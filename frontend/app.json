@@ -13,7 +13,8 @@
       "bundleIdentifier": "com.emergent.salahalarm.lxw9zs",
       "infoPlist": {
         "NSCameraUsageDescription": "Scan your mosque prayer timetable",
-        "NSPhotoLibraryUsageDescription": "Upload your saved timetable image"
+        "NSPhotoLibraryUsageDescription": "Upload your saved timetable image",
+        "NSLocationWhenInUseUsageDescription": "Find the Qibla direction from your location"
       }
     },
     "android": {
@@ -30,7 +31,9 @@
         "USE_EXACT_ALARM",
         "POST_NOTIFICATIONS",
         "RECEIVE_BOOT_COMPLETED",
-        "VIBRATE"
+        "VIBRATE",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
       ]
     },
     "web": {
@@ -61,6 +64,12 @@
         {
           "photosPermission": "Upload your saved timetable image",
           "cameraPermission": "Scan your mosque prayer timetable"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Find the Qibla direction from your location"
         }
       ]
     ],

@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -11,6 +10,8 @@ import { useApp } from "@/src/context/AppContext";
 import { FONTS, RADIUS, SPACING } from "@/src/theme";
 import { formatHijri } from "@/src/lib/hijri";
 import { QUOTES } from "@/src/lib/quotes";
+import { getMoonInfo } from "@/src/lib/moon";
+import MoonPhase from "@/src/components/MoonPhase";
 import {
   PRAYER_LABELS,
   PRAYER_ORDER,
@@ -24,8 +25,7 @@ import {
 import PrayerCard from "@/src/components/PrayerCard";
 import AlarmSettingsSheet, { AlarmSheetRef } from "@/src/components/AlarmSettingsSheet";
 
-const HERO = "https://images.pexels.com/photos/10943458/pexels-photo-10943458.jpeg";
-const HERO_DARK = "https://images.pexels.com/photos/20216577/pexels-photo-20216577.jpeg";
+const HERO_BG = "#20403B";
 
 function clockText(now: Date, is24h: boolean): { time: string; period: string } {
   let h = now.getHours();
@@ -38,13 +38,14 @@ function clockText(now: Date, is24h: boolean): { time: string; period: string } 
 }
 
 export default function HomeScreen() {
-  const { colors, isDark, now, settings, todayRow, timetable, configs, setConfig, needsNextMonth, quoteStartIndex } =
+  const { colors, now, settings, todayRow, timetable, configs, setConfig, needsNextMonth, quoteStartIndex } =
     useApp();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const sheetRef = useRef<AlarmSheetRef>(null);
 
   const [qi, setQi] = useState(quoteStartIndex);
+  const moon = getMoonInfo(now);
 
   // Start from the quote chosen for this app-open, then gently slide through the rest.
   useEffect(() => {
@@ -73,15 +74,12 @@ export default function HomeScreen() {
     <View style={[styles.root, { backgroundColor: colors.surface }]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: SPACING.xxl }}>
         {/* Hero */}
-        <View style={styles.hero}>
-          <Image
-            source={{ uri: isDark ? HERO_DARK : HERO }}
-            style={StyleSheet.absoluteFill}
-            contentFit="cover"
-            transition={300}
-          />
+        <View style={[styles.hero, { backgroundColor: HERO_BG }]}>
+          <View style={styles.moonWrap} pointerEvents="none">
+            <MoonPhase size={230} now={now} backgroundColor={HERO_BG} />
+          </View>
           <LinearGradient
-            colors={["rgba(15,23,42,0.35)", "rgba(15,23,42,0.75)", "rgba(15,23,42,0.95)"]}
+            colors={["rgba(32,64,59,0.15)", "rgba(32,64,59,0.55)", "rgba(32,64,59,0.95)"]}
             style={StyleSheet.absoluteFill}
           />
           <View style={[styles.quoteWrap, { top: insets.top + SPACING.md }]}>
@@ -95,6 +93,9 @@ export default function HomeScreen() {
           <View style={[styles.heroContent, { paddingTop: insets.top + SPACING.lg }]}>
             <Text style={styles.dateText}>{dateStr}</Text>
             <Text style={styles.hijriText}>{formatHijri(now)}</Text>
+            <Text style={styles.moonText}>
+              🌙 {moon.name} · {Math.round(moon.illumination * 100)}% lit
+            </Text>
 
             <View style={styles.clockRow}>
               <Text style={styles.clock} testID="home-clock">{time}</Text>
@@ -181,8 +182,10 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  hero: { height: 380, justifyContent: "flex-end" },
+  hero: { height: 380, justifyContent: "flex-end", overflow: "hidden" },
+  moonWrap: { position: "absolute", top: 60, left: 0, right: 0, alignItems: "center" },
   quoteWrap: { position: "absolute", left: SPACING.xl, right: SPACING.xl },
+  moonText: { fontFamily: FONTS.medium, fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 3 },
   quoteText: {
     fontFamily: FONTS.semibold,
     fontSize: 16,
