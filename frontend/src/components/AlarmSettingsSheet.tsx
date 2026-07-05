@@ -14,6 +14,11 @@ import { PRAYER_LABELS, PrayerKey, SOUND_OPTIONS } from "@/src/lib/prayer";
 export type AlarmSheetRef = { present: (key: PrayerKey) => void };
 
 const beepSource = require("../../assets/sounds/beep.mp3");
+const SOUND_SOURCES: Record<string, any> = {
+  beep: require("../../assets/sounds/beep.mp3"),
+  short_adhan: require("../../assets/sounds/iqamat.mp3"),
+  full_adhan: require("../../assets/sounds/azan.mp3"),
+};
 
 const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
   const { colors, configs, setConfig } = useApp();
@@ -33,9 +38,13 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
 
   const preview = useCallback(() => {
     try {
-      const src =
-        cfg?.sound === "custom" && cfg?.customUri ? { uri: cfg.customUri } : beepSource;
-      player.replace(src as any);
+      let src: any;
+      if (cfg?.sound === "custom" && cfg?.customUri) {
+        src = { uri: cfg.customUri };
+      } else {
+        src = SOUND_SOURCES[cfg?.sound] || beepSource;
+      }
+      player.replace(src);
       player.volume = cfg?.volume ?? 0.8;
       player.seekTo(0);
       player.play();
