@@ -151,7 +151,12 @@ async def ocr_pdf(req: PdfRequest):
 
     tmp_path = None
     try:
-        raw_bytes = b64lib.b64decode(data)
+        try:
+            raw_bytes = b64lib.b64decode(data, validate=False)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid PDF data. Please pick a valid PDF file.")
+        if not raw_bytes:
+            raise HTTPException(status_code=400, detail="Empty PDF data.")
         with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tf:
             tf.write(raw_bytes)
             tmp_path = tf.name

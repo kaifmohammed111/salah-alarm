@@ -25,12 +25,16 @@ Build a mobile app that turns a monthly mosque prayer-timetable image into autom
 - "Upload next month's timetable" prompt when today's row not found
 
 ## Implemented (2026-07-05)
-- Backend `/api/ocr/timetable` (Gemini OCR → JSON rows) — verified accurate
+- Backend `/api/ocr/timetable` (Gemini image OCR → JSON rows) — verified accurate
+- Backend `/api/ocr/pdf` (Gemini PDF OCR via FileContentWithMimeType) — verified; invalid input → 400
 - Home, Alarms, Upload+OCR-edit, Settings screens with bottom tabs
 - AppContext: persistence, ticking clock, theme, auto-reschedule of notifications
 - Manual edit screen for OCR correction (start/jamaat per prayer, 24h HH:MM)
 - Hijri auto-compute (tabular Islamic calendar)
-- Backup/restore snapshot; all tested (backend 4/4, frontend flows pass)
+- Backup/restore snapshot; all tested (backend + frontend flows pass)
+- **Manual day-by-day timetable editor** at `/editor` (from Settings + Upload): create blank month (28-31 days), day chip selector, edit Day/Hijri + per-prayer Start/Jamaat, save. Verified.
+- **PDF import** as an OCR method (Upload → PDF button). Verified.
+- **CSV import** (Upload → CSV button): parses `Day,Date,Hijri,Fajr Start,Fajr Jamaat,Sunrise,Zuhr Start,Zuhr Jamaat,Asr Start,Asr Jamaat,Maghrib,Isha Start,Isha Jamaat`; 12h→24h conversion (Fajr/Sunrise AM, rest PM) — verified deterministically.
 
 ## Backlog / Remaining
 - P1: Bundle real Adhan audio (Short/Full) + custom MP3 picker; per-sound notification channels (needs native build for custom notification sounds).
