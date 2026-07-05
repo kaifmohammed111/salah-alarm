@@ -45,3 +45,7 @@ Build a mobile app that turns a monthly mosque prayer-timetable image into autom
 ## Next Tasks
 - Source royalty-free Adhan audio and wire notification sound channels.
 - Add background refresh (expo-background-task) to roll over to next day automatically.
+
+## Update (2026-07-05, later)
+- Prayer cards now show BOTH Start and Jamaat times per prayer (Sunrise shows single time). Verified on Home + Alarms.
+- Custom MP3 adhan: alarm sheet lets user pick "Custom MP3" and upload their own audio file (expo-document-picker). Plays on Preview via expo-audio; stored per-prayer (customUri/customName). NOTE: custom file as the actual scheduled-notification alarm tone requires a native device build (Expo Go uses default sound) — surfaced in-UI.

@@ -14,7 +14,8 @@ import {
 
 type Props = {
   prayerKey: PrayerKey;
-  time: string;
+  startTime: string;
+  jamaatTime: string | null; // null for sunrise
   status: PrayerStatus;
   config: AlarmConfig;
   colors: ThemeColors;
@@ -26,7 +27,8 @@ type Props = {
 
 export default function PrayerCard({
   prayerKey,
-  time,
+  startTime,
+  jamaatTime,
   status,
   config,
   colors,
@@ -41,11 +43,11 @@ export default function PrayerCard({
 
   const bg = isCurrent ? colors.brandPrimary : colors.surface;
   const primaryText = isCurrent ? colors.onBrandPrimary : colors.onSurface;
-  const secondaryText = isCurrent ? "rgba(255,255,255,0.75)" : colors.onSurfaceTertiary;
+  const labelText = isCurrent ? "rgba(255,255,255,0.7)" : colors.muted;
+  const valueText = isCurrent ? colors.onBrandPrimary : colors.onSurfaceSecondary;
 
   let label = PRAYER_LABELS[prayerKey];
   if (prayerKey === "asr") label = `Asr (${asrMethod === "hanafi" ? "Hanafi" : "Shafi"})`;
-  if (prayerKey === "isha") label = "Isha";
 
   const soundOn = !isSunrise && config.enabled;
 
@@ -65,11 +67,7 @@ export default function PrayerCard({
         <View
           style={[
             styles.iconWrap,
-            {
-              backgroundColor: isCurrent
-                ? "rgba(255,255,255,0.18)"
-                : colors.brandTertiary,
-            },
+            { backgroundColor: isCurrent ? "rgba(255,255,255,0.18)" : colors.brandTertiary },
           ]}
         >
           <Ionicons
@@ -78,45 +76,62 @@ export default function PrayerCard({
             color={isCurrent ? colors.onBrandPrimary : colors.brand}
           />
         </View>
-        <View>
-          <Text style={[styles.name, { color: primaryText }]}>{label}</Text>
-          {isCurrent ? (
-            <Text style={[styles.badge, { color: secondaryText }]}>Up next</Text>
-          ) : isSunrise ? (
-            <Text style={[styles.badge, { color: secondaryText }]}>No alarm</Text>
-          ) : null}
+        <View style={styles.info}>
+          <View style={styles.nameRow}>
+            <Text style={[styles.name, { color: primaryText }]}>{label}</Text>
+            {isCurrent ? (
+              <View style={styles.upNext}>
+                <Text style={styles.upNextText}>UP NEXT</Text>
+              </View>
+            ) : null}
+          </View>
+
+          {isSunrise ? (
+            <View style={styles.timeRow}>
+              <Text style={[styles.timeLabel, { color: labelText }]}>Sunrise</Text>
+              <Text style={[styles.timeValue, { color: valueText }]}>
+                {formatTime(startTime, is24h)}
+              </Text>
+            </View>
+          ) : (
+            <>
+              <View style={styles.timeRow}>
+                <Text style={[styles.timeLabel, { color: labelText }]}>Start</Text>
+                <Text style={[styles.timeValue, { color: valueText }]}>
+                  {formatTime(startTime, is24h)}
+                </Text>
+              </View>
+              <View style={styles.timeRow}>
+                <Text style={[styles.timeLabel, { color: labelText }]}>Jamaat</Text>
+                <Text style={[styles.timeValueStrong, { color: primaryText }]}>
+                  {formatTime(jamaatTime || "", is24h)}
+                </Text>
+              </View>
+            </>
+          )}
         </View>
       </View>
 
-      <View style={styles.right}>
-        <Text style={[styles.time, { color: primaryText }]}>{formatTime(time, is24h)}</Text>
-        <Pressable
-          testID={`prayer-sound-${prayerKey}`}
-          onPress={isSunrise ? undefined : onToggleSound}
-          hitSlop={10}
-          style={styles.soundBtn}
-        >
-          <Ionicons
-            name={
-              isSunrise
-                ? "volume-mute-outline"
-                : soundOn
-                ? "volume-high"
-                : "volume-mute-outline"
-            }
-            size={22}
-            color={
-              isSunrise
-                ? colors.muted
-                : isCurrent
-                ? colors.onBrandPrimary
-                : soundOn
-                ? colors.brand
-                : colors.muted
-            }
-          />
-        </Pressable>
-      </View>
+      <Pressable
+        testID={`prayer-sound-${prayerKey}`}
+        onPress={isSunrise ? undefined : onToggleSound}
+        hitSlop={10}
+        style={styles.soundBtn}
+      >
+        <Ionicons
+          name={isSunrise ? "volume-mute-outline" : soundOn ? "volume-high" : "volume-mute-outline"}
+          size={24}
+          color={
+            isSunrise
+              ? colors.muted
+              : isCurrent
+              ? colors.onBrandPrimary
+              : soundOn
+              ? colors.brand
+              : colors.muted
+          }
+        />
+      </Pressable>
     </Pressable>
   );
 }
@@ -148,15 +163,25 @@ const styles = StyleSheet.create({
   },
   left: { flexDirection: "row", alignItems: "center", gap: SPACING.md, flex: 1 },
   iconWrap: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: RADIUS.md,
     alignItems: "center",
     justifyContent: "center",
   },
-  name: { fontFamily: FONTS.semibold, fontSize: 16 },
-  badge: { fontFamily: FONTS.medium, fontSize: 12, marginTop: 2 },
-  right: { flexDirection: "row", alignItems: "center", gap: SPACING.md },
-  time: { fontFamily: FONTS.bold, fontSize: 17 },
-  soundBtn: { padding: SPACING.xs },
+  info: { flex: 1 },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, marginBottom: 4 },
+  name: { fontFamily: FONTS.bold, fontSize: 17 },
+  upNext: {
+    backgroundColor: "rgba(255,255,255,0.22)",
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 2,
+    borderRadius: RADIUS.sm,
+  },
+  upNextText: { fontFamily: FONTS.bold, fontSize: 9, color: "#fff", letterSpacing: 0.5 },
+  timeRow: { flexDirection: "row", alignItems: "center", marginTop: 1 },
+  timeLabel: { fontFamily: FONTS.medium, fontSize: 12, width: 54 },
+  timeValue: { fontFamily: FONTS.semibold, fontSize: 14 },
+  timeValueStrong: { fontFamily: FONTS.bold, fontSize: 15 },
+  soundBtn: { padding: SPACING.xs, marginLeft: SPACING.sm },
 });

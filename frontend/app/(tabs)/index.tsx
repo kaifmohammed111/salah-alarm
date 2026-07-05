@@ -17,7 +17,7 @@ import {
   countdownString,
   formatTime,
   nextPrayerInfo,
-  prayerTime,
+  startJamaat,
 } from "@/src/lib/prayer";
 import PrayerCard from "@/src/components/PrayerCard";
 import AlarmSettingsSheet, { AlarmSheetRef } from "@/src/components/AlarmSettingsSheet";
@@ -129,20 +129,24 @@ export default function HomeScreen() {
           ) : (
             <>
               <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>Today's Prayers</Text>
-              {keys.map((k: PrayerKey) => (
-                <PrayerCard
-                  key={k}
-                  prayerKey={k}
-                  time={prayerTime(todayRow!, k)}
-                  status={statuses[k]}
-                  config={configs[k]}
-                  colors={colors}
-                  is24h={settings.is24h}
-                  asrMethod={settings.asrMethod}
-                  onPress={() => sheetRef.current?.present(k)}
-                  onToggleSound={() => setConfig(k, { enabled: !configs[k].enabled })}
-                />
-              ))}
+              {keys.map((k: PrayerKey) => {
+                const sj = startJamaat(todayRow!, k);
+                return (
+                  <PrayerCard
+                    key={k}
+                    prayerKey={k}
+                    startTime={sj.start}
+                    jamaatTime={sj.jamaat}
+                    status={statuses[k]}
+                    config={configs[k]}
+                    colors={colors}
+                    is24h={settings.is24h}
+                    asrMethod={settings.asrMethod}
+                    onPress={() => sheetRef.current?.present(k)}
+                    onToggleSound={() => setConfig(k, { enabled: !configs[k].enabled })}
+                  />
+                );
+              })}
             </>
           )}
         </View>

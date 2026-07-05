@@ -61,13 +61,15 @@ export type AlarmConfig = {
   vibration: boolean;
   snooze: boolean;
   preAlarm: boolean; // 30 min before
+  customUri?: string; // local uri of user-uploaded MP3 (when sound === 'custom')
+  customName?: string; // display name of the uploaded file
 };
 
 export const SOUND_OPTIONS = [
   { id: "beep", label: "Beep" },
   { id: "short_adhan", label: "Short Adhan" },
   { id: "full_adhan", label: "Full Adhan" },
-  { id: "custom", label: "Custom MP3 (coming soon)", disabled: true },
+  { id: "custom", label: "Custom MP3" },
 ];
 
 export function defaultAlarmConfig(key: PrayerKey): AlarmConfig {
@@ -87,6 +89,13 @@ export function prayerTime(row: DayRow, key: PrayerKey): string {
   const pair = row[key] as TimePair;
   const src = ALARM_SOURCE[key];
   return (src === "jamaat" ? pair?.jamaat : pair?.start) || pair?.start || "";
+}
+
+// Return start & jamaat display strings for a prayer. jamaat is null for sunrise.
+export function startJamaat(row: DayRow, key: PrayerKey): { start: string; jamaat: string | null } {
+  if (key === "sunrise") return { start: row.sunrise || "", jamaat: null };
+  const pair = row[key] as TimePair;
+  return { start: pair?.start || "", jamaat: pair?.jamaat || "" };
 }
 
 // Build a Date for today at the given HH:MM.

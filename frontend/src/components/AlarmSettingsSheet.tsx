@@ -1,9 +1,10 @@
 import React, { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
-import { BottomSheetModal, BottomSheetView, BottomSheetBackdrop } from "@gorhom/bottom-sheet";
+import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { Ionicons } from "@expo/vector-icons";
 import Slider from "@react-native-community/slider";
 import { useAudioPlayer } from "expo-audio";
+import * as DocumentPicker from "expo-document-picker";
 import * as Haptics from "expo-haptics";
 
 import { FONTS, RADIUS, SPACING } from "@/src/theme";
@@ -28,15 +29,30 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
   }));
 
   const cfg = configs[key];
-  const snapPoints = useMemo(() => ["70%"], []);
+  const snapPoints = useMemo(() => ["82%"], []);
 
   const preview = useCallback(() => {
     try {
-      player.seekTo(0);
+      const src =
+        cfg?.sound === "custom" && cfg?.customUri ? { uri: cfg.customUri } : beepSource;
+      player.replace(src as any);
       player.volume = cfg?.volume ?? 0.8;
+      player.seekTo(0);
       player.play();
     } catch {}
-  }, [player, cfg?.volume]);
+  }, [player, cfg?.sound, cfg?.customUri, cfg?.volume]);
+
+  const pickAudio = useCallback(async () => {
+    try {
+      const res = await DocumentPicker.getDocumentAsync({
+        type: "audio/*",
+        copyToCacheDirectory: true,
+      });
+      if (res.canceled || !res.assets?.[0]) return;
+      const a = res.assets[0];
+      setConfig(key, { sound: "custom", customUri: a.uri, customName: a.name });
+    } catch {}
+  }, [key, setConfig]);
 
   const renderBackdrop = useCallback(
     (props: any) => <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} />,
@@ -70,7 +86,10 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
       backgroundStyle={{ backgroundColor: colors.surface }}
       enablePanDownToClose
     >
-      <BottomSheetView style={[styles.container, { backgroundColor: colors.surface }]}>
+      <BottomSheetScrollView
+        style={{ backgroundColor: colors.surface }}
+        contentContainerStyle={[styles.container, { backgroundColor: colors.surface }]}
+      >
         <Text style={[styles.title, { color: colors.onSurface }]} testID="alarm-sheet-title">
           {PRAYER_LABELS[key]} Alarm
         </Text>
@@ -130,6 +149,24 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
             <Text style={[styles.previewText, { color: colors.brand }]}>Preview</Text>
           </Pressable>
         </View>
+
+        {cfg.sound === "custom" ? (
+          <View style={styles.customWrap}>
+            <Pressable
+              testID="upload-mp3-btn"
+              onPress={pickAudio}
+              style={[styles.uploadBtn, { backgroundColor: colors.surfaceSecondary, borderColor: colors.brand }]}
+            >
+              <Ionicons name="cloud-upload-outline" size={18} color={colors.brand} />
+              <Text style={[styles.uploadText, { color: colors.brand }]} numberOfLines={1}>
+                {cfg.customName ? cfg.customName : "Upload your MP3 file"}
+              </Text>
+            </Pressable>
+            <Text style={[styles.customHint, { color: colors.muted }]}>
+              Plays on Preview & alarm. Custom alarm-tone playback requires a device build.
+            </Text>
+          </View>
+        ) : null}
 
         <Row
           icon="volume-high-outline"
@@ -198,7 +235,7 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
         >
           <Text style={[styles.saveText, { color: colors.onBrandPrimary }]}>Save</Text>
         </Pressable>
-      </BottomSheetView>
+      </BottomSheetScrollView>
     </BottomSheetModal>
   );
 });
@@ -239,6 +276,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   previewText: { fontFamily: FONTS.semibold, fontSize: 13 },
+  customWrap: { marginTop: SPACING.md },
+  uploadBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderStyle: "dashed",
+  },
+  uploadText: { fontFamily: FONTS.semibold, fontSize: 14, flex: 1 },
+  customHint: { fontFamily: FONTS.regular, fontSize: 11, marginTop: SPACING.sm },
   saveBtn: {
     marginTop: SPACING.xl,
     paddingVertical: SPACING.lg,
