@@ -86,7 +86,7 @@ export function parseTimetableCsv(text: string): Timetable {
     const dateVal = get(c, iDate);
     if (!dateVal || !/^\d+$/.test(dateVal.trim())) continue;
 
-    rows.push({
+    const row: DayRow = {
       day: get(c, iDay),
       date: dateVal.trim(),
       hijri: get(c, iHijri),
@@ -96,7 +96,24 @@ export function parseTimetableCsv(text: string): Timetable {
       asr: { start: to24(get(c, iAs), "PM"), jamaat: to24(get(c, iAj), "PM") },
       maghrib: { start: to24(get(c, iMag), "PM"), jamaat: to24(get(c, iMag), "PM") },
       isha: { start: to24(get(c, iIs), "PM"), jamaat: to24(get(c, iIj), "PM") },
-    });
+    };
+
+    // Skip padding rows that have a date number but no actual prayer times
+    // (e.g. day 30/31 left blank in a 29/30-day month).
+    const hasTimes =
+      row.fajr.start ||
+      row.fajr.jamaat ||
+      row.sunrise ||
+      row.zuhr.start ||
+      row.zuhr.jamaat ||
+      row.asr.start ||
+      row.asr.jamaat ||
+      row.maghrib.start ||
+      row.isha.start ||
+      row.isha.jamaat;
+    if (!hasTimes) continue;
+
+    rows.push(row);
   }
 
   if (!rows.length) throw new Error("No valid rows found in CSV");
