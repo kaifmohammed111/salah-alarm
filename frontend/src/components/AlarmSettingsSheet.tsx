@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-nati
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { Ionicons } from "@expo/vector-icons";
 import Slider from "@react-native-community/slider";
-import { useAudioPlayer } from "expo-audio";
+import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import * as DocumentPicker from "expo-document-picker";
 import * as Haptics from "expo-haptics";
 
@@ -35,6 +35,15 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
 
   const cfg = configs[key];
   const snapPoints = useMemo(() => ["82%"], []);
+  const status = useAudioPlayerStatus(player);
+  const isPlaying = !!status?.playing;
+
+  const stopPreview = useCallback(() => {
+    try {
+      player.pause();
+      player.seekTo(0);
+    } catch {}
+  }, [player]);
 
   const preview = useCallback(() => {
     try {
@@ -90,6 +99,7 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
     <BottomSheetModal
       ref={modalRef}
       snapPoints={snapPoints}
+      onDismiss={stopPreview}
       backdropComponent={renderBackdrop}
       handleIndicatorStyle={{ backgroundColor: colors.borderStrong }}
       backgroundStyle={{ backgroundColor: colors.surface }}
@@ -153,9 +163,18 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
               </Pressable>
             );
           })}
-          <Pressable testID="preview-sound-btn" onPress={preview} style={[styles.previewBtn, { borderColor: colors.brand }]}>
-            <Ionicons name="play" size={16} color={colors.brand} />
-            <Text style={[styles.previewText, { color: colors.brand }]}>Preview</Text>
+          <Pressable
+            testID="preview-sound-btn"
+            onPress={isPlaying ? stopPreview : preview}
+            style={[
+              styles.previewBtn,
+              { borderColor: isPlaying ? colors.error : colors.brand },
+            ]}
+          >
+            <Ionicons name={isPlaying ? "stop" : "play"} size={16} color={isPlaying ? colors.error : colors.brand} />
+            <Text style={[styles.previewText, { color: isPlaying ? colors.error : colors.brand }]}>
+              {isPlaying ? "Stop" : "Preview"}
+            </Text>
           </Pressable>
         </View>
 
@@ -268,6 +287,7 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
           testID="alarm-save-btn"
           onPress={() => {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            stopPreview();
             modalRef.current?.dismiss();
           }}
           style={[styles.saveBtn, { backgroundColor: colors.brand }]}

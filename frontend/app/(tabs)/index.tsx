@@ -1,14 +1,16 @@
-import React, { useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import Animated, { FadeIn } from "react-native-reanimated";
 
 import { useApp } from "@/src/context/AppContext";
 import { FONTS, RADIUS, SPACING } from "@/src/theme";
 import { formatHijri } from "@/src/lib/hijri";
+import { QUOTES } from "@/src/lib/quotes";
 import {
   PRAYER_LABELS,
   PRAYER_ORDER,
@@ -36,11 +38,24 @@ function clockText(now: Date, is24h: boolean): { time: string; period: string } 
 }
 
 export default function HomeScreen() {
-  const { colors, isDark, now, settings, todayRow, timetable, configs, setConfig, needsNextMonth } =
+  const { colors, isDark, now, settings, todayRow, timetable, configs, setConfig, needsNextMonth, quoteStartIndex } =
     useApp();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const sheetRef = useRef<AlarmSheetRef>(null);
+
+  const [qi, setQi] = useState(quoteStartIndex);
+
+  // Start from the quote chosen for this app-open, then gently slide through the rest.
+  useEffect(() => {
+    setQi(quoteStartIndex);
+  }, [quoteStartIndex]);
+  useEffect(() => {
+    const id = setInterval(() => setQi((v) => (v + 1) % QUOTES.length), 12000);
+    return () => clearInterval(id);
+  }, []);
+
+  const quote = QUOTES[qi % QUOTES.length];
 
   const statuses = computeStatuses(todayRow, settings.showSunrise, now);
   const next = nextPrayerInfo(todayRow, settings.showSunrise, now);
@@ -69,6 +84,14 @@ export default function HomeScreen() {
             colors={["rgba(15,23,42,0.35)", "rgba(15,23,42,0.75)", "rgba(15,23,42,0.95)"]}
             style={StyleSheet.absoluteFill}
           />
+          <View style={[styles.quoteWrap, { top: insets.top + SPACING.md }]}>
+            <Animated.View key={qi} entering={FadeIn.duration(700)} testID="home-quote">
+              <Ionicons name="book-outline" size={16} color="rgba(255,255,255,0.7)" />
+              <Text style={styles.quoteText}>“{quote.text}”</Text>
+              <Text style={styles.quoteSource}>— {quote.source}</Text>
+            </Animated.View>
+          </View>
+
           <View style={[styles.heroContent, { paddingTop: insets.top + SPACING.lg }]}>
             <Text style={styles.dateText}>{dateStr}</Text>
             <Text style={styles.hijriText}>{formatHijri(now)}</Text>
@@ -158,7 +181,21 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  hero: { height: 340, justifyContent: "flex-end" },
+  hero: { height: 380, justifyContent: "flex-end" },
+  quoteWrap: { position: "absolute", left: SPACING.xl, right: SPACING.xl },
+  quoteText: {
+    fontFamily: FONTS.semibold,
+    fontSize: 16,
+    color: "#FFFFFF",
+    lineHeight: 23,
+    marginTop: SPACING.sm,
+  },
+  quoteSource: {
+    fontFamily: FONTS.medium,
+    fontSize: 12,
+    color: "rgba(255,255,255,0.72)",
+    marginTop: 4,
+  },
   heroContent: { paddingHorizontal: SPACING.xl, paddingBottom: SPACING.xl },
   dateText: { fontFamily: FONTS.medium, fontSize: 14, color: "rgba(255,255,255,0.85)" },
   hijriText: { fontFamily: FONTS.regular, fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 2 },

@@ -24,6 +24,7 @@ import {
   requestNotificationPermissions,
   scheduleTodayAlarms,
 } from "@/src/lib/notifications";
+import { QUOTES } from "@/src/lib/quotes";
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
@@ -56,6 +57,7 @@ type AppState = {
   now: Date;
   colors: ThemeColors;
   isDark: boolean;
+  quoteStartIndex: number;
   settings: Settings;
   timetable: Timetable | null;
   configs: Record<PrayerKey, AlarmConfig>;
@@ -82,6 +84,7 @@ export const useApp = () => {
 const K_SETTINGS = "salah.settings";
 const K_TIMETABLE = "salah.timetable";
 const K_CONFIGS = "salah.configs";
+const K_QUOTE_IDX = "salah.quoteIndex";
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
@@ -90,6 +93,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [timetable, setTimetable] = useState<Timetable | null>(null);
   const [configs, setConfigs] = useState<Record<PrayerKey, AlarmConfig>>(defaultConfigs());
   const [systemScheme, setSystemScheme] = useState(Appearance.getColorScheme());
+  const [quoteStartIndex, setQuoteStartIndex] = useState(0);
 
   // Load persisted state.
   useEffect(() => {
@@ -98,6 +102,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const s = await storage.getItem(K_SETTINGS, "");
       const tt = await storage.getItem(K_TIMETABLE, "");
       const cf = await storage.getItem(K_CONFIGS, "");
+      // Rotate the hero quote on every app open.
+      const prevIdx = (await storage.getItem(K_QUOTE_IDX, -1)) as number;
+      const nextIdx = (((prevIdx ?? -1) as number) + 1 + QUOTES.length) % QUOTES.length;
+      setQuoteStartIndex(nextIdx);
+      await storage.setItem(K_QUOTE_IDX, nextIdx);
       try {
         if (s) setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(s) });
       } catch {}
@@ -230,6 +239,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     now,
     colors,
     isDark,
+    quoteStartIndex,
     settings,
     timetable,
     configs,
