@@ -1,0 +1,43 @@
+{
+  "summary": "Backend: 5/5 pytest tests PASS via public URL (health GET /api/, POST /api/ocr/pdf happy-path with synthetic 3-row PDF returning HH:MM 24h times, POST /api/ocr/pdf empty body → 422 graceful, POST /api/ocr/pdf invalid base64 → 502 JSON with 'detail' (no Python crash), POST /api/ocr/timetable regression). Frontend: All requested flows PASS on mobile viewport (390x844). Settings → manual-edit-btn navigates to /editor showing 'Create a blank month'. create-days-30 renders 30 day-chips + all med-<prayer>-start/jamaat + med-sunrise + editor-save-btn. Typed 04:15 into med-fajr-start and 04:35 into med-fajr-jamaat, switched to day-chip-5 (values blank as expected) then back to day-chip-1 (values persisted). editor-save-btn shows 'Saved!' toast. Upload tab (/upload) shows pick-camera-btn, pick-gallery-btn, pick-pdf-btn, pick-csv-btn, manual-editor-link — link navigates to /editor. Home clock/hijri, tab bar, and Settings toggles (24h/theme/sunrise) all render and respond. No red screens, no console errors (only known expo web warnings about boxShadow/pointerEvents/expo-notifications on web).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/ocr/pdf",
+       "issue": "Invalid base64 payload (padding error) is caught by the broad `except Exception` block and re-raised as HTTPException(502) → 'PDF OCR failed: Incorrect padding'. Backend does NOT crash and JSON is well-formed, but 502 is semantically incorrect for a client input error and Cloudflare rewrites any origin 5xx into its own HTML 502 page, so the frontend loses the JSON 'detail'. Recommend catching binascii.Error explicitly and returning 400/422 with 'Invalid base64 file_base64'."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "editor.tsx", "issues": ["Console warnings: 'shadow*' style props deprecated (use boxShadow) and 'props.pointerEvents is deprecated' — RN Web deprecations only, no visual impact but should be cleaned up eventually in shared components."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_pdf_ocr.py",
+    "/app/backend/tests/test_ocr_api.py",
+    "/app/backend/tests/gen_timetable_image.py",
+    "/app/test_reports/pytest/pdf_ocr_results.xml"
+  ],
+  "action_items": [
+    "(MINOR) In /app/backend/server.py ocr_pdf: wrap `b64lib.b64decode(data)` in its own try/except binascii.Error → raise HTTPException(400, 'Invalid base64 payload'). Currently invalid base64 leaks through the generic `except Exception` and becomes a 502, which Cloudflare then rewrites to an HTML error page, hiding the JSON error from the mobile UI.",
+    "(OPTIONAL) Address RN-Web deprecation warnings ('shadow*' style props → boxShadow; props.pointerEvents → style.pointerEvents) in shared components/theme to future-proof."
+  ],
+  "critical_code_review_comments": [
+    "server.py PDF endpoint correctly writes/cleans up the temp file in finally.",
+    "server.py maps the invalid-base64 case to 502 which is misleading (should be 4xx).",
+    "editor.tsx correctly uses KeyboardAvoidingView, testIDs on every interactive element, and Text-wrapped strings. State persists across chip taps.",
+    "upload.tsx renders four import buttons and manual-editor-link with correct testIDs and navigates via expo-router push('/editor')."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_pdf_ocr.py (new — PDF endpoint tests + regression)"
+  ],
+  "success_rate": {"backend": "100% (5/5)", "frontend": "100% (all requested testIDs + flows verified)"},
+  "seed_data_creation": "Synthetic in-memory PDF timetable generated via PIL (test_pdf_ocr.py :: _make_timetable_pdf_b64) with 3 rows (Aug 1-3 2025). Each pytest run also generates the regression JPEG via gen_timetable_image. One document per successful OCR call is inserted into MongoDB db.timetables (marked source='pdf' for the PDF endpoint). No cleanup — acceptable for MVP.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Public URL: https://salah-alarm-6.preview.emergentagent.com. Frontend .env key is EXPO_PUBLIC_BACKEND_URL (not EXPO_BACKEND_URL). Emergent LLM key rate-limits concurrent calls — keep pytest sequential (no -n xdist). Backend PDF endpoint uses FileContentWithMimeType with gemini-3.1-pro-preview and takes ~10-20s per PDF. The /editor route persists per-day edits in local state via rowIdx switching. If testing invalid-base64 via public URL, expect Cloudflare 502 HTML — hit http://localhost:8001 directly to see the actual FastAPI JSON error body.",
+  "rca_of_issue": "MINOR — POST /api/ocr/pdf with invalid base64 returns 502 instead of 4xx. Root cause: `raw_bytes = b64lib.b64decode(data)` at server.py:154 raises binascii.Error which is caught by the broad `except Exception` at :172 and mapped to HTTPException(502). Because Cloudflare's edge rewrites any origin 5xx into its own HTML 502 page, the frontend never sees the JSON 'detail'. Mitigation: add `try: raw_bytes = b64lib.b64decode(data) \\n except binascii.Error: raise HTTPException(400, 'Invalid base64 payload')` before the LLM call. Empty body already correctly returns 422 via Pydantic."
+}

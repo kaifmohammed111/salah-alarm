@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-nat
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { useRouter } from "expo-router";
 
 import { useApp } from "@/src/context/AppContext";
 import { storage } from "@/src/utils/storage";
@@ -14,6 +15,7 @@ export default function SettingsScreen() {
   const { colors, isDark, settings, updateSettings, exportBackup, importBackup, timetable } =
     useApp();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -156,6 +158,27 @@ export default function SettingsScreen() {
           />
         </View>
 
+        {/* Timetable */}
+        <Text style={[styles.section, { color: colors.onSurfaceTertiary }]}>TIMETABLE</Text>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Pressable
+            testID="manual-edit-btn"
+            onPress={() => router.push("/editor")}
+            style={[styles.row, { borderBottomWidth: 0 }]}
+          >
+            <View style={styles.rowLeft}>
+              {iconTile("create-outline", colors.brandTertiary, colors.brand)}
+              <View>
+                <Text style={[styles.rowLabel, { color: colors.onSurface }]}>Edit timetable manually</Text>
+                <Text style={[styles.rowSub, { color: colors.onSurfaceTertiary }]}>
+                  Enter or correct times day by day
+                </Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+          </Pressable>
+        </View>
+
         {/* Data */}
         <Text style={[styles.section, { color: colors.onSurfaceTertiary }]}>DATA</Text>
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -204,6 +227,7 @@ const styles = StyleSheet.create({
   },
   rowLeft: { flexDirection: "row", alignItems: "center", gap: SPACING.md },
   rowLabel: { fontFamily: FONTS.medium, fontSize: 15 },
+  rowSub: { fontFamily: FONTS.regular, fontSize: 12, marginTop: 1 },
   tile: { width: 34, height: 34, borderRadius: RADIUS.sm, alignItems: "center", justifyContent: "center" },
   segment: { flexDirection: "row", borderRadius: RADIUS.md, padding: 4, marginBottom: SPACING.md },
   segmentItem: { flex: 1, paddingVertical: SPACING.sm, borderRadius: RADIUS.sm, alignItems: "center" },

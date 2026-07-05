@@ -12,7 +12,9 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime, timezone
 
-from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+import base64 as b64lib
+import tempfile
+from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent, FileContentWithMimeType
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -130,6 +132,64 @@ async def ocr_timetable(req: OcrRequest):
         "year": resp.year,
         "rows": resp.rows,
         "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+    return resp
+
+
+class PdfRequest(BaseModel):
+    file_base64: str = Field(..., description="Base64 encoded PDF of the timetable")
+
+
+@api_router.post("/ocr/pdf", response_model=OcrResponse)
+async def ocr_pdf(req: PdfRequest):
+    if not EMERGENT_LLM_KEY:
+        raise HTTPException(status_code=500, detail="LLM key not configured")
+
+    data = req.file_base64
+    if "," in data and data.strip().startswith("data:"):
+        data = data.split(",", 1)[1]
+
+    tmp_path = None
+    try:
+        raw_bytes = b64lib.b64decode(data)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tf:
+            tf.write(raw_bytes)
+            tmp_path = tf.name
+
+        chat = LlmChat(
+            api_key=EMERGENT_LLM_KEY,
+            session_id=f"ocr-pdf-{uuid.uuid4()}",
+            system_message=OCR_SYSTEM,
+        ).with_model("gemini", "gemini-3.1-pro-preview")
+
+        message = UserMessage(
+            text="Extract the full prayer timetable from this PDF document as JSON per the schema.",
+            file_contents=[FileContentWithMimeType(file_path=tmp_path, mime_type="application/pdf")],
+        )
+        result = await chat.send_message(message)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("PDF OCR failed")
+        raise HTTPException(status_code=502, detail=f"PDF OCR failed: {e}")
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except Exception:
+                pass
+
+    raw = result if isinstance(result, str) else str(result)
+    try:
+        parsed = _extract_json(raw)
+    except Exception:
+        logger.error("Failed to parse PDF OCR JSON: %s", raw[:500])
+        raise HTTPException(status_code=422, detail="Could not parse timetable from PDF. Please retry or enter manually.")
+
+    resp = OcrResponse(month=parsed.get("month"), year=parsed.get("year"), rows=parsed.get("rows", []))
+    await db.timetables.insert_one({
+        "id": resp.id, "month": resp.month, "year": resp.year, "rows": resp.rows,
+        "source": "pdf", "created_at": datetime.now(timezone.utc).isoformat(),
     })
     return resp
 

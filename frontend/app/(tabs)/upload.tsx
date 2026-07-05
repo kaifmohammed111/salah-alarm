@@ -13,22 +13,27 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 
 import { useApp } from "@/src/context/AppContext";
 import { FONTS, RADIUS, SPACING } from "@/src/theme";
 import { DayRow, PRAYER_LABELS, Timetable, findTodayRow } from "@/src/lib/prayer";
+import { parseTimetableCsv } from "@/src/lib/csv";
+import { readFileBase64, readFileText } from "@/src/lib/files";
 
 const EDIT_KEYS: (keyof DayRow)[] = ["fajr", "sunrise", "zuhr", "asr", "maghrib", "isha"];
 
 export default function UploadScreen() {
-  const { colors, timetable, saveTimetable, runOcr, now } = useApp();
+  const { colors, timetable, saveTimetable, runOcr, runOcrPdf, now } = useApp();
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingLabel, setLoadingLabel] = useState("Scanning timetable…");
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<Timetable | null>(null);
   const [rowIdx, setRowIdx] = useState(0);
@@ -63,22 +68,79 @@ export default function UploadScreen() {
     if (res.canceled || !res.assets?.[0]) return;
     const asset = res.assets[0];
     setImageUri(asset.uri);
+    setFileName(null);
     if (asset.base64) {
       await scan(asset.base64);
     }
   };
 
+  const applyDraft = (tt: Timetable) => {
+    setDraft(tt);
+    const t = findTodayRow(tt, now);
+    const idx = t ? tt.rows.indexOf(t) : 0;
+    setRowIdx(Math.max(0, idx));
+  };
+
+  const pickPdf = async () => {
+    setError(null);
+    const res = await DocumentPicker.getDocumentAsync({
+      type: "application/pdf",
+      copyToCacheDirectory: true,
+    });
+    if (res.canceled || !res.assets?.[0]) return;
+    const asset = res.assets[0];
+    setImageUri(null);
+    setFileName(asset.name || "timetable.pdf");
+    setLoading(true);
+    setLoadingLabel("Reading PDF…");
+    setError(null);
+    setSaved(false);
+    try {
+      const base64 = await readFileBase64(asset.uri);
+      const tt = await runOcrPdf(base64);
+      if (!tt.rows?.length) throw new Error("No rows detected in the PDF. Try another file or enter manually.");
+      applyDraft(tt);
+    } catch (e: any) {
+      setError(typeof e?.message === "string" ? e.message : "Could not read the PDF. Please retry.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const pickCsv = async () => {
+    setError(null);
+    const res = await DocumentPicker.getDocumentAsync({
+      type: ["text/csv", "text/comma-separated-values", "application/vnd.ms-excel", "text/plain", "*/*"],
+      copyToCacheDirectory: true,
+    });
+    if (res.canceled || !res.assets?.[0]) return;
+    const asset = res.assets[0];
+    setImageUri(null);
+    setFileName(asset.name || "timetable.csv");
+    setLoading(true);
+    setLoadingLabel("Parsing CSV…");
+    setError(null);
+    setSaved(false);
+    try {
+      const text = await readFileText(asset.uri);
+      const tt = parseTimetableCsv(text);
+      applyDraft(tt);
+    } catch (e: any) {
+      setError(typeof e?.message === "string" ? e.message : "Could not parse the CSV file.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const scan = async (base64: string) => {
     setLoading(true);
+    setLoadingLabel("Scanning timetable…");
     setError(null);
     setSaved(false);
     try {
       const tt = await runOcr(base64);
       if (!tt.rows?.length) throw new Error("No rows detected. Try a clearer image or enter manually.");
-      setDraft(tt);
-      const t = findTodayRow(tt, now);
-      const idx = t ? tt.rows.indexOf(t) : 0;
-      setRowIdx(Math.max(0, idx));
+      applyDraft(tt);
     } catch (e: any) {
       setError(typeof e?.message === "string" ? e.message : "Could not read the timetable. Please retry.");
     } finally {
@@ -151,11 +213,20 @@ export default function UploadScreen() {
           {/* Preview / upload buttons */}
           {imageUri ? (
             <Image source={{ uri: imageUri }} style={styles.preview} contentFit="cover" />
+          ) : fileName ? (
+            <View style={[styles.placeholder, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
+              <Ionicons
+                name={fileName.toLowerCase().endsWith(".pdf") ? "document-text-outline" : "grid-outline"}
+                size={40}
+                color={colors.brand}
+              />
+              <Text style={[styles.placeholderText, { color: colors.onSurface }]}>{fileName}</Text>
+            </View>
           ) : (
             <View style={[styles.placeholder, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
               <Ionicons name="image-outline" size={40} color={colors.muted} />
               <Text style={[styles.placeholderText, { color: colors.onSurfaceTertiary }]}>
-                No image selected
+                No file selected
               </Text>
             </View>
           )}
@@ -178,11 +249,38 @@ export default function UploadScreen() {
               <Text style={[styles.pickText, { color: colors.onBrandTertiary }]}>Gallery</Text>
             </Pressable>
           </View>
+          <View style={styles.pickRow}>
+            <Pressable
+              testID="pick-pdf-btn"
+              onPress={pickPdf}
+              style={[styles.pickBtn, { backgroundColor: colors.brandTertiary }]}
+            >
+              <Ionicons name="document-text-outline" size={18} color={colors.brand} />
+              <Text style={[styles.pickText, { color: colors.onBrandTertiary }]}>PDF</Text>
+            </Pressable>
+            <Pressable
+              testID="pick-csv-btn"
+              onPress={pickCsv}
+              style={[styles.pickBtn, { backgroundColor: colors.brandTertiary }]}
+            >
+              <Ionicons name="grid-outline" size={18} color={colors.brand} />
+              <Text style={[styles.pickText, { color: colors.onBrandTertiary }]}>CSV</Text>
+            </Pressable>
+          </View>
+
+          <Pressable
+            testID="manual-editor-link"
+            onPress={() => router.push("/editor")}
+            style={styles.manualLink}
+          >
+            <Ionicons name="create-outline" size={16} color={colors.brand} />
+            <Text style={[styles.manualLinkText, { color: colors.brand }]}>Or enter times manually</Text>
+          </Pressable>
 
           {loading ? (
             <View style={styles.loadingBox}>
               <Ionicons name="scan-outline" size={22} color={colors.brand} />
-              <Text style={[styles.loadingText, { color: colors.onSurface }]}>Scanning timetable…</Text>
+              <Text style={[styles.loadingText, { color: colors.onSurface }]}>{loadingLabel}</Text>
             </View>
           ) : null}
 
@@ -287,6 +385,14 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
   },
   pickText: { fontFamily: FONTS.semibold, fontSize: 14 },
+  manualLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: SPACING.xs,
+    marginTop: SPACING.lg,
+  },
+  manualLinkText: { fontFamily: FONTS.semibold, fontSize: 14 },
   loadingBox: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, marginTop: SPACING.lg },
   loadingText: { fontFamily: FONTS.medium, fontSize: 14 },
   errorBox: {
