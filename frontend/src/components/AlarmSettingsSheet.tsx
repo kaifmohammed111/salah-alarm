@@ -1,5 +1,5 @@
 import React, { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
+import { Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { Ionicons } from "@expo/vector-icons";
 import Slider from "@react-native-community/slider";
@@ -9,7 +9,7 @@ import * as Haptics from "expo-haptics";
 
 import { FONTS, RADIUS, SPACING } from "@/src/theme";
 import { useApp } from "@/src/context/AppContext";
-import { PRAYER_LABELS, PrayerKey, SOUND_OPTIONS } from "@/src/lib/prayer";
+import { PRAYER_LABELS, PRE_ALARM_PRESETS, PrayerKey, SOUND_OPTIONS } from "@/src/lib/prayer";
 
 export type AlarmSheetRef = { present: (key: PrayerKey) => void };
 
@@ -21,7 +21,7 @@ const SOUND_SOURCES: Record<string, any> = {
 };
 
 const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
-  const { colors, configs, setConfig } = useApp();
+  const { colors, configs, setConfig, settings } = useApp();
   const modalRef = useRef<BottomSheetModal>(null);
   const [key, setKey] = useState<PrayerKey>("fajr");
   const player = useAudioPlayer(beepSource);
@@ -221,18 +221,48 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
           }
         />
 
-        <Row
-          icon="notifications-outline"
-          label="Remind 30 min before"
-          right={
-            <Switch
-              testID="prealarm-switch"
-              value={cfg.preAlarm}
-              onValueChange={(v) => setConfig(key, { preAlarm: v })}
-              trackColor={{ true: colors.brand }}
-            />
-          }
-        />
+        <Text style={[styles.section, { color: colors.onSurfaceTertiary }]}>PRE-ALARM (RING EARLY)</Text>
+        <Text style={[styles.preHint, { color: colors.muted }]}>
+          {cfg.preAlarmMinutes > 0
+            ? `Rings ${cfg.preAlarmMinutes} min before ${settings.preAlarmAnchor} time`
+            : "Off — only rings at prayer time"}
+        </Text>
+        <View style={styles.preRow}>
+          {PRE_ALARM_PRESETS.map((m) => {
+            const selected = cfg.preAlarmMinutes === m;
+            return (
+              <Pressable
+                key={m}
+                testID={`prealarm-${m}`}
+                onPress={() => setConfig(key, { preAlarmMinutes: m })}
+                style={[
+                  styles.preChip,
+                  { backgroundColor: selected ? colors.brand : colors.surfaceSecondary },
+                ]}
+              >
+                <Text style={[styles.preChipText, { color: selected ? "#fff" : colors.onSurfaceSecondary }]}>
+                  {m === 0 ? "Off" : `${m} min`}
+                </Text>
+              </Pressable>
+            );
+          })}
+          <TextInput
+            testID="prealarm-custom"
+            value={cfg.preAlarmMinutes && !PRE_ALARM_PRESETS.includes(cfg.preAlarmMinutes) ? String(cfg.preAlarmMinutes) : ""}
+            onChangeText={(t) => {
+              const n = parseInt(t.replace(/[^0-9]/g, ""), 10);
+              setConfig(key, { preAlarmMinutes: isNaN(n) ? 0 : Math.min(n, 180) });
+            }}
+            placeholder="Custom"
+            placeholderTextColor={colors.muted}
+            keyboardType="number-pad"
+            maxLength={3}
+            style={[
+              styles.preInput,
+              { backgroundColor: colors.surfaceSecondary, color: colors.onSurface, borderColor: colors.border },
+            ]}
+          />
+        </View>
 
         <Pressable
           testID="alarm-save-btn"
@@ -298,6 +328,24 @@ const styles = StyleSheet.create({
   },
   uploadText: { fontFamily: FONTS.semibold, fontSize: 14, flex: 1 },
   customHint: { fontFamily: FONTS.regular, fontSize: 11, marginTop: SPACING.sm },
+  preHint: { fontFamily: FONTS.regular, fontSize: 12, marginBottom: SPACING.sm },
+  preRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: SPACING.sm },
+  preChip: {
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: RADIUS.pill,
+  },
+  preChipText: { fontFamily: FONTS.semibold, fontSize: 13 },
+  preInput: {
+    minWidth: 84,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    borderRadius: RADIUS.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    fontFamily: FONTS.semibold,
+    fontSize: 13,
+    textAlign: "center",
+  },
   saveBtn: {
     marginTop: SPACING.xl,
     paddingVertical: SPACING.lg,

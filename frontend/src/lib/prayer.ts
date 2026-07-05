@@ -60,7 +60,7 @@ export type AlarmConfig = {
   volume: number; // 0..1
   vibration: boolean;
   snooze: boolean;
-  preAlarm: boolean; // 30 min before
+  preAlarmMinutes: number; // 0 = off; ring this many minutes before the anchor time
   customUri?: string; // local uri of user-uploaded MP3 (when sound === 'custom')
   customName?: string; // display name of the uploaded file
 };
@@ -72,6 +72,8 @@ export const SOUND_OPTIONS = [
   { id: "custom", label: "Custom MP3" },
 ];
 
+export const PRE_ALARM_PRESETS = [0, 5, 10, 15];
+
 export function defaultAlarmConfig(key: PrayerKey): AlarmConfig {
   return {
     enabled: key !== "sunrise",
@@ -79,7 +81,7 @@ export function defaultAlarmConfig(key: PrayerKey): AlarmConfig {
     volume: 0.8,
     vibration: true,
     snooze: false,
-    preAlarm: false,
+    preAlarmMinutes: 0,
   };
 }
 

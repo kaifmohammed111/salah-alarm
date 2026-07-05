@@ -102,8 +102,8 @@ export default function SettingsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: SPACING.xl, paddingBottom: SPACING.xxxl }}>
-        {/* Time & Calculation */}
-        <Text style={[styles.section, { color: colors.onSurfaceTertiary }]}>TIME & CALCULATION</Text>
+        {/* Time */}
+        <Text style={[styles.section, { color: colors.onSurfaceTertiary }]}>TIME</Text>
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <RowSwitch
             icon="time-outline"
@@ -112,19 +112,29 @@ export default function SettingsScreen() {
             onChange={(v) => updateSettings({ is24h: v })}
             testID="setting-24h"
           />
+        </View>
+
+        {/* Pre-alarm */}
+        <Text style={[styles.section, { color: colors.onSurfaceTertiary }]}>PRE-ALARM</Text>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={[styles.row, { borderBottomWidth: 0 }]}>
             <View style={styles.rowLeft}>
-              {iconTile("calculator-outline", colors.brandTertiary, colors.brand)}
-              <Text style={[styles.rowLabel, { color: colors.onSurface }]}>Asr method</Text>
+              {iconTile("alarm-outline", colors.brandTertiary, colors.brand)}
+              <View>
+                <Text style={[styles.rowLabel, { color: colors.onSurface }]}>Ring early relative to</Text>
+                <Text style={[styles.rowSub, { color: colors.onSurfaceTertiary }]}>
+                  Pre-alarm minutes count back from this time
+                </Text>
+              </View>
             </View>
           </View>
           <Segmented
-            testID="setting-asr"
-            value={settings.asrMethod}
-            onChange={(v) => updateSettings({ asrMethod: v as any })}
+            testID="setting-prealarm-anchor"
+            value={settings.preAlarmAnchor}
+            onChange={(v) => updateSettings({ preAlarmAnchor: v as any })}
             options={[
-              { id: "hanafi", label: "Hanafi" },
-              { id: "shafi", label: "Shafi" },
+              { id: "start", label: "Start time" },
+              { id: "jamaat", label: "Jamaat time" },
             ]}
           />
         </View>

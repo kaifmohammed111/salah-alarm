@@ -34,6 +34,7 @@ export type Settings = {
   themeMode: ThemeMode;
   asrMethod: "hanafi" | "shafi";
   showSunrise: boolean;
+  preAlarmAnchor: "start" | "jamaat";
 };
 
 const DEFAULT_SETTINGS: Settings = {
@@ -41,6 +42,7 @@ const DEFAULT_SETTINGS: Settings = {
   themeMode: "system",
   asrMethod: "hanafi",
   showSunrise: true,
+  preAlarmAnchor: "jamaat",
 };
 
 function defaultConfigs(): Record<PrayerKey, AlarmConfig> {
@@ -140,16 +142,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const rescheduleRef = useRef<any>(null);
   const reschedule = useCallback(async () => {
-    return scheduleTodayAlarms(todayRow, configs, settings.showSunrise);
-  }, [todayRow, configs, settings.showSunrise]);
+    return scheduleTodayAlarms(todayRow, configs, settings.showSunrise, settings.preAlarmAnchor);
+  }, [todayRow, configs, settings.showSunrise, settings.preAlarmAnchor]);
   rescheduleRef.current = reschedule;
 
   // Reschedule whenever inputs change (debounced-ish via effect).
   useEffect(() => {
     if (!ready) return;
-    scheduleTodayAlarms(todayRow, configs, settings.showSunrise);
+    scheduleTodayAlarms(todayRow, configs, settings.showSunrise, settings.preAlarmAnchor);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, timetable, configs, settings.showSunrise, todayRow?.date]);
+  }, [ready, timetable, configs, settings.showSunrise, settings.preAlarmAnchor, todayRow?.date]);
 
   const persistSettings = (next: Settings) => {
     setSettings(next);

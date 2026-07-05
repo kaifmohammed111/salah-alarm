@@ -7,6 +7,7 @@ import {
   PRAYER_LABELS,
   PRAYER_ORDER,
   PrayerKey,
+  TimePair,
   prayerTime,
   timeToDate,
 } from "./prayer";
@@ -52,6 +53,7 @@ export async function scheduleTodayAlarms(
   row: DayRow | null,
   configs: Record<PrayerKey, AlarmConfig>,
   showSunrise: boolean,
+  preAlarmAnchor: "start" | "jamaat" = "jamaat",
 ): Promise<number> {
   if (Platform.OS === "web") return 0;
   try {
@@ -80,20 +82,27 @@ export async function scheduleTodayAlarms(
       });
       count++;
 
-      // Optional 30-min pre-alarm reminder.
-      if (cfg.preAlarm) {
-        const pre = new Date(t.getTime() - 30 * 60 * 1000);
-        if (pre.getTime() > now.getTime()) {
-          await Notifications.scheduleNotificationAsync({
-            content: {
-              title: `${PRAYER_LABELS[key]} in 30 minutes`,
-              body: `${PRAYER_LABELS[key]} prayer is coming up soon.`,
-              sound: "default",
-              ...(Platform.OS === "android" ? { channelId: "prayer-alarms" } : {}),
-            },
-            trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: pre },
-          });
-          count++;
+      // Optional pre-alarm: ring N minutes before the chosen anchor (start / jamaat).
+      const minutes = cfg.preAlarmMinutes || 0;
+      if (minutes > 0) {
+        const pair = row[key] as TimePair;
+        const anchorStr = preAlarmAnchor === "jamaat" ? pair?.jamaat : pair?.start;
+        const anchorDate = timeToDate(anchorStr || "", now);
+        if (anchorDate) {
+          const pre = new Date(anchorDate.getTime() - minutes * 60 * 1000);
+          if (pre.getTime() > now.getTime()) {
+            await Notifications.scheduleNotificationAsync({
+              content: {
+                title: `${PRAYER_LABELS[key]} in ${minutes} min`,
+                body: `${PRAYER_LABELS[key]} ${preAlarmAnchor} is in ${minutes} minutes.`,
+                sound: "default",
+                vibrate: cfg.vibration ? [0, 400, 200, 400] : undefined,
+                ...(Platform.OS === "android" ? { channelId: "prayer-alarms" } : {}),
+              },
+              trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: pre },
+            });
+            count++;
+          }
         }
       }
     }
