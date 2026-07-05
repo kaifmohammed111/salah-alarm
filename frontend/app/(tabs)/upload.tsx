@@ -10,9 +10,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
@@ -21,19 +19,18 @@ import { useApp } from "@/src/context/AppContext";
 import { FONTS, RADIUS, SPACING } from "@/src/theme";
 import { DayRow, PRAYER_LABELS, Timetable, findTodayRow } from "@/src/lib/prayer";
 import { parseTimetableCsv } from "@/src/lib/csv";
-import { readFileBase64, readFileText } from "@/src/lib/files";
+import { readFileText } from "@/src/lib/files";
 
 const EDIT_KEYS: (keyof DayRow)[] = ["fajr", "sunrise", "zuhr", "asr", "maghrib", "isha"];
 
 export default function UploadScreen() {
-  const { colors, timetable, saveTimetable, runOcr, runOcrPdf, now } = useApp();
+  const { colors, timetable, saveTimetable, now } = useApp();
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  const [imageUri, setImageUri] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [loadingLabel, setLoadingLabel] = useState("Scanning timetable…");
+  const [loadingLabel, setLoadingLabel] = useState("Parsing CSV…");
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<Timetable | null>(null);
   const [rowIdx, setRowIdx] = useState(0);
@@ -49,62 +46,11 @@ export default function UploadScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timetable]);
 
-  const pickImage = async (fromCamera: boolean) => {
-    setError(null);
-    const perm = fromCamera
-      ? await ImagePicker.requestCameraPermissionsAsync()
-      : await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      setError("Permission denied. Please allow access to continue.");
-      return;
-    }
-    const res = fromCamera
-      ? await ImagePicker.launchCameraAsync({ base64: true, quality: 0.7 })
-      : await ImagePicker.launchImageLibraryAsync({
-          base64: true,
-          quality: 0.7,
-          mediaTypes: ["images"],
-        });
-    if (res.canceled || !res.assets?.[0]) return;
-    const asset = res.assets[0];
-    setImageUri(asset.uri);
-    setFileName(null);
-    if (asset.base64) {
-      await scan(asset.base64);
-    }
-  };
-
   const applyDraft = (tt: Timetable) => {
     setDraft(tt);
     const t = findTodayRow(tt, now);
     const idx = t ? tt.rows.indexOf(t) : 0;
     setRowIdx(Math.max(0, idx));
-  };
-
-  const pickPdf = async () => {
-    setError(null);
-    const res = await DocumentPicker.getDocumentAsync({
-      type: "application/pdf",
-      copyToCacheDirectory: true,
-    });
-    if (res.canceled || !res.assets?.[0]) return;
-    const asset = res.assets[0];
-    setImageUri(null);
-    setFileName(asset.name || "timetable.pdf");
-    setLoading(true);
-    setLoadingLabel("Reading PDF…");
-    setError(null);
-    setSaved(false);
-    try {
-      const base64 = await readFileBase64(asset.uri);
-      const tt = await runOcrPdf(base64);
-      if (!tt.rows?.length) throw new Error("No rows detected in the PDF. Try another file or enter manually.");
-      applyDraft(tt);
-    } catch (e: any) {
-      setError(typeof e?.message === "string" ? e.message : "Could not read the PDF. Please retry.");
-    } finally {
-      setLoading(false);
-    }
   };
 
   const pickCsv = async () => {
@@ -115,7 +61,6 @@ export default function UploadScreen() {
     });
     if (res.canceled || !res.assets?.[0]) return;
     const asset = res.assets[0];
-    setImageUri(null);
     setFileName(asset.name || "timetable.csv");
     setLoading(true);
     setLoadingLabel("Parsing CSV…");
@@ -127,22 +72,6 @@ export default function UploadScreen() {
       applyDraft(tt);
     } catch (e: any) {
       setError(typeof e?.message === "string" ? e.message : "Could not parse the CSV file.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const scan = async (base64: string) => {
-    setLoading(true);
-    setLoadingLabel("Scanning timetable…");
-    setError(null);
-    setSaved(false);
-    try {
-      const tt = await runOcr(base64);
-      if (!tt.rows?.length) throw new Error("No rows detected. Try a clearer image or enter manually.");
-      applyDraft(tt);
-    } catch (e: any) {
-      setError(typeof e?.message === "string" ? e.message : "Could not read the timetable. Please retry.");
     } finally {
       setLoading(false);
     }
@@ -196,7 +125,7 @@ export default function UploadScreen() {
       <View style={[styles.header, { paddingTop: insets.top + SPACING.md, borderBottomColor: colors.border }]}>
         <Text style={[styles.title, { color: colors.onSurface }]}>Timetable</Text>
         <Text style={[styles.subtitle, { color: colors.onSurfaceTertiary }]}>
-          Upload the monthly image — we read today's row automatically
+          Import your monthly timetable as a CSV file
         </Text>
       </View>
 
@@ -210,62 +139,35 @@ export default function UploadScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ padding: SPACING.xl, paddingBottom: 120 }}
         >
-          {/* Preview / upload buttons */}
-          {imageUri ? (
-            <Image source={{ uri: imageUri }} style={styles.preview} contentFit="cover" />
-          ) : fileName ? (
+          {/* CSV import */}
+          {fileName ? (
             <View style={[styles.placeholder, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
-              <Ionicons
-                name={fileName.toLowerCase().endsWith(".pdf") ? "document-text-outline" : "grid-outline"}
-                size={40}
-                color={colors.brand}
-              />
+              <Ionicons name="grid-outline" size={40} color={colors.brand} />
               <Text style={[styles.placeholderText, { color: colors.onSurface }]}>{fileName}</Text>
             </View>
           ) : (
             <View style={[styles.placeholder, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}>
-              <Ionicons name="image-outline" size={40} color={colors.muted} />
+              <Ionicons name="document-attach-outline" size={40} color={colors.muted} />
               <Text style={[styles.placeholderText, { color: colors.onSurfaceTertiary }]}>
-                No file selected
+                No CSV file selected
               </Text>
             </View>
           )}
 
-          <View style={styles.pickRow}>
-            <Pressable
-              testID="pick-camera-btn"
-              onPress={() => pickImage(true)}
-              style={[styles.pickBtn, { backgroundColor: colors.brandTertiary }]}
-            >
-              <Ionicons name="camera-outline" size={18} color={colors.brand} />
-              <Text style={[styles.pickText, { color: colors.onBrandTertiary }]}>Camera</Text>
-            </Pressable>
-            <Pressable
-              testID="pick-gallery-btn"
-              onPress={() => pickImage(false)}
-              style={[styles.pickBtn, { backgroundColor: colors.brandTertiary }]}
-            >
-              <Ionicons name="images-outline" size={18} color={colors.brand} />
-              <Text style={[styles.pickText, { color: colors.onBrandTertiary }]}>Gallery</Text>
-            </Pressable>
-          </View>
-          <View style={styles.pickRow}>
-            <Pressable
-              testID="pick-pdf-btn"
-              onPress={pickPdf}
-              style={[styles.pickBtn, { backgroundColor: colors.brandTertiary }]}
-            >
-              <Ionicons name="document-text-outline" size={18} color={colors.brand} />
-              <Text style={[styles.pickText, { color: colors.onBrandTertiary }]}>PDF</Text>
-            </Pressable>
-            <Pressable
-              testID="pick-csv-btn"
-              onPress={pickCsv}
-              style={[styles.pickBtn, { backgroundColor: colors.brandTertiary }]}
-            >
-              <Ionicons name="grid-outline" size={18} color={colors.brand} />
-              <Text style={[styles.pickText, { color: colors.onBrandTertiary }]}>CSV</Text>
-            </Pressable>
+          <Pressable
+            testID="pick-csv-btn"
+            onPress={pickCsv}
+            style={[styles.csvBtn, { backgroundColor: colors.brand }]}
+          >
+            <Ionicons name="cloud-upload-outline" size={18} color={colors.onBrandPrimary} />
+            <Text style={[styles.csvBtnText, { color: colors.onBrandPrimary }]}>Import CSV file</Text>
+          </Pressable>
+
+          <View style={[styles.formatBox, { backgroundColor: colors.brandTertiary }]}>
+            <Text style={[styles.formatTitle, { color: colors.onBrandTertiary }]}>Expected CSV columns</Text>
+            <Text style={[styles.formatText, { color: colors.onBrandTertiary }]}>
+              Day, Date, Hijri, Fajr Start, Fajr Jamaat, Sunrise, Zuhr Start, Zuhr Jamaat, Asr Start, Asr Jamaat, Maghrib, Isha Start, Isha Jamaat
+            </Text>
           </View>
 
           <Pressable
@@ -374,17 +276,19 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   placeholderText: { fontFamily: FONTS.medium, fontSize: 13 },
-  pickRow: { flexDirection: "row", gap: SPACING.md, marginTop: SPACING.md },
-  pickBtn: {
-    flex: 1,
+  csvBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: SPACING.sm,
-    paddingVertical: SPACING.md,
+    paddingVertical: SPACING.lg,
     borderRadius: RADIUS.md,
+    marginTop: SPACING.md,
   },
-  pickText: { fontFamily: FONTS.semibold, fontSize: 14 },
+  csvBtnText: { fontFamily: FONTS.bold, fontSize: 15 },
+  formatBox: { padding: SPACING.lg, borderRadius: RADIUS.md, marginTop: SPACING.lg },
+  formatTitle: { fontFamily: FONTS.bold, fontSize: 13, marginBottom: SPACING.xs },
+  formatText: { fontFamily: FONTS.regular, fontSize: 12, lineHeight: 18 },
   manualLink: {
     flexDirection: "row",
     alignItems: "center",
