@@ -18,14 +18,20 @@ import {
   PrayerKey,
   computeStatuses,
   countdownString,
+  findTodayRow,
   formatTime,
   nextPrayerInfo,
   startJamaat,
 } from "@/src/lib/prayer";
 import PrayerCard from "@/src/components/PrayerCard";
 import AlarmSettingsSheet, { AlarmSheetRef } from "@/src/components/AlarmSettingsSheet";
+import DateSheet, { DateSheetRef } from "@/src/components/DateSheet";
 
 const HERO_BG = "#20403B";
+
+function sameYMD(a: Date, b: Date) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
 
 function clockText(now: Date, is24h: boolean): { time: string; period: string } {
   let h = now.getHours();
@@ -38,13 +44,15 @@ function clockText(now: Date, is24h: boolean): { time: string; period: string } 
 }
 
 export default function HomeScreen() {
-  const { colors, now, settings, todayRow, timetable, configs, setConfig, needsNextMonth, quoteStartIndex } =
+  const { colors, now, settings, timetable, configs, setConfig, needsNextMonth, quoteStartIndex } =
     useApp();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const sheetRef = useRef<AlarmSheetRef>(null);
+  const dateSheetRef = useRef<DateSheetRef>(null);
 
   const [qi, setQi] = useState(quoteStartIndex);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const moon = getMoonInfo(now);
 
   // Start from the quote chosen for this app-open, then gently slide through the rest.
@@ -58,13 +66,23 @@ export default function HomeScreen() {
 
   const quote = QUOTES[qi % QUOTES.length];
 
-  const statuses = computeStatuses(todayRow, settings.showSunrise, now);
-  const next = nextPrayerInfo(todayRow, settings.showSunrise, now);
+  const viewDate = selectedDate ?? now;
+  const isToday = sameYMD(viewDate, now);
+  const viewRow = findTodayRow(timetable, viewDate);
+  const statusRef = isToday ? now : new Date(viewDate.getFullYear(), viewDate.getMonth(), viewDate.getDate(), 0, 0, 0);
+
+  const statuses = computeStatuses(viewRow, settings.showSunrise, statusRef);
+  if (!isToday) {
+    (Object.keys(statuses) as PrayerKey[]).forEach((k) => {
+      if (statuses[k] === "current") statuses[k] = "upcoming";
+    });
+  }
+  const next = isToday ? nextPrayerInfo(viewRow, settings.showSunrise, now) : null;
   const { time, period } = clockText(now, settings.is24h);
 
   const keys = PRAYER_ORDER.filter((k) => (k === "sunrise" ? settings.showSunrise : true));
 
-  const dateStr = now.toLocaleDateString(undefined, {
+  const dateStr = viewDate.toLocaleDateString(undefined, {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -91,8 +109,20 @@ export default function HomeScreen() {
           </View>
 
           <View style={[styles.heroContent, { paddingTop: insets.top + SPACING.lg }]}>
-            <Text style={styles.dateText}>{dateStr}</Text>
-            <Text style={styles.hijriText}>{formatHijri(now)}</Text>
+            <Pressable
+              testID="home-date-btn"
+              onPress={() => dateSheetRef.current?.present(viewDate)}
+              style={styles.dateBtn}
+              hitSlop={8}
+            >
+              <View>
+                <View style={styles.dateRow}>
+                  <Text style={styles.dateText}>{dateStr}</Text>
+                  <Ionicons name="calendar-outline" size={16} color="rgba(255,255,255,0.85)" />
+                </View>
+                <Text style={styles.hijriText}>{formatHijri(viewDate)}</Text>
+              </View>
+            </Pressable>
             <Text style={styles.moonText}>
               🌙 {moon.name} · {Math.round(moon.illumination * 100)}% lit
             </Text>
@@ -109,7 +139,7 @@ export default function HomeScreen() {
                 </Text>
                 <Text style={styles.countdown}>{countdownString(next.date, now)}</Text>
               </View>
-            ) : todayRow ? (
+            ) : isToday && viewRow ? (
               <View style={styles.nextWrap}>
                 <Text style={styles.nextLabel}>All prayers done for today</Text>
               </View>
@@ -126,7 +156,7 @@ export default function HomeScreen() {
             >
               <Ionicons name="calendar-outline" size={20} color={colors.brand} />
               <Text style={[styles.bannerText, { color: colors.onBrandTertiary }]}>
-                Please upload next month's prayer timetable.
+                Please upload next month’s prayer timetable.
               </Text>
             </Pressable>
           ) : null}
@@ -138,7 +168,7 @@ export default function HomeScreen() {
               </View>
               <Text style={[styles.emptyTitle, { color: colors.onSurface }]}>No timetable yet</Text>
               <Text style={[styles.emptySub, { color: colors.onSurfaceTertiary }]}>
-                Upload your mosque's monthly prayer timetable to auto-schedule daily alarms.
+                Upload your mosque’s monthly prayer timetable to auto-schedule daily alarms.
               </Text>
               <Pressable
                 testID="empty-upload-btn"
@@ -152,14 +182,36 @@ export default function HomeScreen() {
             </View>
           ) : (
             <>
-              <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>Today's Prayers</Text>
-              {keys.map((k: PrayerKey) => {
-                const sj = startJamaat(todayRow!, k);
-                return (
-                  <PrayerCard
-                    key={k}
-                    prayerKey={k}
-                    startTime={sj.start}
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>
+                  {isToday ? "Today’s Prayers" : dateStr}
+                </Text>
+                {!isToday ? (
+                  <Pressable
+                    testID="reset-today-btn"
+                    onPress={() => setSelectedDate(null)}
+                    style={[styles.resetPill, { backgroundColor: colors.brandTertiary }]}
+                  >
+                    <Ionicons name="refresh" size={13} color={colors.brand} />
+                    <Text style={[styles.resetText, { color: colors.onBrandTertiary }]}>Today</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+              {!viewRow ? (
+                <View style={[styles.noRow, { backgroundColor: colors.surfaceSecondary }]}>
+                  <Ionicons name="information-circle-outline" size={20} color={colors.muted} />
+                  <Text style={[styles.noRowText, { color: colors.onSurfaceTertiary }]}>
+                    No timings stored for this date. Import that month’s timetable.
+                  </Text>
+                </View>
+              ) : (
+                keys.map((k: PrayerKey) => {
+                  const sj = startJamaat(viewRow, k);
+                  return (
+                    <PrayerCard
+                      key={k}
+                      prayerKey={k}
+                      startTime={sj.start}
                     jamaatTime={sj.jamaat}
                     status={statuses[k]}
                     config={configs[k]}
@@ -170,12 +222,18 @@ export default function HomeScreen() {
                     onToggleSound={() => setConfig(k, { enabled: !configs[k].enabled })}
                   />
                 );
-              })}
+                })
+              )}
             </>
           )}
         </View>
       </ScrollView>
       <AlarmSettingsSheet ref={sheetRef} />
+      <DateSheet
+        ref={dateSheetRef}
+        selected={viewDate}
+        onSelect={(d) => setSelectedDate(sameYMD(d, now) ? null : d)}
+      />
     </View>
   );
 }
@@ -218,7 +276,27 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   bannerText: { fontFamily: FONTS.semibold, fontSize: 14, flex: 1 },
-  sectionTitle: { fontFamily: FONTS.bold, fontSize: 18, marginBottom: SPACING.md },
+  dateBtn: { alignSelf: "flex-start" },
+  dateRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
+  sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: SPACING.md },
+  resetPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderRadius: RADIUS.pill,
+  },
+  resetText: { fontFamily: FONTS.semibold, fontSize: 12 },
+  noRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    padding: SPACING.lg,
+    borderRadius: RADIUS.md,
+  },
+  noRowText: { fontFamily: FONTS.medium, fontSize: 13, flex: 1 },
+  sectionTitle: { fontFamily: FONTS.bold, fontSize: 18 },
   empty: { alignItems: "center", paddingVertical: SPACING.xxxl },
   emptyIcon: {
     width: 88,

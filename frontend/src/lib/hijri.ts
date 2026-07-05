@@ -18,6 +18,10 @@ export function gregorianToHijri(date: Date): { day: number; month: number; year
     Math.floor((3 * Math.floor((year + 4900 + Math.floor((month - 14) / 12)) / 100)) / 4) +
     day - 32075;
 
+  // Calibration: the tabular algorithm runs ~1 day ahead of the observed
+  // Umm al-Qura calendar, so shift back by one day.
+  jd -= 1;
+
   const l0 = jd - 1948440 + 10632;
   const n = Math.floor((l0 - 1) / 10631);
   let l = l0 - 10631 * n + 354;
