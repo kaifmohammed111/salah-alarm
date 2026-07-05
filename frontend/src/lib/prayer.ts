@@ -45,6 +45,8 @@ export type DayRow = {
   asr: TimePair;
   maghrib: TimePair;
   isha: TimePair;
+  sehriEnd?: string; // Ramadan: suhoor end time
+  iftar?: string; // Ramadan: iftar (maghrib) time
 };
 
 export type Timetable = {
@@ -52,6 +54,7 @@ export type Timetable = {
   month?: string;
   year?: string;
   rows: DayRow[];
+  isRamadan?: boolean;
 };
 
 export type AlarmConfig = {

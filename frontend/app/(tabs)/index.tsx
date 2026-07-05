@@ -205,24 +205,48 @@ export default function HomeScreen() {
                   </Text>
                 </View>
               ) : (
-                keys.map((k: PrayerKey) => {
-                  const sj = startJamaat(viewRow, k);
-                  return (
-                    <PrayerCard
-                      key={k}
-                      prayerKey={k}
-                      startTime={sj.start}
-                    jamaatTime={sj.jamaat}
-                    status={statuses[k]}
-                    config={configs[k]}
-                    colors={colors}
-                    is24h={settings.is24h}
-                    asrMethod={settings.asrMethod}
-                    onPress={() => sheetRef.current?.present(k)}
-                    onToggleSound={() => setConfig(k, { enabled: !configs[k].enabled })}
-                  />
-                );
-                })
+                <>
+                  {viewRow.sehriEnd || viewRow.iftar ? (
+                    <View style={styles.ramadanRow} testID="ramadan-strip">
+                      <View style={[styles.ramCard, { backgroundColor: colors.brandTertiary }]}>
+                        <Ionicons name="restaurant-outline" size={20} color={colors.brand} />
+                        <View>
+                          <Text style={[styles.ramLabel, { color: colors.onBrandTertiary }]}>Sehri Ends</Text>
+                          <Text style={[styles.ramValue, { color: colors.onBrandTertiary }]}>
+                            {formatTime(viewRow.sehriEnd || "", settings.is24h)}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={[styles.ramCard, { backgroundColor: colors.brandTertiary }]}>
+                        <Ionicons name="moon-outline" size={20} color={colors.brand} />
+                        <View>
+                          <Text style={[styles.ramLabel, { color: colors.onBrandTertiary }]}>Iftar</Text>
+                          <Text style={[styles.ramValue, { color: colors.onBrandTertiary }]}>
+                            {formatTime(viewRow.iftar || "", settings.is24h)}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  ) : null}
+                  {keys.map((k: PrayerKey) => {
+                    const sj = startJamaat(viewRow, k);
+                    return (
+                      <PrayerCard
+                        key={k}
+                        prayerKey={k}
+                        startTime={sj.start}
+                        jamaatTime={sj.jamaat}
+                        status={statuses[k]}
+                        config={configs[k]}
+                        colors={colors}
+                        is24h={settings.is24h}
+                        asrMethod={settings.asrMethod}
+                        onPress={() => sheetRef.current?.present(k)}
+                        onToggleSound={() => setConfig(k, { enabled: !configs[k].enabled })}
+                      />
+                    );
+                  })}
+                </>
               )}
             </>
           )}
@@ -296,6 +320,17 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
   },
   noRowText: { fontFamily: FONTS.medium, fontSize: 13, flex: 1 },
+  ramadanRow: { flexDirection: "row", gap: SPACING.md, marginBottom: SPACING.md },
+  ramCard: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.md,
+    padding: SPACING.lg,
+    borderRadius: RADIUS.lg,
+  },
+  ramLabel: { fontFamily: FONTS.medium, fontSize: 12 },
+  ramValue: { fontFamily: FONTS.bold, fontSize: 18, marginTop: 1 },
   sectionTitle: { fontFamily: FONTS.bold, fontSize: 18 },
   empty: { alignItems: "center", paddingVertical: SPACING.xxxl },
   emptyIcon: {

@@ -78,6 +78,7 @@ export default function EditorScreen() {
   };
 
   const row = draft?.rows?.[rowIdx];
+  const isRamadan = !!draft?.isRamadan || (!!row && (row.sehriEnd != null || row.iftar != null));
 
   return (
     <View style={[styles.root, { backgroundColor: colors.surface }]}>
@@ -182,6 +183,33 @@ export default function EditorScreen() {
                     />
                   </View>
                 </View>
+
+                {isRamadan ? (
+                  <View style={styles.ramFields}>
+                    <View style={styles.fieldRow}>
+                      <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Sehri Ends</Text>
+                      <View style={styles.fieldInputs}>
+                        <TimeField
+                          testID="med-sehri"
+                          colors={colors}
+                          value={row.sehriEnd || ""}
+                          onChange={(v) => updateRow((rr) => ({ ...rr, sehriEnd: v }))}
+                        />
+                      </View>
+                    </View>
+                    <View style={styles.fieldRow}>
+                      <Text style={[styles.fieldLabel, { color: colors.onSurface }]}>Iftar</Text>
+                      <View style={styles.fieldInputs}>
+                        <TimeField
+                          testID="med-iftar"
+                          colors={colors}
+                          value={row.iftar || ""}
+                          onChange={(v) => updateRow((rr) => ({ ...rr, iftar: v, maghrib: { start: v, jamaat: v } }))}
+                        />
+                      </View>
+                    </View>
+                  </View>
+                ) : null}
 
                 <View style={styles.colHeader}>
                   <Text style={[styles.colHeaderLabel, { color: colors.muted }]}>Prayer</Text>
@@ -293,6 +321,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   colHeader: { flexDirection: "row", alignItems: "center", marginBottom: SPACING.sm },
+  ramFields: { marginBottom: SPACING.xs },
   colHeaderLabel: { fontFamily: FONTS.semibold, fontSize: 12, flex: 1, letterSpacing: 0.5 },
   colHeaderRight: { flexDirection: "row", gap: SPACING.sm },
   colHeaderText: { fontFamily: FONTS.semibold, fontSize: 12, width: 76, textAlign: "center", letterSpacing: 0.5 },

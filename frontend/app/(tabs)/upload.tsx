@@ -168,6 +168,9 @@ export default function UploadScreen() {
             <Text style={[styles.formatText, { color: colors.onBrandTertiary }]}>
               Day, Date, Hijri, Fajr Start, Fajr Jamaat, Sunrise, Zuhr Start, Zuhr Jamaat, Asr Start, Asr Jamaat, Maghrib, Isha Start, Isha Jamaat
             </Text>
+            <Text style={[styles.formatText, { color: colors.onBrandTertiary, marginTop: SPACING.sm }]}>
+              Ramadan timetables are detected automatically — just add “Sehri End” and “Iftari” columns.
+            </Text>
           </View>
 
           <Pressable
