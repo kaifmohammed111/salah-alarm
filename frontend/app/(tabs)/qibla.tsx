@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import * as Location from "expo-location";
 import { Magnetometer } from "expo-sensors";
 import * as Haptics from "expo-haptics";
@@ -207,8 +208,8 @@ export default function QiblaScreen() {
               {/* Kaaba marker at the qibla bearing relative to device */}
               <View style={[styles.fill, { transform: [{ rotate: `${qiblaRelative}deg` }] }]} pointerEvents="none">
                 <View style={styles.kaabaWrap}>
-                  <View style={[styles.kaabaBadge, { backgroundColor: aligned ? colors.success : colors.brand }]}>
-                    <MaterialCommunityIcons name="kaaba" size={22} color="#fff" />
+                  <View style={[styles.kaabaBadge, aligned && { backgroundColor: colors.success }]}>
+                    <Image source={require("../../assets/images/kaaba.png")} style={styles.kaabaImg} contentFit="contain" />
                   </View>
                 </View>
               </View>
@@ -293,13 +294,14 @@ const styles = StyleSheet.create({
   tick: { width: 2, borderRadius: 1, marginTop: 6 },
   kaabaWrap: { position: "absolute", width: COMPASS, height: COMPASS, alignItems: "center" },
   kaabaBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 18,
+    marginTop: 12,
   },
+  kaabaImg: { width: 40, height: 40 },
   center: { alignItems: "center" },
   centerDeg: { fontFamily: FONTS.bold, fontSize: 40 },
   centerLabel: { fontFamily: FONTS.medium, fontSize: 13, marginTop: -2 },

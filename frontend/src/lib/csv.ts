@@ -54,27 +54,70 @@ function idx(headers: string[], ...names: string[]): number {
  * Times are 12-hour without AM/PM: Fajr & Sunrise are AM, the rest are PM.
  */
 export function parseTimetableCsv(text: string): Timetable {
+  const norm = (s: string) => (s || "").toLowerCase().replace(/[^a-z]/g, "");
+
   const lines = text
     .replace(/\r/g, "")
     .split("\n")
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0);
+    .filter((l) => l.split(",").some((c) => c.trim() !== "")); // drop fully-empty rows
   if (lines.length < 2) throw new Error("CSV has no data rows");
 
-  const headers = splitLine(lines[0]);
+  // Find the header row (the one that has a "Date" column). Skips any title rows.
+  let headerIdx = -1;
+  for (let i = 0; i < Math.min(lines.length, 8); i++) {
+    const toks = splitLine(lines[i]).map(norm);
+    if (toks.includes("date")) {
+      headerIdx = i;
+      break;
+    }
+  }
+  if (headerIdx === -1) throw new Error("CSV missing a Date column");
+
+  const headerRaw = splitLine(lines[headerIdx]);
+  const headerNorm = headerRaw.map(norm);
+  const inlineTiers = headerNorm.some(
+    (t) => t.includes("start") || t.includes("jamat") || t.includes("jamaat") || t.includes("sehri") || t.includes("iftar"),
+  );
+
+  let headers: string[];
+  let dataStart: number;
+
+  if (inlineTiers) {
+    headers = headerRaw;
+    dataStart = headerIdx + 1;
+  } else if (headerIdx + 1 < lines.length) {
+    const subRaw = splitLine(lines[headerIdx + 1]);
+    const subHasTiers = subRaw.map(norm).some((t) => t.includes("start") || t.includes("jamat") || t.includes("jamaat"));
+    if (subHasTiers) {
+      // Two-tier header: forward-fill merged prayer names, then append Start/Jamat.
+      const filled = [...headerRaw];
+      for (let k = 1; k < filled.length; k++) {
+        if (!filled[k] || !filled[k].trim()) filled[k] = filled[k - 1];
+      }
+      headers = filled.map((h, k) => `${h || ""} ${subRaw[k] || ""}`.trim());
+      dataStart = headerIdx + 2;
+    } else {
+      headers = headerRaw;
+      dataStart = headerIdx + 1;
+    }
+  } else {
+    headers = headerRaw;
+    dataStart = headerIdx + 1;
+  }
+
   const iDay = idx(headers, "day");
   const iDate = idx(headers, "date");
   const iHijri = idx(headers, "hijri");
   const iFs = idx(headers, "fajrstart", "fajr");
   const iFj = idx(headers, "fajrjamaat", "fajriqamah", "fajrjamat");
   const iSun = idx(headers, "sunrise");
-  const iZs = idx(headers, "zuhrstart", "zuhr", "dhuhrstart", "dhuhr");
-  const iZj = idx(headers, "zuhrjamaat", "dhuhrjamaat");
+  const iZs = idx(headers, "zuhrstart", "zuharstart", "dhuhrstart", "zuhr", "zuhar", "dhuhr");
+  const iZj = idx(headers, "zuhrjamaat", "zuhrjamat", "zuharjamaat", "zuharjamat", "dhuhrjamaat");
   const iAs = idx(headers, "asrstart", "asr");
-  const iAj = idx(headers, "asrjamaat");
+  const iAj = idx(headers, "asrjamaat", "asrjamat");
   const iMag = idx(headers, "maghrib", "maghribstart");
   const iIs = idx(headers, "ishastart", "isha");
-  const iIj = idx(headers, "ishajamaat");
+  const iIj = idx(headers, "ishajamaat", "ishajamat");
   // Ramadan-only columns
   const iSehri = idx(headers, "sehriend", "sehri", "suhoor", "sehar", "sehriendtime");
   const iIftar = idx(headers, "iftari", "iftar", "iftaar", "iftaari");
@@ -85,7 +128,7 @@ export function parseTimetableCsv(text: string): Timetable {
   const get = (cols: string[], i: number) => (i >= 0 && i < cols.length ? cols[i] : "");
 
   const rows: DayRow[] = [];
-  for (let r = 1; r < lines.length; r++) {
+  for (let r = dataStart; r < lines.length; r++) {
     const c = splitLine(lines[r]);
     const dateVal = get(c, iDate);
     if (!dateVal || !/^\d+$/.test(dateVal.trim())) continue;
