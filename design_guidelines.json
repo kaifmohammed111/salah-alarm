@@ -1,0 +1,190 @@
+{
+  "app_name": "SalahAlarm",
+  "personality": "1 iOS-Native Clean",
+  "personality_one_liner": "A calm, highly legible, and precise utility interface that honors daily prayer rhythms through clear typography, soft shadows, and focused moments of contrast.",
+  "color": {
+    "surface": "#FFFFFF",
+    "onSurface": "#0F172A",
+    "surfaceSecondary": "#F8FAFC",
+    "onSurfaceSecondary": "#334155",
+    "surfaceTertiary": "#E2E8F0",
+    "onSurfaceTertiary": "#475569",
+    "surfaceInverse": "#0F172A",
+    "onSurfaceInverse": "#F8FAFC",
+    "brand": "#1E3A8A",
+    "brandPrimary": "#1E3A8A",
+    "onBrandPrimary": "#FFFFFF",
+    "brandSecondary": "#3B82F6",
+    "onBrandSecondary": "#FFFFFF",
+    "brandTertiary": "#DBEAFE",
+    "onBrandTertiary": "#1E3A8A",
+    "success": "#059669",
+    "onSuccess": "#FFFFFF",
+    "warning": "#D97706",
+    "onWarning": "#FFFFFF",
+    "error": "#DC2626",
+    "onError": "#FFFFFF",
+    "info": "#0284C7",
+    "onInfo": "#FFFFFF",
+    "border": "#E2E8F0",
+    "borderStrong": "#CBD5E1",
+    "divider": "#F1F5F9",
+    "dark": {
+      "surface": "#0F172A",
+      "onSurface": "#F8FAFC",
+      "surfaceSecondary": "#1E293B",
+      "onSurfaceSecondary": "#CBD5E1",
+      "surfaceTertiary": "#334155",
+      "onSurfaceTertiary": "#94A3B8",
+      "surfaceInverse": "#F8FAFC",
+      "onSurfaceInverse": "#0F172A",
+      "brand": "#3B82F6",
+      "brandPrimary": "#1D4ED8",
+      "onBrandPrimary": "#FFFFFF",
+      "brandSecondary": "#60A5FA",
+      "onBrandSecondary": "#0F172A",
+      "brandTertiary": "#1E3A8A",
+      "onBrandTertiary": "#DBEAFE",
+      "success": "#10B981",
+      "onSuccess": "#0F172A",
+      "warning": "#F59E0B",
+      "onWarning": "#0F172A",
+      "error": "#EF4444",
+      "onError": "#FFFFFF",
+      "info": "#38BDF8",
+      "onInfo": "#0F172A",
+      "border": "#334155",
+      "borderStrong": "#475569",
+      "divider": "#1E293B"
+    }
+  },
+  "typography": {
+    "displayFontFamily": "Plus Jakarta Sans",
+    "textFontFamily": "Plus Jakarta Sans",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24,
+      "3xl": 48
+    }
+  },
+  "spacing": {
+    "rule": "Generous vertical breathing room. Cards never flush to screen edge; always at least md/lg margin. Intentional padding around clock and countdown.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": "1",
+  "navigation": "bottom_tabs",
+  "icon_set": "Ionicons",
+  "glassmorphism": {
+    "enabled": true,
+    "do's": [
+      "Use frosted glass overlay behind the top clock/countdown over the hero background image.",
+      "Bottom tab bar background."
+    ],
+    "dont's": [
+      "No glass on list items or prayer cards.",
+      "No glass on form inputs."
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Home",
+      "purpose": "Dashboard displaying the large digital clock, Hijri date, and today's prayer timeline.",
+      "states": {
+        "loading": "Centered spinner over surface",
+        "empty": "No timetable uploaded state: Illustration + prompt to upload timetable",
+        "error": "Failed to load timetable data + Retry button"
+      },
+      "layout": "Top 1/3: Hero background image (mosque geometry) overlaid with a 3-stop vertical gradient scrim. On top, display a large digital clock (3xl+), Hijri date, and 'Next Prayer' countdown in onSurfaceInverse. Bottom 2/3: Scrollable vertical list of today's prayer cards. Each card (Fajr, Sunrise, Zuhr, Asr, Maghrib, Isha) is rounded (radius lg) with shadow tier 1. Left side: Prayer Name and Time. Right side: Alarm Icon. **Crucial Rule:** The current/upcoming prayer card MUST have background brandPrimary (DARK BLUE) with onBrandPrimary text and white icon. Past prayers must be greyed out (opacity 0.5 or surfaceTertiary) with no shadow. Sunrise should be visually distinct/disabled."
+    },
+    {
+      "name": "Alarm Settings Modal",
+      "purpose": "Per-prayer settings to toggle alarm, change sound, volume, and snooze.",
+      "states": {
+        "loading": "N/A",
+        "empty": "N/A",
+        "error": "N/A"
+      },
+      "layout": "Bottom sheet or modal. Header with Prayer Name. Form rows with clear borders. 1. Master Enable/Disable Switch. 2. Sound selector row (opens a list) with preview play icon. 3. Volume slider. 4. Vibration toggle switch. 5. Snooze toggle switch. Primary 'Save' CTA pinned to bottom."
+    },
+    {
+      "name": "Upload Timetable & OCR Edit",
+      "purpose": "Upload a photo of the monthly mosque timetable, review OCR results, and correct errors.",
+      "states": {
+        "loading": "Scanning document... spinner with progress",
+        "empty": "Upload image placeholder",
+        "error": "Failed to extract text. Please retry or enter manually."
+      },
+      "layout": "Split layout. Top 30%: Image preview of the uploaded timetable (cropped to today's row if possible) to serve as visual reference. Bottom 70%: Scrollable form with 6 inputs (Fajr, Sunrise, Zuhr, Asr, Maghrib, Isha) pre-filled from OCR. Users can tap to edit any misread time. Sticky 'Confirm & Save' primary CTA button at the bottom."
+    },
+    {
+      "name": "Settings",
+      "purpose": "Global app preferences.",
+      "states": {
+        "loading": "N/A",
+        "empty": "N/A",
+        "error": "N/A"
+      },
+      "layout": "Standard iOS-style grouped list. Group 1: Time Format (12/24h toggle), Asr Calculation (Hanafi/Shafi segmented control or select). Group 2: Appearance (Dark/Light mode toggle), Show Sunrise row (toggle). Group 3: Data (Backup/Restore). Use tinted icon containers for row icons."
+    }
+  ],
+  "images": {
+    "home_hero_bg": {
+      "url": "https://images.pexels.com/photos/10943458/pexels-photo-10943458.jpeg",
+      "dark": "https://images.pexels.com/photos/20216577/pexels-photo-20216577.jpeg",
+      "alt": "Intricate geometric facade of a mosque showcasing modern architecture"
+    },
+    "empty_alarms": {
+      "url": "https://images.unsplash.com/photo-1563861826100-9cb868fdbe1c",
+      "alt": "round analog wall clock"
+    },
+    "upload_illustration": {
+      "url": "https://images.unsplash.com/photo-1635859890085-ec8cb5466806",
+      "alt": "document scan review"
+    }
+  },
+  "haptics": {
+    "events": {
+      "onToggleAlarm": "selection",
+      "onSaveSettings": "success",
+      "onTabPress": "light",
+      "onSliderCommit": "medium"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Strictly follow the color palette. Despite the general anti-pattern rule against blues, the user specifically requested a 'DARK BLUE' background for the current prayer card. Use `brandPrimary` (#1E3A8A) for the active/current prayer card background.",
+    "Implement the gradient scrim pattern (transparent to 80%+ dark) over the `home_hero_bg` image so the large clock text (onSurfaceInverse) is perfectly legible.",
+    "Past/completed prayers should have reduced opacity and drop their shadows so they sit flat on the surface. They should feel 'greyed out'.",
+    "Sunrise is a special row: it is generally not an alarm. Show it disabled or distinctly styled without the standard alarm toggle, unless the user overrides it.",
+    "On the OCR Review screen, ensure the original image (or the specific row) remains visible at the top while the user edits the input fields below it.",
+    "Place primary CTA buttons in a sticky fixed container at the bottom with safe area padding, not at the bottom of the scroll view.",
+    "Use `Plus Jakarta Sans` for clean, highly legible numbers, critical for the large digital clock and countdown timer.",
+    "Icons must be all outlined or all filled per screen. Do not mix weights."
+  ]
+}
