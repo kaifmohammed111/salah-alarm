@@ -49,3 +49,7 @@ Build a mobile app that turns a monthly mosque prayer-timetable image into autom
 ## Update (2026-07-05, later)
 - Prayer cards now show BOTH Start and Jamaat times per prayer (Sunrise shows single time). Verified on Home + Alarms.
 - Custom MP3 adhan: alarm sheet lets user pick "Custom MP3" and upload their own audio file (expo-document-picker). Plays on Preview via expo-audio; stored per-prayer (customUri/customName). NOTE: custom file as the actual scheduled-notification alarm tone requires a native device build (Expo Go uses default sound) — surfaced in-UI.
+
+## Update (2026-06, fork)
+- **CSV parser hardened** (`src/lib/csv.ts`): column detection rewritten from exact-name matching to flexible substring matching (`findCol`/`prayerCols`). Now handles: "Zuhur" spelling variants, phantom "Zuha-e-Kubra" columns (ignored via `kubra` exclusion), separate "Maghrib Start"/"Maghrib Jamaat" columns (invalid values like "B.Night" fall back to the other), and appended non-prayer tables (advertiser rows auto-skipped by non-numeric Date). Verified against phantom + July + August CSVs — July/August mapping unchanged.
+

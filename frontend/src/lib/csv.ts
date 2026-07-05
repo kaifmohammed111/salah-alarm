@@ -36,16 +36,6 @@ function splitLine(line: string): string[] {
   return out.map((s) => s.trim());
 }
 
-function idx(headers: string[], ...names: string[]): number {
-  const lower = headers.map((h) => h.toLowerCase().replace(/[^a-z]/g, ""));
-  for (const n of names) {
-    const key = n.toLowerCase().replace(/[^a-z]/g, "");
-    const found = lower.indexOf(key);
-    if (found !== -1) return found;
-  }
-  return -1;
-}
-
 /**
  * Parse a monthly prayer timetable CSV.
  * Expected headers (case/spacing tolerant):
@@ -105,22 +95,62 @@ export function parseTimetableCsv(text: string): Timetable {
     dataStart = headerIdx + 1;
   }
 
-  const iDay = idx(headers, "day");
-  const iDate = idx(headers, "date");
-  const iHijri = idx(headers, "hijri");
-  const iFs = idx(headers, "fajrstart", "fajr");
-  const iFj = idx(headers, "fajrjamaat", "fajriqamah", "fajrjamat");
-  const iSun = idx(headers, "sunrise");
-  const iZs = idx(headers, "zuhrstart", "zuharstart", "dhuhrstart", "zuhr", "zuhar", "dhuhr");
-  const iZj = idx(headers, "zuhrjamaat", "zuhrjamat", "zuharjamaat", "zuharjamat", "dhuhrjamaat");
-  const iAs = idx(headers, "asrstart", "asr");
-  const iAj = idx(headers, "asrjamaat", "asrjamat");
-  const iMag = idx(headers, "maghrib", "maghribstart");
-  const iIs = idx(headers, "ishastart", "isha");
-  const iIj = idx(headers, "ishajamaat", "ishajamat");
+  // Normalized (alpha-only, lowercased) view of the FINAL header list.
+  const hNorm = headers.map(norm);
+
+  // Find a single column by substring match, ignoring any header that also
+  // matches one of the `exclude` fragments (e.g. phantom "Zuha-e-Kubra" columns).
+  const findCol = (variants: string[], exclude: string[] = []) =>
+    hNorm.findIndex(
+      (h) => variants.some((v) => h.includes(v)) && !exclude.some((e) => h.includes(e)),
+    );
+
+  // For a prayer, locate its Start / Jamaat / plain (untiered) columns by name.
+  // Resilient to extra columns, alternate spellings and inline vs. two-tier headers.
+  const prayerCols = (variants: string[], exclude: string[] = []) => {
+    let start = -1;
+    let jamaat = -1;
+    let plain = -1;
+    hNorm.forEach((h, i) => {
+      if (!variants.some((v) => h.includes(v))) return;
+      if (exclude.some((e) => h.includes(e))) return;
+      if (h.includes("start")) {
+        if (start === -1) start = i;
+      } else if (h.includes("jama") || h.includes("iqam")) {
+        if (jamaat === -1) jamaat = i;
+      } else if (plain === -1) {
+        plain = i;
+      }
+    });
+    return { start, jamaat, plain };
+  };
+
+  const iDay = findCol(["day"], ["date"]);
+  const iDate = findCol(["date"]);
+  const iHijri = findCol(["hijri"]);
+  const iSun = findCol(["sunrise", "sunris"]);
+
+  const fajr = prayerCols(["fajr", "sehri", "suhoor", "sehar"]);
+  // "Zuhur"/"Zuhr"/"Zuhar"/"Dhuhr" — never "Zuha-e-Kubra" (excluded via "kubra").
+  const zuhr = prayerCols(["zuhur", "zuhr", "zuhar", "dhuhr"], ["kubra"]);
+  const asr = prayerCols(["asr"]);
+  const maghrib = prayerCols(["maghrib"]);
+  const isha = prayerCols(["isha"]);
+
+  const iFs = fajr.start !== -1 ? fajr.start : fajr.plain;
+  const iFj = fajr.jamaat;
+  const iZs = zuhr.start !== -1 ? zuhr.start : zuhr.plain;
+  const iZj = zuhr.jamaat;
+  const iAs = asr.start !== -1 ? asr.start : asr.plain;
+  const iAj = asr.jamaat;
+  const iMs = maghrib.start !== -1 ? maghrib.start : maghrib.plain;
+  const iMj = maghrib.jamaat;
+  const iIs = isha.start !== -1 ? isha.start : isha.plain;
+  const iIj = isha.jamaat;
+
   // Ramadan-only columns
-  const iSehri = idx(headers, "sehriend", "sehri", "suhoor", "sehar", "sehriendtime");
-  const iIftar = idx(headers, "iftari", "iftar", "iftaar", "iftaari");
+  const iSehri = findCol(["sehriend", "sehri", "suhoor", "sehar"]);
+  const iIftar = findCol(["iftari", "iftar", "iftaar", "iftaari"]);
   const isRamadan = iSehri !== -1 || iIftar !== -1;
 
   if (iDate === -1) throw new Error("CSV missing a Date column");
@@ -137,8 +167,12 @@ export function parseTimetableCsv(text: string): Timetable {
     const iftar = iIftar >= 0 ? to24(get(c, iIftar), "PM") : "";
     // In Ramadan tables Fajr has no explicit "start"; Sehri End is when Fajr begins.
     const fajrStart = iFs >= 0 ? to24(get(c, iFs), "AM") : sehriEnd;
-    // Maghrib time comes from an explicit column, or from Iftari in Ramadan tables.
-    const maghribTime = iMag >= 0 ? to24(get(c, iMag), "PM") : iftar;
+    // Maghrib: prefer its explicit Start column, fall back to its Jamaat column,
+    // then to Iftari (Ramadan tables). Values that aren't times (e.g. "B.Night")
+    // convert to "" and are treated as absent.
+    const maghribStart = iMs >= 0 ? to24(get(c, iMs), "PM") : "";
+    const maghribJamaat = iMj >= 0 ? to24(get(c, iMj), "PM") : "";
+    const maghribBase = maghribStart || maghribJamaat || iftar;
 
     const row: DayRow = {
       day: get(c, iDay),
@@ -148,7 +182,7 @@ export function parseTimetableCsv(text: string): Timetable {
       sunrise: to24(get(c, iSun), "AM"),
       zuhr: { start: to24(get(c, iZs), "PM"), jamaat: to24(get(c, iZj), "PM") },
       asr: { start: to24(get(c, iAs), "PM"), jamaat: to24(get(c, iAj), "PM") },
-      maghrib: { start: maghribTime, jamaat: maghribTime },
+      maghrib: { start: maghribBase, jamaat: maghribJamaat || maghribBase },
       isha: { start: to24(get(c, iIs), "PM"), jamaat: to24(get(c, iIj), "PM") },
       ...(isRamadan ? { sehriEnd, iftar } : {}),
     };
