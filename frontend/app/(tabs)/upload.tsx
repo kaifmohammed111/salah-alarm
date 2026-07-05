@@ -18,6 +18,7 @@ import { useRouter } from "expo-router";
 import { useApp } from "@/src/context/AppContext";
 import { FONTS, RADIUS, SPACING } from "@/src/theme";
 import { DayRow, PRAYER_LABELS, Timetable, findTodayRow } from "@/src/lib/prayer";
+import type { ColumnMap } from "@/src/lib/prayer";
 import { parseTimetableCsv } from "@/src/lib/csv";
 import { readFileText } from "@/src/lib/files";
 
@@ -35,6 +36,7 @@ export default function UploadScreen() {
   const [draft, setDraft] = useState<Timetable | null>(null);
   const [rowIdx, setRowIdx] = useState(0);
   const [saved, setSaved] = useState(false);
+  const [mapping, setMapping] = useState<ColumnMap[] | null>(null);
 
   useEffect(() => {
     if (timetable && !draft) {
@@ -69,6 +71,7 @@ export default function UploadScreen() {
     try {
       const text = await readFileText(asset.uri);
       const tt = parseTimetableCsv(text);
+      setMapping(tt.mapping || null);
       applyDraft(tt);
     } catch (e: any) {
       setError(typeof e?.message === "string" ? e.message : "Could not parse the CSV file.");
@@ -196,6 +199,46 @@ export default function UploadScreen() {
             </View>
           ) : null}
 
+          {/* Detected column mapping — sanity-check for non-standard CSVs */}
+          {mapping && !error ? (
+            <View
+              testID="mapping-card"
+              style={[styles.mappingCard, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}
+            >
+              <View style={styles.mappingHead}>
+                <Ionicons name="git-compare-outline" size={16} color={colors.brand} />
+                <Text style={[styles.mappingTitle, { color: colors.onSurface }]}>Detected columns</Text>
+              </View>
+              <Text style={[styles.mappingHint, { color: colors.onSurfaceTertiary }]}>
+                Confirm each prayer picked up the right column from your file.
+              </Text>
+              {mapping.map((m) => {
+                const found = !!m.column;
+                return (
+                  <View key={m.label} style={[styles.mappingRow, { borderBottomColor: colors.divider }]}>
+                    <Text style={[styles.mappingLabel, { color: colors.onSurfaceSecondary }]}>{m.label}</Text>
+                    <View style={styles.mappingRight}>
+                      <Ionicons
+                        name={found ? "checkmark-circle" : "remove-circle-outline"}
+                        size={15}
+                        color={found ? colors.success : colors.muted}
+                      />
+                      <Text
+                        style={[
+                          styles.mappingCol,
+                          { color: found ? colors.onSurface : colors.muted },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {m.column || "Not found"}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          ) : null}
+
           {/* Edit form */}
           {row ? (
             <View style={styles.form}>
@@ -311,6 +354,28 @@ const styles = StyleSheet.create({
     marginTop: SPACING.lg,
   },
   errorText: { fontFamily: FONTS.medium, fontSize: 13, flex: 1 },
+  mappingCard: {
+    marginTop: SPACING.lg,
+    borderRadius: RADIUS.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.xs,
+  },
+  mappingHead: { flexDirection: "row", alignItems: "center", gap: SPACING.xs },
+  mappingTitle: { fontFamily: FONTS.bold, fontSize: 14 },
+  mappingHint: { fontFamily: FONTS.regular, fontSize: 12, marginTop: 2, marginBottom: SPACING.sm },
+  mappingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    gap: SPACING.md,
+  },
+  mappingLabel: { fontFamily: FONTS.semibold, fontSize: 13, flexShrink: 0 },
+  mappingRight: { flexDirection: "row", alignItems: "center", gap: SPACING.xs, flexShrink: 1, maxWidth: "60%" },
+  mappingCol: { fontFamily: FONTS.medium, fontSize: 13 },
   form: { marginTop: SPACING.xl },
   formTitle: { fontFamily: FONTS.bold, fontSize: 16, marginBottom: SPACING.md },
   fieldRow: { flexDirection: "row", alignItems: "center", marginBottom: SPACING.md },

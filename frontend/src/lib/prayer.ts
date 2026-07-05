@@ -49,12 +49,15 @@ export type DayRow = {
   iftar?: string; // Ramadan: iftar (maghrib) time
 };
 
+export type ColumnMap = { label: string; column: string | null };
+
 export type Timetable = {
   id?: string;
   month?: string;
   year?: string;
   rows: DayRow[];
   isRamadan?: boolean;
+  mapping?: ColumnMap[];
 };
 
 export type AlarmConfig = {

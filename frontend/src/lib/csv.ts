@@ -1,4 +1,4 @@
-import { DayRow, Timetable } from "./prayer";
+import { ColumnMap, DayRow, Timetable } from "./prayer";
 
 // Convert a 12-hour "h:mm" (accepts "." or ":" separators, no AM/PM) to 24-hour "HH:MM".
 function to24(t: string, period: "AM" | "PM"): string {
@@ -208,5 +208,30 @@ export function parseTimetableCsv(text: string): Timetable {
   }
 
   if (!rows.length) throw new Error("No valid rows found in CSV");
-  return { rows, isRamadan };
+
+  // Human-readable summary of which CSV header fed each prayer field, so the
+  // user can sanity-check odd/non-standard files before saving.
+  const col = (i: number) => (i >= 0 && i < headers.length ? headers[i].trim() || null : null);
+  const mapping: ColumnMap[] = [
+    { label: "Date", column: col(iDate) },
+    { label: "Fajr Start", column: col(iFs) },
+    { label: "Fajr Jamaat", column: col(iFj) },
+    { label: "Sunrise", column: col(iSun) },
+    { label: "Zuhr Start", column: col(iZs) },
+    { label: "Zuhr Jamaat", column: col(iZj) },
+    { label: "Asr Start", column: col(iAs) },
+    { label: "Asr Jamaat", column: col(iAj) },
+    { label: "Maghrib Start", column: col(iMs) },
+    { label: "Maghrib Jamaat", column: col(iMj) },
+    { label: "Isha Start", column: col(iIs) },
+    { label: "Isha Jamaat", column: col(iIj) },
+    ...(isRamadan
+      ? [
+          { label: "Sehri End", column: col(iSehri) },
+          { label: "Iftari", column: col(iIftar) },
+        ]
+      : []),
+  ];
+
+  return { rows, isRamadan, mapping };
 }
