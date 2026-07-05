@@ -3,6 +3,7 @@ import { Linking, Platform, Pressable, StyleSheet, Text, View } from "react-nati
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Location from "expo-location";
+import { Magnetometer } from "expo-sensors";
 import * as Haptics from "expo-haptics";
 
 import { useApp } from "@/src/context/AppContext";
@@ -24,7 +25,29 @@ export default function QiblaScreen() {
   const [distance, setDistance] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const headingSub = useRef<Location.LocationSubscription | null>(null);
+  const magSub = useRef<{ remove: () => void } | null>(null);
+  const headingReceived = useRef(false);
+  const fallbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wasAligned = useRef(false);
+
+  const stopHeading = useCallback(() => {
+    headingSub.current?.remove();
+    headingSub.current = null;
+    magSub.current?.remove();
+    magSub.current = null;
+    if (fallbackTimer.current) clearTimeout(fallbackTimer.current);
+  }, []);
+
+  // Direct magnetometer hardware reading (fallback / continuous updates).
+  const startMagnetometer = useCallback(() => {
+    if (magSub.current) return;
+    Magnetometer.setUpdateInterval(120);
+    magSub.current = Magnetometer.addListener(({ x, y }) => {
+      let angle = Math.atan2(y, x) * (180 / Math.PI);
+      angle = (angle + 360) % 360;
+      setHeading(angle);
+    });
+  }, []);
 
   const start = useCallback(async () => {
     setError(null);
@@ -37,23 +60,43 @@ export default function QiblaScreen() {
       }
       setPerm("granted");
 
-      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      const { latitude, longitude } = pos.coords;
-      setQibla(qiblaBearing(latitude, longitude));
-      setDistance(distanceToKaabaKm(latitude, longitude));
-
-      if (Platform.OS !== "web") {
-        headingSub.current = await Location.watchHeadingAsync((h) => {
-          const val = h.trueHeading >= 0 ? h.trueHeading : h.magHeading;
-          setHeading(val);
-        });
-      } else {
-        setError("Compass heading is not available on web. Open on your phone for the live compass.");
+      // GPS position: try a fast last-known fix first, then a precise reading.
+      let pos = await Location.getLastKnownPositionAsync();
+      if (!pos) {
+        pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       }
+      if (pos) {
+        const { latitude, longitude } = pos.coords;
+        setQibla(qiblaBearing(latitude, longitude));
+        setDistance(distanceToKaabaKm(latitude, longitude));
+      }
+
+      if (Platform.OS === "web") {
+        setError("Live compass needs your phone's sensors. Open in Expo Go or a build on your device.");
+        return;
+      }
+
+      // Heading: prefer the OS-calibrated compass; fall back to the raw
+      // magnetometer hardware if the compass API doesn't emit.
+      headingReceived.current = false;
+      try {
+        headingSub.current = await Location.watchHeadingAsync((h) => {
+          const val = h.trueHeading != null && h.trueHeading >= 0 ? h.trueHeading : h.magHeading;
+          if (val != null && !isNaN(val)) {
+            headingReceived.current = true;
+            setHeading(val);
+          }
+        });
+      } catch {
+        startMagnetometer();
+      }
+      fallbackTimer.current = setTimeout(() => {
+        if (!headingReceived.current) startMagnetometer();
+      }, 1500);
     } catch (e: any) {
       setError(typeof e?.message === "string" ? e.message : "Could not get your location.");
     }
-  }, []);
+  }, [startMagnetometer]);
 
   useEffect(() => {
     (async () => {
@@ -65,10 +108,8 @@ export default function QiblaScreen() {
         setPerm(status === "denied" ? "denied" : "undetermined");
       }
     })();
-    return () => {
-      headingSub.current?.remove();
-    };
-  }, [start]);
+    return () => stopHeading();
+  }, [start, stopHeading]);
 
   const qiblaRelative = qibla != null ? (qibla - heading + 360) % 360 : 0;
   const aligned = qibla != null && (qiblaRelative < 6 || qiblaRelative > 354);
