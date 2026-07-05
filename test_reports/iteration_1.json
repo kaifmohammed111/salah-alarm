@@ -1,0 +1,40 @@
+{
+  "summary": "Backend: 4/4 pytest tests PASS (health + OCR happy path with synthetic timetable image extracting rows[] with HH:MM prayer times + OCR error handling for missing body & non-table image). Frontend: All Home/Alarms/Timetable/Settings tabs render, empty states show, all requested testIDs present (empty-upload-btn, pick-camera-btn, pick-gallery-btn, setting-24h, setting-theme-*, setting-sunrise, setting-asr-*, backup-btn, restore-btn, settings-toast), dark theme applies visually, 24h toggle changes clock from '5:30 PM' to '17:31', backup toast shows 'Backup saved on this device', restore toast shows 'Backup restored'.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "app/(tabs)/settings.tsx -> flash()",
+        "issue": "flash() uses setTimeout(2000) but never stores/clears the previous timeout. If user taps Backup and then Restore within 2s, the leftover backup timeout fires and clears the Restore toast prematurely. Fix: store the setTimeout id in a ref and clearTimeout before starting a new one.",
+        "testID": "settings-toast",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_ocr_api.py",
+    "/app/backend/tests/gen_timetable_image.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "(Optional / LOW) In /app/frontend/app/(tabs)/settings.tsx patch flash() to clear the previous setTimeout so back-to-back toasts (backup then restore) both remain visible for their full 2s."
+  ],
+  "critical_code_review_comments": [
+    "server.py hard-codes model 'gemini-3.1-pro-preview' - acceptable but consider env override.",
+    "OCR endpoint stores every parsed timetable to Mongo (db.timetables) with no cleanup - fine for MVP.",
+    "flash() timeout leak in settings.tsx (see ui_bugs)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "seed_data_creation": "Generated in-memory synthetic prayer timetable JPEG (base64) via /app/backend/tests/gen_timetable_image.py - not persisted; each pytest run recreates it. One document per run is inserted into MongoDB db.timetables by the OCR endpoint (no cleanup needed for MVP).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Frontend uses EXPO_PUBLIC_BACKEND_URL (not EXPO_BACKEND_URL) in /app/frontend/.env. Public URL: https://salah-alarm-6.preview.emergentagent.com. Backend OCR endpoint /api/ocr/timetable returns 200 on synthetic JPEG timetable within ~15s. Emergent LLM key rate-limits parallel calls - keep pytest sequential (no xdist). All required testIDs are present and working.",
+  "rca_of_issue": "Minor: settings toast disappears too early on rapid Backup->Restore because flash() setTimeout is not cleared between calls. Reproduce: open Settings, tap Backup, within 2s tap Restore -> Restore toast vanishes at t=2000ms from the leftover backup timeout instead of t=restore+2000ms. Mitigation: store ref of setTimeout id, clearTimeout on each new flash()."
+}

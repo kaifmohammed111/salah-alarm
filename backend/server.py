@@ -1,58 +1,139 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, HTTPException
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
+import json
 import logging
+import re
+import uuid
 from pathlib import Path
 from pydantic import BaseModel, Field
-from typing import List
-import uuid
-from datetime import datetime
+from typing import Optional, List
+from datetime import datetime, timezone
 
+from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-# Create the main app without a prefix
-app = FastAPI()
+EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
 
-# Create a router with the /api prefix
+app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Define Models
-class StatusCheck(BaseModel):
+
+# ---------- Models ----------
+class OcrRequest(BaseModel):
+    image_base64: str = Field(..., description="Base64 encoded timetable image (no data URI prefix)")
+
+
+class OcrResponse(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    month: Optional[str] = None
+    year: Optional[str] = None
+    rows: List[dict] = []
+    raw: Optional[str] = None
 
-class StatusCheckCreate(BaseModel):
-    client_name: str
 
-# Add your routes to the router instead of directly to app
+OCR_SYSTEM = """You are an expert OCR engine specialised in reading monthly Islamic mosque prayer timetables.
+The image is a table with one row per day of the month. Columns usually include: Day, Date, Hijri date,
+Fajr, Sunrise, Zuhr (Dhuhr), Asr, Maghrib, Isha. Each prayer may have TWO sub-columns: a Start (Begins/Adhan) time
+and a Jamaat (Congregation/Iqamah) time. Sunrise has only one time.
+
+Intelligently identify columns even if headers are abbreviated, the image is blurry, slightly rotated, or fonts vary.
+Convert every time to strict 24-hour "HH:MM" format. If a prayer's afternoon/evening (Zuhr/Asr/Maghrib/Isha) is
+clearly PM, add 12 hours. Fajr and Sunrise are AM. If a value is unreadable use empty string "".
+
+Return ONLY valid minified JSON, no markdown, no commentary, with this exact schema:
+{"month":"July","year":"2025","rows":[
+  {"day":"Sat","date":"1","hijri":"5 Muharram",
+   "fajr":{"start":"HH:MM","jamaat":"HH:MM"},
+   "sunrise":"HH:MM",
+   "zuhr":{"start":"HH:MM","jamaat":"HH:MM"},
+   "asr":{"start":"HH:MM","jamaat":"HH:MM"},
+   "maghrib":{"start":"HH:MM","jamaat":"HH:MM"},
+   "isha":{"start":"HH:MM","jamaat":"HH:MM"}}
+]}
+"date" must be the day-of-month number as a string (e.g. "26"). If a sub-column is missing, put the same time in both start and jamaat."""
+
+
+def _extract_json(text: str) -> dict:
+    text = text.strip()
+    # strip code fences
+    if text.startswith("```"):
+        text = re.sub(r"^```[a-zA-Z]*", "", text).strip()
+        text = re.sub(r"```$", "", text).strip()
+    # find first { ... last }
+    start = text.find("{")
+    end = text.rfind("}")
+    if start != -1 and end != -1:
+        text = text[start:end + 1]
+    return json.loads(text)
+
+
 @api_router.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return {"message": "SalahAlarm API running"}
 
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.dict()
-    status_obj = StatusCheck(**status_dict)
-    _ = await db.status_checks.insert_one(status_obj.dict())
-    return status_obj
 
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    status_checks = await db.status_checks.find().to_list(1000)
-    return [StatusCheck(**status_check) for status_check in status_checks]
+@api_router.post("/ocr/timetable", response_model=OcrResponse)
+async def ocr_timetable(req: OcrRequest):
+    if not EMERGENT_LLM_KEY:
+        raise HTTPException(status_code=500, detail="LLM key not configured")
 
-# Include the router in the main app
+    img_b64 = req.image_base64
+    if "," in img_b64 and img_b64.strip().startswith("data:"):
+        img_b64 = img_b64.split(",", 1)[1]
+
+    chat = LlmChat(
+        api_key=EMERGENT_LLM_KEY,
+        session_id=f"ocr-{uuid.uuid4()}",
+        system_message=OCR_SYSTEM,
+    ).with_model("gemini", "gemini-3.1-pro-preview")
+
+    message = UserMessage(
+        text="Extract the full prayer timetable from this image as JSON per the schema.",
+        file_contents=[ImageContent(image_base64=img_b64)],
+    )
+
+    try:
+        result = await chat.send_message(message)
+    except Exception as e:
+        logger.exception("OCR LLM call failed")
+        raise HTTPException(status_code=502, detail=f"OCR failed: {e}")
+
+    raw = result if isinstance(result, str) else str(result)
+    try:
+        parsed = _extract_json(raw)
+    except Exception:
+        logger.error("Failed to parse OCR JSON: %s", raw[:500])
+        raise HTTPException(status_code=422, detail="Could not parse timetable from image. Please retry or enter manually.")
+
+    resp = OcrResponse(
+        month=parsed.get("month"),
+        year=parsed.get("year"),
+        rows=parsed.get("rows", []),
+        raw=None,
+    )
+
+    await db.timetables.insert_one({
+        "id": resp.id,
+        "month": resp.month,
+        "year": resp.year,
+        "rows": resp.rows,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
+    return resp
+
+
 app.include_router(api_router)
 
 app.add_middleware(
@@ -63,12 +144,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

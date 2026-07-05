@@ -10,7 +10,11 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.emergent.salahalarm.lxw9zs"
+      "bundleIdentifier": "com.emergent.salahalarm.lxw9zs",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Scan your mosque prayer timetable",
+        "NSPhotoLibraryUsageDescription": "Upload your saved timetable image"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -18,7 +22,16 @@
         "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.emergent.salahalarm.lxw9zs"
+      "package": "com.emergent.salahalarm.lxw9zs",
+      "permissions": [
+        "CAMERA",
+        "READ_MEDIA_IMAGES",
+        "SCHEDULE_EXACT_ALARM",
+        "USE_EXACT_ALARM",
+        "POST_NOTIFICATIONS",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -34,6 +47,20 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#000000"
+        }
+      ],
+      "expo-audio",
+      [
+        "expo-notifications",
+        {
+          "color": "#1E3A8A"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Upload your saved timetable image",
+          "cameraPermission": "Scan your mosque prayer timetable"
         }
       ]
     ],
