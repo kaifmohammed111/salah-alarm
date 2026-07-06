@@ -11,6 +11,13 @@
     "web": "expo start --web",
     "lint": "expo lint"
   },
+  "expo": {
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "exclude": ["@notifee/react-native"]
+      }
+    }
+  },
   "dependencies": {
     "@expo/metro-runtime": "6.1.2",
     "@expo/vector-icons": "15.1.1",
