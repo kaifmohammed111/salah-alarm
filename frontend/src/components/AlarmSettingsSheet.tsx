@@ -248,7 +248,7 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
               </Text>
             </Pressable>
             <Text style={[styles.customHint, { color: colors.muted }]}>
-              Plays on Preview & alarm. Custom alarm-tone playback requires a device build.
+              Plays on Preview here, and as your full alarm sound in the built app.
             </Text>
           </View>
         ) : null}

@@ -29,6 +29,7 @@
         "READ_MEDIA_IMAGES",
         "SCHEDULE_EXACT_ALARM",
         "USE_EXACT_ALARM",
+        "USE_FULL_SCREEN_INTENT",
         "POST_NOTIFICATIONS",
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
@@ -43,6 +44,7 @@
     },
     "plugins": [
       "expo-router",
+      "./plugins/withAlarmActivity",
       [
         "expo-splash-screen",
         {

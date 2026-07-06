@@ -20,10 +20,10 @@ import {
   findTodayRow,
 } from "@/src/lib/prayer";
 import {
-  initNotifications,
-  requestNotificationPermissions,
+  requestAlarmPermissions,
   scheduleAlarms,
-} from "@/src/lib/notifications";
+  setupAlarms,
+} from "@/src/lib/alarm";
 import { QUOTES } from "@/src/lib/quotes";
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
@@ -98,7 +98,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Load persisted state.
   useEffect(() => {
     (async () => {
-      initNotifications();
+      await setupAlarms();
       const s = await storage.getItem(K_SETTINGS, "");
       const tt = await storage.getItem(K_TIMETABLE, "");
       const cf = await storage.getItem(K_CONFIGS, "");
@@ -116,7 +116,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       try {
         if (cf) setConfigs({ ...defaultConfigs(), ...JSON.parse(cf) });
       } catch {}
-      await requestNotificationPermissions();
+      await requestAlarmPermissions();
       setReady(true);
     })();
   }, []);
