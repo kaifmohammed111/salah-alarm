@@ -7,7 +7,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -22,6 +21,7 @@ import { DayRow, PRAYER_LABELS, Timetable, findTodayRow } from "@/src/lib/prayer
 import type { ColumnMap, CsvFieldKey } from "@/src/lib/prayer";
 import { parseTimetableCsv } from "@/src/lib/csv";
 import { readFileText } from "@/src/lib/files";
+import TimeField from "@/src/components/TimeField";
 
 const EDIT_KEYS: (keyof DayRow)[] = ["fajr", "sunrise", "zuhr", "asr", "maghrib", "isha"];
 
@@ -125,30 +125,6 @@ export default function UploadScreen() {
   };
 
   const row = draft?.rows?.[rowIdx];
-
-  const TimeField = ({
-    value,
-    onChange,
-    testID,
-  }: {
-    value: string;
-    onChange: (v: string) => void;
-    testID: string;
-  }) => (
-    <TextInput
-      testID={testID}
-      value={value}
-      onChangeText={onChange}
-      placeholder="--:--"
-      placeholderTextColor={colors.muted}
-      maxLength={5}
-      keyboardType="numbers-and-punctuation"
-      style={[
-        styles.input,
-        { backgroundColor: colors.surfaceSecondary, color: colors.onSurface, borderColor: colors.border },
-      ]}
-    />
-  );
 
   return (
     <View style={[styles.root, { backgroundColor: colors.surface }]}>
@@ -286,6 +262,7 @@ export default function UploadScreen() {
                       <View style={styles.fieldInputs}>
                         <TimeField
                           testID="edit-sunrise"
+                          colors={colors}
                           value={(row.sunrise as string) || ""}
                           onChange={(v) => updateRow((r) => ({ ...r, sunrise: v }))}
                         />
@@ -302,11 +279,13 @@ export default function UploadScreen() {
                     <View style={styles.fieldInputs}>
                       <TimeField
                         testID={`edit-${k}-start`}
+                        colors={colors}
                         value={pair.start || ""}
                         onChange={(v) => updateRow((r) => ({ ...r, [k]: { ...(r[k] as any), start: v } }))}
                       />
                       <TimeField
                         testID={`edit-${k}-jamaat`}
+                        colors={colors}
                         value={pair.jamaat || ""}
                         onChange={(v) => updateRow((r) => ({ ...r, [k]: { ...(r[k] as any), jamaat: v } }))}
                       />
@@ -467,16 +446,6 @@ const styles = StyleSheet.create({
   fieldRow: { flexDirection: "row", alignItems: "center", marginBottom: SPACING.md },
   fieldLabel: { fontFamily: FONTS.semibold, fontSize: 15, flex: 1 },
   fieldInputs: { flexDirection: "row", gap: SPACING.sm },
-  input: {
-    width: 76,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    borderRadius: RADIUS.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    fontFamily: FONTS.semibold,
-    fontSize: 15,
-    textAlign: "center",
-  },
   hint: { fontFamily: FONTS.regular, fontSize: 12, marginTop: SPACING.sm },
   footer: {
     paddingHorizontal: SPACING.xl,
