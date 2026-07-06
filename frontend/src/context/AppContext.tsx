@@ -22,7 +22,7 @@ import {
 import {
   initNotifications,
   requestNotificationPermissions,
-  scheduleTodayAlarms,
+  scheduleAlarms,
 } from "@/src/lib/notifications";
 import { QUOTES } from "@/src/lib/quotes";
 
@@ -151,14 +151,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const rescheduleRef = useRef<any>(null);
   const reschedule = useCallback(async () => {
-    return scheduleTodayAlarms(todayRow, configs, settings.showSunrise, settings.preAlarmAnchor);
-  }, [todayRow, configs, settings.showSunrise, settings.preAlarmAnchor]);
+    return scheduleAlarms(timetable, configs, settings.showSunrise, settings.preAlarmAnchor);
+  }, [timetable, configs, settings.showSunrise, settings.preAlarmAnchor]);
   rescheduleRef.current = reschedule;
 
-  // Reschedule whenever inputs change (debounced-ish via effect).
+  // Reschedule whenever inputs change (and daily, as the horizon rolls forward).
   useEffect(() => {
     if (!ready) return;
-    scheduleTodayAlarms(todayRow, configs, settings.showSunrise, settings.preAlarmAnchor);
+    scheduleAlarms(timetable, configs, settings.showSunrise, settings.preAlarmAnchor);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, timetable, configs, settings.showSunrise, settings.preAlarmAnchor, todayRow?.date]);
 

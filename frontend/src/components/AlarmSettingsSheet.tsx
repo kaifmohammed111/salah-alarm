@@ -13,6 +13,48 @@ import { PRAYER_LABELS, PRE_ALARM_PRESETS, PrayerKey, SOUND_OPTIONS } from "@/sr
 
 export type AlarmSheetRef = { present: (key: PrayerKey) => void };
 
+// Memoized so the app's 1-second ticking clock (which re-renders the sheet)
+// never re-applies the `value` prop mid-drag — that was snapping the thumb back.
+// It owns its drag state and only reports the final value on release.
+type VolumeSliderProps = {
+  initial: number;
+  onCommit: (v: number) => void;
+  minColor: string;
+  maxColor: string;
+  thumbColor: string;
+};
+
+const VolumeSlider = React.memo(function VolumeSlider({
+  initial,
+  onCommit,
+  minColor,
+  maxColor,
+  thumbColor,
+}: VolumeSliderProps) {
+  const [v, setV] = useState(initial);
+  useEffect(() => {
+    setV(initial);
+  }, [initial]);
+  return (
+    <Slider
+      testID="volume-slider"
+      style={{ width: 140 }}
+      minimumValue={0}
+      maximumValue={1}
+      step={0.05}
+      value={v}
+      minimumTrackTintColor={minColor}
+      maximumTrackTintColor={maxColor}
+      thumbTintColor={thumbColor}
+      onValueChange={setV}
+      onSlidingComplete={(nv) => {
+        setV(nv);
+        onCommit(nv);
+      }}
+    />
+  );
+});
+
 const beepSource = require("../../assets/sounds/beep.mp3");
 const SOUND_SOURCES: Record<string, any> = {
   beep: require("../../assets/sounds/beep.mp3"),
@@ -25,15 +67,12 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
   const modalRef = useRef<BottomSheetModal>(null);
   const [key, setKey] = useState<PrayerKey>("fajr");
   const player = useAudioPlayer(beepSource);
-  // Local UI state kept independent of the 1s ticking clock re-render so the
-  // slider thumb doesn't snap back mid-drag and the Preview button doesn't flicker.
-  const [vol, setVol] = useState(0.8);
+  // Explicit preview flag so the button label doesn't flicker with raw playback status.
   const [previewing, setPreviewing] = useState(false);
 
   useImperativeHandle(ref, () => ({
     present: (k: PrayerKey) => {
       setKey(k);
-      setVol(configs[k]?.volume ?? 0.8);
       setPreviewing(false);
       modalRef.current?.present();
     },
@@ -42,6 +81,12 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
   const cfg = configs[key];
   const snapPoints = useMemo(() => ["82%"], []);
   const status = useAudioPlayerStatus(player);
+
+  // Stable commit callback (identity never changes) so the memoized VolumeSlider
+  // is not re-created by the ticking-clock re-renders.
+  const commitRef = useRef((_v: number) => {});
+  commitRef.current = (v: number) => setConfig(key, { volume: v });
+  const onVolCommit = useCallback((v: number) => commitRef.current(v), []);
 
   // Clear the "playing" flag when a short clip finishes on its own.
   useEffect(() => {
@@ -65,12 +110,12 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
         src = SOUND_SOURCES[cfg?.sound] || beepSource;
       }
       player.replace(src);
-      player.volume = vol;
+      player.volume = cfg?.volume ?? 0.8;
       player.seekTo(0);
       player.play();
       setPreviewing(true);
     } catch {}
-  }, [player, cfg?.sound, cfg?.customUri, vol]);
+  }, [player, cfg?.sound, cfg?.customUri, cfg?.volume]);
 
   const pickAudio = useCallback(async () => {
     try {
@@ -212,20 +257,12 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
           icon="volume-high-outline"
           label="Volume"
           right={
-            <Slider
-              testID="volume-slider"
-              style={{ width: 140 }}
-              minimumValue={0}
-              maximumValue={1}
-              value={vol}
-              minimumTrackTintColor={colors.brand}
-              maximumTrackTintColor={colors.surfaceTertiary}
-              thumbTintColor={colors.brand}
-              onValueChange={setVol}
-              onSlidingComplete={(v) => {
-                setVol(v);
-                setConfig(key, { volume: v });
-              }}
+            <VolumeSlider
+              initial={cfg.volume}
+              onCommit={onVolCommit}
+              minColor={colors.brand}
+              maxColor={colors.surfaceTertiary}
+              thumbColor={colors.brand}
             />
           }
         />
