@@ -1,4 +1,4 @@
-import React, { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from "react";
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { BottomSheetModal, BottomSheetScrollView, BottomSheetBackdrop } from "@gorhom/bottom-sheet";
 import { Ionicons } from "@expo/vector-icons";
@@ -25,10 +25,16 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
   const modalRef = useRef<BottomSheetModal>(null);
   const [key, setKey] = useState<PrayerKey>("fajr");
   const player = useAudioPlayer(beepSource);
+  // Local UI state kept independent of the 1s ticking clock re-render so the
+  // slider thumb doesn't snap back mid-drag and the Preview button doesn't flicker.
+  const [vol, setVol] = useState(0.8);
+  const [previewing, setPreviewing] = useState(false);
 
   useImperativeHandle(ref, () => ({
     present: (k: PrayerKey) => {
       setKey(k);
+      setVol(configs[k]?.volume ?? 0.8);
+      setPreviewing(false);
       modalRef.current?.present();
     },
   }));
@@ -36,9 +42,14 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
   const cfg = configs[key];
   const snapPoints = useMemo(() => ["82%"], []);
   const status = useAudioPlayerStatus(player);
-  const isPlaying = !!status?.playing;
+
+  // Clear the "playing" flag when a short clip finishes on its own.
+  useEffect(() => {
+    if (status?.didJustFinish) setPreviewing(false);
+  }, [status?.didJustFinish]);
 
   const stopPreview = useCallback(() => {
+    setPreviewing(false);
     try {
       player.pause();
       player.seekTo(0);
@@ -54,11 +65,12 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
         src = SOUND_SOURCES[cfg?.sound] || beepSource;
       }
       player.replace(src);
-      player.volume = cfg?.volume ?? 0.8;
+      player.volume = vol;
       player.seekTo(0);
       player.play();
+      setPreviewing(true);
     } catch {}
-  }, [player, cfg?.sound, cfg?.customUri, cfg?.volume]);
+  }, [player, cfg?.sound, cfg?.customUri, vol]);
 
   const pickAudio = useCallback(async () => {
     try {
@@ -165,15 +177,15 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
           })}
           <Pressable
             testID="preview-sound-btn"
-            onPress={isPlaying ? stopPreview : preview}
+            onPress={previewing ? stopPreview : preview}
             style={[
               styles.previewBtn,
-              { borderColor: isPlaying ? colors.error : colors.brand },
+              { borderColor: previewing ? colors.error : colors.brand },
             ]}
           >
-            <Ionicons name={isPlaying ? "stop" : "play"} size={16} color={isPlaying ? colors.error : colors.brand} />
-            <Text style={[styles.previewText, { color: isPlaying ? colors.error : colors.brand }]}>
-              {isPlaying ? "Stop" : "Preview"}
+            <Ionicons name={previewing ? "stop" : "play"} size={16} color={previewing ? colors.error : colors.brand} />
+            <Text style={[styles.previewText, { color: previewing ? colors.error : colors.brand }]}>
+              {previewing ? "Stop" : "Preview"}
             </Text>
           </Pressable>
         </View>
@@ -205,11 +217,15 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
               style={{ width: 140 }}
               minimumValue={0}
               maximumValue={1}
-              value={cfg.volume}
+              value={vol}
               minimumTrackTintColor={colors.brand}
               maximumTrackTintColor={colors.surfaceTertiary}
               thumbTintColor={colors.brand}
-              onSlidingComplete={(v) => setConfig(key, { volume: v })}
+              onValueChange={setVol}
+              onSlidingComplete={(v) => {
+                setVol(v);
+                setConfig(key, { volume: v });
+              }}
             />
           }
         />
