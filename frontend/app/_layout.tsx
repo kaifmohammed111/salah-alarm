@@ -7,7 +7,6 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
-
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 import { AppProvider } from "@/src/context/AppContext";
 import {
@@ -15,20 +14,24 @@ import {
   registerBackgroundAlarmHandler,
   registerForegroundAlarmHandler,
 } from "@/src/lib/alarm";
-
 // Disable logbox errors etc so that users can see the app
 // and agent works as expected.
 LogBox.ignoreAllLogs(true);
-
 // Register Notifee's background handler once at module load.
 registerBackgroundAlarmHandler();
-
 // Routes to the full-screen ring screen when an alarm launches or is delivered.
 function AlarmGate() {
   const router = useRouter();
   useEffect(() => {
     let unsub = () => {};
     (async () => {
+      try {
+        const notifee = require("@notifee/react-native").default;
+        const settings = await notifee.getNotificationSettings();
+        console.log("NOTIFEE SETTINGS:", JSON.stringify(settings, null, 2));
+      } catch (e) {
+        console.log("NOTIFEE SETTINGS CHECK FAILED:", e);
+      }
       const d = await getLaunchAlarm();
       if (d) router.replace({ pathname: "/alarm-ring", params: d as any });
     })();
@@ -43,10 +46,8 @@ function AlarmGate() {
   }, []);
   return null;
 }
-
 // Keep the native splash visible from cold start until icon fonts register.
 SplashScreen.preventAutoHideAsync();
-
 export default function RootLayout() {
   const [iconsLoaded, iconsError] = useIconFonts();
   const [fontsLoaded, fontsError] = useFonts({
@@ -55,15 +56,11 @@ export default function RootLayout() {
     "Jakarta-SemiBold": require("../assets/fonts/PlusJakartaSans-SemiBold.ttf"),
     "Jakarta-Bold": require("../assets/fonts/PlusJakartaSans-Bold.ttf"),
   });
-
   const ready = (iconsLoaded || iconsError) && (fontsLoaded || fontsError);
-
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();
   }, [ready]);
-
   if (!ready) return null;
-
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
