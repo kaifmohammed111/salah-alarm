@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -18,7 +19,7 @@ import { useRouter } from "expo-router";
 import { useApp } from "@/src/context/AppContext";
 import { FONTS, RADIUS, SPACING } from "@/src/theme";
 import { DayRow, PRAYER_LABELS, Timetable, findTodayRow } from "@/src/lib/prayer";
-import type { ColumnMap } from "@/src/lib/prayer";
+import type { ColumnMap, CsvFieldKey } from "@/src/lib/prayer";
 import { parseTimetableCsv } from "@/src/lib/csv";
 import { readFileText } from "@/src/lib/files";
 
@@ -37,6 +38,10 @@ export default function UploadScreen() {
   const [rowIdx, setRowIdx] = useState(0);
   const [saved, setSaved] = useState(false);
   const [mapping, setMapping] = useState<ColumnMap[] | null>(null);
+  const [csvText, setCsvText] = useState<string | null>(null);
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
+  const [overrides, setOverrides] = useState<Partial<Record<CsvFieldKey, number>>>({});
+  const [pickerFor, setPickerFor] = useState<ColumnMap | null>(null);
 
   useEffect(() => {
     if (timetable && !draft) {
@@ -71,12 +76,34 @@ export default function UploadScreen() {
     try {
       const text = await readFileText(asset.uri);
       const tt = parseTimetableCsv(text);
+      setCsvText(text);
+      setOverrides({});
+      setCsvHeaders(tt.headers || []);
       setMapping(tt.mapping || null);
       applyDraft(tt);
     } catch (e: any) {
       setError(typeof e?.message === "string" ? e.message : "Could not parse the CSV file.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Re-run the parser with a manual column override for a single field.
+  const reassign = (key: CsvFieldKey, index: number | null) => {
+    if (!csvText) return;
+    const next = { ...overrides };
+    if (index === null) delete next[key];
+    else next[key] = index;
+    setOverrides(next);
+    setPickerFor(null);
+    try {
+      const tt = parseTimetableCsv(csvText, next);
+      setCsvHeaders(tt.headers || []);
+      setMapping(tt.mapping || null);
+      applyDraft(tt);
+      Haptics.selectionAsync();
+    } catch (e: any) {
+      setError(typeof e?.message === "string" ? e.message : "Could not re-map the CSV file.");
     }
   };
 
@@ -210,12 +237,17 @@ export default function UploadScreen() {
                 <Text style={[styles.mappingTitle, { color: colors.onSurface }]}>Detected columns</Text>
               </View>
               <Text style={[styles.mappingHint, { color: colors.onSurfaceTertiary }]}>
-                Confirm each prayer picked up the right column from your file.
+                Confirm each prayer picked up the right column. Tap a row to change it.
               </Text>
               {mapping.map((m) => {
                 const found = !!m.column;
                 return (
-                  <View key={m.label} style={[styles.mappingRow, { borderBottomColor: colors.divider }]}>
+                  <Pressable
+                    key={m.label}
+                    testID={`mapping-row-${m.key}`}
+                    onPress={() => setPickerFor(m)}
+                    style={[styles.mappingRow, { borderBottomColor: colors.divider }]}
+                  >
                     <Text style={[styles.mappingLabel, { color: colors.onSurfaceSecondary }]}>{m.label}</Text>
                     <View style={styles.mappingRight}>
                       <Ionicons
@@ -232,8 +264,9 @@ export default function UploadScreen() {
                       >
                         {m.column || "Not found"}
                       </Text>
+                      <Ionicons name="chevron-forward" size={14} color={colors.muted} />
                     </View>
-                  </View>
+                  </Pressable>
                 );
               })}
             </View>
@@ -301,6 +334,59 @@ export default function UploadScreen() {
           </View>
         ) : null}
       </KeyboardAvoidingView>
+
+      {/* Column re-assignment picker */}
+      <Modal
+        visible={!!pickerFor}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setPickerFor(null)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setPickerFor(null)}>
+          <Pressable
+            style={[styles.modalSheet, { backgroundColor: colors.surface, paddingBottom: insets.bottom + SPACING.lg }]}
+            onPress={() => {}}
+          >
+            <View style={styles.modalHandle} />
+            <Text style={[styles.modalTitle, { color: colors.onSurface }]}>
+              Column for “{pickerFor?.label}”
+            </Text>
+            <Text style={[styles.modalSub, { color: colors.onSurfaceTertiary }]}>
+              Choose which CSV column feeds this field.
+            </Text>
+            <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
+              <Pressable
+                testID="picker-autodetect"
+                onPress={() => pickerFor && reassign(pickerFor.key, null)}
+                style={[styles.modalOpt, { borderBottomColor: colors.divider }]}
+              >
+                <Ionicons name="sparkles-outline" size={16} color={colors.brand} />
+                <Text style={[styles.modalOptText, { color: colors.brand }]}>Auto-detect</Text>
+              </Pressable>
+              {csvHeaders.map((h, i) => {
+                const active = pickerFor?.index === i;
+                return (
+                  <Pressable
+                    key={`${i}-${h}`}
+                    testID={`picker-col-${i}`}
+                    onPress={() => pickerFor && reassign(pickerFor.key, i)}
+                    style={[styles.modalOpt, { borderBottomColor: colors.divider }]}
+                  >
+                    <Ionicons
+                      name={active ? "radio-button-on" : "radio-button-off"}
+                      size={16}
+                      color={active ? colors.brand : colors.muted}
+                    />
+                    <Text style={[styles.modalOptText, { color: colors.onSurface }]} numberOfLines={1}>
+                      {h || `(column ${i + 1})`}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -406,4 +492,29 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
   },
   saveText: { fontFamily: FONTS.bold, fontSize: 16, color: "#fff" },
+  modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
+  modalSheet: {
+    borderTopLeftRadius: RADIUS.lg,
+    borderTopRightRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.xl,
+    paddingTop: SPACING.md,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(120,120,120,0.4)",
+    alignSelf: "center",
+    marginBottom: SPACING.md,
+  },
+  modalTitle: { fontFamily: FONTS.bold, fontSize: 18 },
+  modalSub: { fontFamily: FONTS.regular, fontSize: 13, marginTop: 2, marginBottom: SPACING.sm },
+  modalOpt: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.md,
+    paddingVertical: SPACING.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  modalOptText: { fontFamily: FONTS.medium, fontSize: 15, flex: 1 },
 });

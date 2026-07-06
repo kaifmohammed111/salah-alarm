@@ -20,7 +20,6 @@ type Props = {
   config: AlarmConfig;
   colors: ThemeColors;
   is24h: boolean;
-  asrMethod: "hanafi" | "shafi";
   onPress: () => void;
   onToggleSound: () => void;
 };
@@ -33,7 +32,6 @@ export default function PrayerCard({
   config,
   colors,
   is24h,
-  asrMethod,
   onPress,
   onToggleSound,
 }: Props) {
@@ -46,8 +44,7 @@ export default function PrayerCard({
   const labelText = isCurrent ? "rgba(255,255,255,0.7)" : colors.muted;
   const valueText = isCurrent ? colors.onBrandPrimary : colors.onSurfaceSecondary;
 
-  let label = PRAYER_LABELS[prayerKey];
-  if (prayerKey === "asr") label = `Asr (${asrMethod === "hanafi" ? "Hanafi" : "Shafi"})`;
+  const label = PRAYER_LABELS[prayerKey];
 
   const soundOn = !isSunrise && config.enabled;
 

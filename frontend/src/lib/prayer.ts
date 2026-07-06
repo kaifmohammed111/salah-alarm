@@ -49,7 +49,23 @@ export type DayRow = {
   iftar?: string; // Ramadan: iftar (maghrib) time
 };
 
-export type ColumnMap = { label: string; column: string | null };
+export type CsvFieldKey =
+  | "date"
+  | "fajrStart"
+  | "fajrJamaat"
+  | "sunrise"
+  | "zuhrStart"
+  | "zuhrJamaat"
+  | "asrStart"
+  | "asrJamaat"
+  | "maghribStart"
+  | "maghribJamaat"
+  | "ishaStart"
+  | "ishaJamaat"
+  | "sehri"
+  | "iftar";
+
+export type ColumnMap = { key: CsvFieldKey; label: string; column: string | null; index: number };
 
 export type Timetable = {
   id?: string;
@@ -58,6 +74,7 @@ export type Timetable = {
   rows: DayRow[];
   isRamadan?: boolean;
   mapping?: ColumnMap[];
+  headers?: string[];
 };
 
 export type AlarmConfig = {

@@ -240,7 +240,6 @@ export default function HomeScreen() {
                         config={configs[k]}
                         colors={colors}
                         is24h={settings.is24h}
-                        asrMethod={settings.asrMethod}
                         onPress={() => sheetRef.current?.present(k)}
                         onToggleSound={() => setConfig(k, { enabled: !configs[k].enabled })}
                       />
