@@ -1,0 +1,5 @@
+--------- beginning of main
+07-07 15:08:30.546  6310 17302 I NearbyMediums: No BLE Fast/GATT advertisements found in the latest cycle.
+07-07 15:08:30.546  6310 17302 I NearbyMediums: Current Tracked Scanning Clients are : {NearbyConnections.EnvironmentMonitor, NearbySharing}
+07-07 15:08:36.802 28630 18212 I Authzen : [DeviceStateSyncManager] The server is in sync with current state. Nothing to do
+07-07 15:08:36.803  6831 18213 I Authzen : [DeviceStateSyncManager] The server is in sync with current state. Nothing to do

@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import {
   AlarmConfig,
@@ -15,6 +16,7 @@ const CHANNEL_ID = "prayer-alarm";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const HORIZON_DAYS = 7; // schedule this many days ahead
 const MAX_SCHEDULED = 60; // stay under the OS pending-alarm limit
+const PENDING_ALARM_KEY = "pending-alarm-data";
 
 // Lazily require Notifee so the web preview / Expo Go don't crash on the native module.
 function nf(): any | null {
@@ -190,15 +192,32 @@ export async function scheduleAlarms(
 }
 
 // If the app was launched (or brought forward) by an alarm's full-screen intent,
-// return the alarm payload so we can route to the ring screen.
+// return the alarm payload so we can route to the ring screen. Falls back to a
+// value persisted by the background handler, since getInitialNotification() is
+// unreliable on some Android OEMs (notably when launched via fullScreenAction
+// rather than a direct notification press).
 export async function getLaunchAlarm(): Promise<AlarmData | null> {
   const m = nf();
   if (!m) return null;
   try {
     const initial = await m.default.getInitialNotification();
     const d = initial?.notification?.data;
-    if (d?.type === "alarm") return d as AlarmData;
+    if (d?.type === "alarm") {
+      await AsyncStorage.removeItem(PENDING_ALARM_KEY);
+      return d as AlarmData;
+    }
   } catch {}
+
+  // Fallback: check for data persisted by the background/delivery handler.
+  try {
+    const raw = await AsyncStorage.getItem(PENDING_ALARM_KEY);
+    if (raw) {
+      await AsyncStorage.removeItem(PENDING_ALARM_KEY);
+      const parsed = JSON.parse(raw);
+      if (parsed?.type === "alarm") return parsed as AlarmData;
+    }
+  } catch {}
+
   return null;
 }
 
@@ -217,11 +236,23 @@ export function registerForegroundAlarmHandler(onAlarm: (data: AlarmData) => voi
 }
 
 // Must be registered once at module load so Notifee has a background handler.
+// Persists the alarm payload to AsyncStorage on delivery so getLaunchAlarm()
+// can recover it even if getInitialNotification() fails to populate.
 export function registerBackgroundAlarmHandler(): void {
   const m = nf();
   if (!m) return;
   const notifee = m.default;
-  notifee.onBackgroundEvent(async () => {
+  const { EventType } = m;
+  notifee.onBackgroundEvent(async ({ type, detail }: any) => {
+    try {
+      const d = detail?.notification?.data;
+      if (
+        (type === EventType.DELIVERED || type === EventType.PRESS) &&
+        d?.type === "alarm"
+      ) {
+        await AsyncStorage.setItem(PENDING_ALARM_KEY, JSON.stringify(d));
+      }
+    } catch {}
     // The full-screen intent launches the activity; routing is handled on start
     // via getLaunchAlarm(). Nothing else needed here.
   });
