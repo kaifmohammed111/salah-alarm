@@ -254,7 +254,9 @@ export function registerForegroundAlarmHandler(onAlarm: (data: AlarmData) => voi
   if (!m) return () => {};
   const notifee = m.default;
   const { EventType } = m;
-  return notifee.onForegroundEvent(({ type, detail }: any) => {
+  return notifee.onForegroundEvent((event: any) => {
+    console.log("FOREGROUND EVENT RAW:", JSON.stringify(event));
+    const { type, detail } = event;
     const d = detail?.notification?.data;
     if ((type === EventType.PRESS || type === EventType.DELIVERED) && d?.type === "alarm") {
       onAlarm(d as AlarmData);
@@ -270,16 +272,21 @@ export function registerBackgroundAlarmHandler(): void {
   if (!m) return;
   const notifee = m.default;
   const { EventType } = m;
-  notifee.onBackgroundEvent(async ({ type, detail }: any) => {
+  notifee.onBackgroundEvent(async (event: any) => {
+    console.log("BACKGROUND EVENT RAW:", JSON.stringify(event));
     try {
+      const { type, detail } = event;
       const d = detail?.notification?.data;
       if (
         (type === EventType.DELIVERED || type === EventType.PRESS) &&
         d?.type === "alarm"
       ) {
         await AsyncStorage.setItem(PENDING_ALARM_KEY, JSON.stringify(d));
+        console.log("BACKGROUND EVENT: wrote pending alarm to storage");
       }
-    } catch {}
+    } catch (e) {
+      console.log("BACKGROUND EVENT ERROR:", e);
+    }
     // The full-screen intent launches the activity; routing is handled on start
     // via getLaunchAlarm(). Nothing else needed here.
   });
