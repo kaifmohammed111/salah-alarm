@@ -1,0 +1,3 @@
+07-07 19:14:13.841  2798  2852 I ReactNativeJS: Running "main"
+07-07 19:14:14.056  2798  2852 I ReactNativeJS: 'NOTIFEE SETTINGS:', '{\n  "authorizationStatus": 1,\n  "android": {\n    "alarm": 1\n  },\n  "ios": {\n    "alert": 1,\n    "badge": 1,\n    "criticalAlert": 1,\n    "showPreviews": 1,\n    "sound": 1,\n    "carPlay": 1,\n    "lockScreen": 1,\n    "announcement": 1,\n    "notificationCenter": 1,\n    "inAppNotificationSettings": 1,\n    "authorizationStatus": 1\n  },\n  "web": {}\n}'
+07-07 19:14:14.081  2798  2852 I ReactNativeJS: 'GET LAUNCH ALARM RESULT:', 'null'

@@ -18,6 +18,12 @@ const SOUND_SOURCES: Record<string, any> = {
   full_adhan: require("../assets/sounds/azan.mp3"),
 };
 
+// Ignore AppState transitions within this window after mount — waking from a
+// locked/off screen via full-screen intent can briefly report "background" or
+// "inactive" during the OS wake animation, which would otherwise instantly
+// silence the alarm before the user ever hears it.
+const APP_STATE_GRACE_MS = 2000;
+
 export default function AlarmRingScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -32,6 +38,7 @@ export default function AlarmRingScreen() {
   const pre = parseInt((params.pre as string) || "0", 10);
   const player = useAudioPlayer(beepSource);
   const dismissedRef = useRef(false);
+  const mountedAtRef = useRef(Date.now());
 
   const stopAll = () => {
     try {
@@ -52,6 +59,7 @@ export default function AlarmRingScreen() {
 
   // Start audio (once) + vibration on mount.
   useEffect(() => {
+    mountedAtRef.current = Date.now();
     try {
       const sound = (params.sound as string) || "beep";
       const src =
@@ -62,15 +70,26 @@ export default function AlarmRingScreen() {
       player.volume = 1;
       player.seekTo(0);
       player.play();
+      console.log("ALARM RING: audio play() called", sound);
       Vibration.vibrate([0, 600, 400, 600, 400, 600], false);
-    } catch {}
+    } catch (e) {
+      console.log("ALARM RING: audio setup failed", e);
+    }
     return () => stopAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Any hardware button / screen-off (power, home) backgrounds the app → silence.
+  // Ignore transitions that happen immediately after mount, since waking from a
+  // locked screen can briefly report a non-"active" state during the OS's own
+  // wake/composite animation, not a real user-initiated backgrounding.
   useEffect(() => {
     const sub = AppState.addEventListener("change", (state) => {
+      const elapsed = Date.now() - mountedAtRef.current;
+      if (elapsed < APP_STATE_GRACE_MS) {
+        console.log("ALARM RING: ignoring early AppState change", state, elapsed);
+        return;
+      }
       if (state !== "active") stopAll();
     });
     const back = BackHandler.addEventListener("hardwareBackPress", () => {

@@ -1,7 +1,7 @@
 import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
-import { LogBox } from "react-native";
+import { useEffect, useRef } from "react";
+import { AppState, LogBox } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
@@ -22,8 +22,23 @@ registerBackgroundAlarmHandler();
 // Routes to the full-screen ring screen when an alarm launches or is delivered.
 function AlarmGate() {
   const router = useRouter();
+  const checkingRef = useRef(false);
+
+  const checkForAlarm = async (source: string) => {
+    if (checkingRef.current) return;
+    checkingRef.current = true;
+    try {
+      const d = await getLaunchAlarm();
+      console.log(`GET LAUNCH ALARM RESULT (${source}):`, JSON.stringify(d, null, 2));
+      if (d) router.replace({ pathname: "/alarm-ring", params: d as any });
+    } finally {
+      checkingRef.current = false;
+    }
+  };
+
   useEffect(() => {
     let unsub = () => {};
+
     (async () => {
       try {
         const notifee = require("@notifee/react-native").default;
@@ -32,18 +47,27 @@ function AlarmGate() {
       } catch (e) {
         console.log("NOTIFEE SETTINGS CHECK FAILED:", e);
       }
-      const d = await getLaunchAlarm();
-      console.log("GET LAUNCH ALARM RESULT:", JSON.stringify(d, null, 2));
-      if (d) router.replace({ pathname: "/alarm-ring", params: d as any });
+      await checkForAlarm("mount");
     })();
+
     unsub = registerForegroundAlarmHandler((d) => {
       console.log("FOREGROUND ALARM EVENT:", JSON.stringify(d, null, 2));
       router.replace({ pathname: "/alarm-ring", params: d as any });
     });
+
+    // The app may be resumed (not freshly mounted) when an alarm's full-screen
+    // intent brings an already-running process back to the foreground. In that
+    // case the initial mount check above never re-runs, so we also re-check
+    // whenever the app transitions to "active".
+    const appStateSub = AppState.addEventListener("change", (state) => {
+      if (state === "active") checkForAlarm("resume");
+    });
+
     return () => {
       try {
         unsub();
       } catch {}
+      appStateSub.remove();
     };
   }, []);
   return null;

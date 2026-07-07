@@ -76,13 +76,18 @@ export async function requestBatteryOptimizationExemption(): Promise<void> {
   if (Platform.OS !== "android") return;
   try {
     const already = await AsyncStorage.getItem(BATTERY_PROMPT_KEY);
-    if (already) return;
+    if (already) {
+      console.log("BATTERY EXEMPTION: already prompted, skipping");
+      return;
+    }
     await AsyncStorage.setItem(BATTERY_PROMPT_KEY, "1");
     const IntentLauncher = require("expo-intent-launcher");
-    await IntentLauncher.startActivityAsync(
+    console.log("BATTERY EXEMPTION: launching intent");
+    const result = await IntentLauncher.startActivityAsync(
       "android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
       { data: "package:com.emergent.salahalarm.lxw9zs" },
     );
+    console.log("BATTERY EXEMPTION: intent result", JSON.stringify(result));
   } catch (e) {
     console.warn("requestBatteryOptimizationExemption failed", e);
   }
