@@ -40,3 +40,4 @@ yarn-error.*
 app-example
 alarm_log.txt
 alarm_test.txt
+perms_dump.txt
