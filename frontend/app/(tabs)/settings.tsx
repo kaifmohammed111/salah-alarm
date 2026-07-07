@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -7,6 +7,7 @@ import { useRouter } from "expo-router";
 
 import { useApp } from "@/src/context/AppContext";
 import { storage } from "@/src/utils/storage";
+import { requestBatteryOptimizationExemption } from "@/src/lib/alarm";
 import { FONTS, RADIUS, SPACING } from "@/src/theme";
 
 const K_BACKUP = "salah.backup";
@@ -35,6 +36,10 @@ export default function SettingsScreen() {
     if (!b) return flash("No backup found");
     const ok = await importBackup(b);
     flash(ok ? "Backup restored" : "Restore failed");
+  };
+
+  const doBatteryExemption = async () => {
+    await requestBatteryOptimizationExemption(true);
   };
 
   const iconTile = (name: string, bg: string, color: string) => (
@@ -102,6 +107,33 @@ export default function SettingsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: SPACING.xl, paddingBottom: SPACING.xxxl }}>
+        {/* Reliability */}
+        {Platform.OS === "android" ? (
+          <>
+            <Text style={[styles.section, { color: colors.onSurfaceTertiary }]}>RELIABILITY</Text>
+            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Pressable
+                testID="battery-optimization-btn"
+                onPress={doBatteryExemption}
+                style={[styles.row, { borderBottomWidth: 0 }]}
+              >
+                <View style={styles.rowLeft}>
+                  {iconTile("battery-charging-outline", colors.brandTertiary, colors.brand)}
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.rowLabel, { color: colors.onSurface }]}>
+                      Allow background alarms
+                    </Text>
+                    <Text style={[styles.rowSub, { color: colors.onSurfaceTertiary }]}>
+                      Required for alarms to ring reliably when the app isn't open
+                    </Text>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+              </Pressable>
+            </View>
+          </>
+        ) : null}
+
         {/* Time */}
         <Text style={[styles.section, { color: colors.onSurfaceTertiary }]}>TIME</Text>
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>

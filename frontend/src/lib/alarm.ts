@@ -72,22 +72,33 @@ export async function requestAlarmPermissions(): Promise<void> {
 // manually reopened. Only prompts once per install — safe to call on every
 // app launch.
 const BATTERY_PROMPT_KEY = "battery-optimization-prompted";
-export async function requestBatteryOptimizationExemption(): Promise<void> {
+export async function requestBatteryOptimizationExemption(force = false): Promise<void> {
   if (Platform.OS !== "android") return;
   try {
-    const already = await AsyncStorage.getItem(BATTERY_PROMPT_KEY);
-    if (already) {
-      console.log("BATTERY EXEMPTION: already prompted, skipping");
-      return;
+    if (!force) {
+      const already = await AsyncStorage.getItem(BATTERY_PROMPT_KEY);
+      if (already) {
+        console.log("BATTERY EXEMPTION: already prompted, skipping");
+        return;
+      }
+      await AsyncStorage.setItem(BATTERY_PROMPT_KEY, "1");
     }
-    await AsyncStorage.setItem(BATTERY_PROMPT_KEY, "1");
     const IntentLauncher = require("expo-intent-launcher");
-    console.log("BATTERY EXEMPTION: launching intent");
-    const result = await IntentLauncher.startActivityAsync(
-      "android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
-      { data: "package:com.emergent.salahalarm.lxw9zs" },
-    );
-    console.log("BATTERY EXEMPTION: intent result", JSON.stringify(result));
+    console.log("BATTERY EXEMPTION: launching intent, force =", force);
+    try {
+      const result = await IntentLauncher.startActivityAsync(
+        "android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
+        { data: "package:com.emergent.salahalarm.lxw9zs" },
+      );
+      console.log("BATTERY EXEMPTION: intent result", JSON.stringify(result));
+    } catch (innerErr) {
+      // Some OEMs block the direct per-app intent. Fall back to the general
+      // battery optimization list, where the user can find and allow the app.
+      console.log("BATTERY EXEMPTION: direct intent failed, trying fallback", innerErr);
+      await IntentLauncher.startActivityAsync(
+        "android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS",
+      );
+    }
   } catch (e) {
     console.warn("requestBatteryOptimizationExemption failed", e);
   }

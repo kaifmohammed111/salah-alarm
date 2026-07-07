@@ -1,7 +1,7 @@
 import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useRef } from "react";
-import { AppState, LogBox } from "react-native";
+import { AppState, LogBox, Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
@@ -19,6 +19,23 @@ import {
 LogBox.ignoreAllLogs(true);
 // Register Notifee's background handler once at module load.
 registerBackgroundAlarmHandler();
+
+// Hide the 3-button/gesture navigation bar so it doesn't overlap the app's own
+// bottom UI. "overlay-swipe" keeps it hidden by default; swiping up from the
+// bottom edge briefly reveals it, matching standard Android immersive apps.
+function setupImmersiveNavBar() {
+  if (Platform.OS !== "android") return;
+  try {
+    const NavigationBar = require("expo-navigation-bar");
+    NavigationBar.setPositionAsync("absolute");
+    NavigationBar.setBehaviorAsync("overlay-swipe");
+    NavigationBar.setVisibilityAsync("hidden");
+    NavigationBar.setBackgroundColorAsync("#00000000");
+  } catch (e) {
+    console.log("setupImmersiveNavBar failed", e);
+  }
+}
+
 // Routes to the full-screen ring screen when an alarm launches or is delivered.
 function AlarmGate() {
   const router = useRouter();
@@ -38,6 +55,8 @@ function AlarmGate() {
 
   useEffect(() => {
     let unsub = () => {};
+
+    setupImmersiveNavBar();
 
     (async () => {
       try {
@@ -60,7 +79,10 @@ function AlarmGate() {
     // case the initial mount check above never re-runs, so we also re-check
     // whenever the app transitions to "active".
     const appStateSub = AppState.addEventListener("change", (state) => {
-      if (state === "active") checkForAlarm("resume");
+      if (state === "active") {
+        checkForAlarm("resume");
+        setupImmersiveNavBar();
+      }
     });
 
     return () => {

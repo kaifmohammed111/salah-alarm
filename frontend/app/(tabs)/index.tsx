@@ -106,27 +106,25 @@ export default function HomeScreen() {
               <Text style={styles.quoteText}>“{quote.text}”</Text>
               <Text style={styles.quoteSource}>— {quote.source}</Text>
             </Animated.View>
-          </View>
 
-          <View style={[styles.heroContent, { paddingTop: insets.top + SPACING.lg }]}>
             <Pressable
               testID="home-date-btn"
               onPress={() => dateSheetRef.current?.present(viewDate)}
               style={styles.dateBtn}
               hitSlop={8}
             >
-              <View>
-                <View style={styles.dateRow}>
-                  <Text style={styles.dateText}>{dateStr}</Text>
-                  <Ionicons name="calendar-outline" size={16} color="rgba(255,255,255,0.85)" />
-                </View>
-                <Text style={styles.hijriText}>{formatHijri(viewDate)}</Text>
+              <View style={styles.dateRow}>
+                <Text style={styles.dateText}>{dateStr}</Text>
+                <Ionicons name="calendar-outline" size={16} color="rgba(255,255,255,0.85)" />
               </View>
+              <Text style={styles.hijriText}>{formatHijri(viewDate)}</Text>
+              <Text style={styles.moonText}>
+                🌙 {moon.name} · {Math.round(moon.illumination * 100)}% lit
+              </Text>
             </Pressable>
-            <Text style={styles.moonText}>
-              🌙 {moon.name} · {Math.round(moon.illumination * 100)}% lit
-            </Text>
+          </View>
 
+          <View style={[styles.heroContent, { paddingTop: insets.top + SPACING.lg }]}>
             <View style={styles.clockRow}>
               <Text style={styles.clock} testID="home-clock">{time}</Text>
               {period ? <Text style={styles.period}>{period}</Text> : null}
@@ -299,7 +297,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   bannerText: { fontFamily: FONTS.semibold, fontSize: 14, flex: 1 },
-  dateBtn: { alignSelf: "flex-start" },
+  dateBtn: { alignSelf: "flex-start", marginTop: SPACING.md },
   dateRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
   sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: SPACING.md },
   resetPill: {
