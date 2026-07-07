@@ -21,6 +21,7 @@ import {
 } from "@/src/lib/prayer";
 import {
   requestAlarmPermissions,
+  requestBatteryOptimizationExemption,
   scheduleAlarms,
   setupAlarms,
 } from "@/src/lib/alarm";
@@ -117,6 +118,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (cf) setConfigs({ ...defaultConfigs(), ...JSON.parse(cf) });
       } catch {}
       await requestAlarmPermissions();
+      await requestBatteryOptimizationExemption();
       setReady(true);
     })();
   }, []);

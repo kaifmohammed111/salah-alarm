@@ -66,6 +66,28 @@ export async function requestAlarmPermissions(): Promise<void> {
   } catch {}
 }
 
+// Prompts the user to exempt this app from Android's battery/Doze optimization.
+// Without this, many OEMs (notably Vivo, Oppo, Xiaomi) freeze the app in the
+// background and delay or drop scheduled alarms entirely until the app is
+// manually reopened. Only prompts once per install — safe to call on every
+// app launch.
+const BATTERY_PROMPT_KEY = "battery-optimization-prompted";
+export async function requestBatteryOptimizationExemption(): Promise<void> {
+  if (Platform.OS !== "android") return;
+  try {
+    const already = await AsyncStorage.getItem(BATTERY_PROMPT_KEY);
+    if (already) return;
+    await AsyncStorage.setItem(BATTERY_PROMPT_KEY, "1");
+    const IntentLauncher = require("expo-intent-launcher");
+    await IntentLauncher.startActivityAsync(
+      "android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
+      { data: "package:com.emergent.salahalarm.lxw9zs" },
+    );
+  } catch (e) {
+    console.warn("requestBatteryOptimizationExemption failed", e);
+  }
+}
+
 // Cancel & (re)schedule exact full-screen alarms for every enabled prayer (and
 // its optional pre-alarm) across the next several days.
 export async function scheduleAlarms(
