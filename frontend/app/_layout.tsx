@@ -33,9 +33,11 @@ function AlarmGate() {
         console.log("NOTIFEE SETTINGS CHECK FAILED:", e);
       }
       const d = await getLaunchAlarm();
+      console.log("GET LAUNCH ALARM RESULT:", JSON.stringify(d, null, 2));
       if (d) router.replace({ pathname: "/alarm-ring", params: d as any });
     })();
     unsub = registerForegroundAlarmHandler((d) => {
+      console.log("FOREGROUND ALARM EVENT:", JSON.stringify(d, null, 2));
       router.replace({ pathname: "/alarm-ring", params: d as any });
     });
     return () => {
