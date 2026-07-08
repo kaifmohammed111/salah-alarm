@@ -3,6 +3,7 @@ import { Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as Device from "expo-device";
 import { useRouter } from "expo-router";
 
 import { useApp } from "@/src/context/AppContext";
@@ -11,6 +12,16 @@ import { requestBatteryOptimizationExemption } from "@/src/lib/alarm";
 import { FONTS, RADIUS, SPACING } from "@/src/theme";
 
 const K_BACKUP = "salah.backup";
+
+// OEMs known to hide/split background permissions behind vendor-specific
+// settings screens that can't be reliably deep-linked into from a standard
+// Android intent. We show manual instructions for these brands.
+const OEM_INSTRUCTIONS: Record<string, string> = {
+  vivo: "On Vivo phones: after tapping above, also go to Settings → Battery → Background power consumption management → SalahSync → Allow background power usage.",
+  oppo: "On Oppo phones: after tapping above, also go to Settings → Battery → App Battery Management → SalahSync → Allow background activity.",
+  xiaomi: "On Xiaomi/Redmi phones: after tapping above, also go to Settings → Apps → SalahSync → Battery saver → No restrictions, and enable Autostart.",
+  realme: "On Realme phones: after tapping above, also go to Settings → Battery → App Battery Management → SalahSync → Allow background activity.",
+};
 
 export default function SettingsScreen() {
   const { colors, isDark, settings, updateSettings, exportBackup, importBackup, timetable } =
@@ -41,6 +52,9 @@ export default function SettingsScreen() {
   const doBatteryExemption = async () => {
     await requestBatteryOptimizationExemption(true);
   };
+
+  const deviceBrand = (Device.brand || "").toLowerCase();
+  const oemHint = OEM_INSTRUCTIONS[deviceBrand];
 
   const iconTile = (name: string, bg: string, color: string) => (
     <View style={[styles.tile, { backgroundColor: bg }]}>
@@ -130,6 +144,12 @@ export default function SettingsScreen() {
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={colors.muted} />
               </Pressable>
+              {oemHint ? (
+                <View style={[styles.oemHintBox, { borderTopColor: colors.divider }]}>
+                  <Ionicons name="information-circle-outline" size={16} color={colors.brand} />
+                  <Text style={[styles.oemHintText, { color: colors.onSurfaceTertiary }]}>{oemHint}</Text>
+                </View>
+              ) : null}
             </View>
           </>
         ) : null}
@@ -270,6 +290,15 @@ const styles = StyleSheet.create({
   rowLeft: { flexDirection: "row", alignItems: "center", gap: SPACING.md },
   rowLabel: { fontFamily: FONTS.medium, fontSize: 15 },
   rowSub: { fontFamily: FONTS.regular, fontSize: 12, marginTop: 1 },
+  oemHintBox: {
+    flexDirection: "row",
+    gap: SPACING.sm,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    alignItems: "flex-start",
+  },
+  oemHintText: { fontFamily: FONTS.regular, fontSize: 12, flex: 1, lineHeight: 17 },
   tile: { width: 34, height: 34, borderRadius: RADIUS.sm, alignItems: "center", justifyContent: "center" },
   segment: { flexDirection: "row", borderRadius: RADIUS.md, padding: 4, marginBottom: SPACING.md },
   segmentItem: { flex: 1, paddingVertical: SPACING.sm, borderRadius: RADIUS.sm, alignItems: "center" },
