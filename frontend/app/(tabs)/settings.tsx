@@ -11,6 +11,9 @@ import { storage } from "@/src/utils/storage";
 import { requestBatteryOptimizationExemption } from "@/src/lib/alarm";
 import { FONTS, RADIUS, SPACING } from "@/src/theme";
 
+import { settingsGuard } from "@/src/utils/settingsGuard";
+import type { Settings } from "@/src/context/AppContext";
+
 const K_BACKUP = "salah.backup";
 
 // OEMs known to hide/split background permissions behind vendor-specific
@@ -30,6 +33,33 @@ export default function SettingsScreen() {
   const router = useRouter();
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Draft state: edits here don't persist/apply anywhere else in the app
+  // until the user explicitly taps Save. Re-seeded whenever `settings`
+  // itself changes from outside this screen (e.g. right after a save).
+  const [draft, setDraft] = useState<Settings>(settings);
+  useEffect(() => {
+    setDraft(settings);
+  }, [settings]);
+
+  const isDirty = JSON.stringify(draft) !== JSON.stringify(settings);
+
+  const saveSettings = () => {
+    updateSettings(draft);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    flash("Settings saved");
+  };
+
+  const discardSettings = () => {
+    setDraft(settings);
+  };
+
+  // Keep the shared guard's flags/callbacks current every render so the
+  // Tabs layout always sees the latest dirty state and can call back into
+  // this screen's own save/discard logic when intercepting a tab switch.
+  settingsGuard.isDirty = isDirty;
+  settingsGuard.save = saveSettings;
+  settingsGuard.discard = discardSettings;
 
   const flash = (msg: string) => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -175,8 +205,8 @@ export default function SettingsScreen() {
           <RowSwitch
             icon="time-outline"
             label="24-hour format"
-            value={settings.is24h}
-            onChange={(v) => updateSettings({ is24h: v })}
+            value={draft.is24h}
+            onChange={(v) => setDraft((d) => ({ ...d, is24h: v }))}
             testID="setting-24h"
           />
         </View>
@@ -197,8 +227,8 @@ export default function SettingsScreen() {
           </View>
           <Segmented
             testID="setting-prealarm-anchor"
-            value={settings.preAlarmAnchor}
-            onChange={(v) => updateSettings({ preAlarmAnchor: v as any })}
+            value={draft.preAlarmAnchor}
+            onChange={(v) => setDraft((d) => ({ ...d, preAlarmAnchor: v as any }))}
             options={[
               { id: "start", label: "Start time" },
               { id: "jamaat", label: "Jamaat time" },
@@ -217,8 +247,8 @@ export default function SettingsScreen() {
           </View>
           <Segmented
             testID="setting-theme"
-            value={settings.themeMode}
-            onChange={(v) => updateSettings({ themeMode: v as any })}
+            value={draft.themeMode}
+            onChange={(v) => setDraft((d) => ({ ...d, themeMode: v as any }))}
             options={[
               { id: "light", label: "Light" },
               { id: "dark", label: "Dark" },
@@ -229,8 +259,8 @@ export default function SettingsScreen() {
           <RowSwitch
             icon="partly-sunny-outline"
             label="Show Sunrise row"
-            value={settings.showSunrise}
-            onChange={(v) => updateSettings({ showSunrise: v })}
+            value={draft.showSunrise}
+            onChange={(v) => setDraft((d) => ({ ...d, showSunrise: v }))}
             testID="setting-sunrise"
           />
         </View>
@@ -322,8 +352,20 @@ export default function SettingsScreen() {
         </Text>
       </ScrollView>
 
+      {isDirty ? (
+        <View style={[styles.saveBar, { paddingBottom: insets.bottom + SPACING.md, backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+          <Pressable testID="settings-discard-btn" onPress={discardSettings} style={styles.discardBtn}>
+            <Text style={[styles.discardText, { color: colors.muted }]}>Discard</Text>
+          </Pressable>
+          <Pressable testID="settings-save-btn" onPress={saveSettings} style={[styles.saveBtn, { backgroundColor: colors.brand }]}>
+            <Ionicons name="checkmark" size={18} color="#fff" />
+            <Text style={styles.saveBtnText}>Save Settings</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
       {toast ? (
-        <View style={[styles.toast, { bottom: insets.bottom + 80, backgroundColor: colors.onSurface }]} testID="settings-toast">
+        <View style={[styles.toast, { bottom: insets.bottom + (isDirty ? 92 : 20), backgroundColor: colors.onSurface }]} testID="settings-toast">
           <Text style={[styles.toastText, { color: colors.surface }]}>{toast}</Text>
         </View>
       ) : null}
@@ -361,6 +403,26 @@ const styles = StyleSheet.create({
   segmentItem: { flex: 1, paddingVertical: SPACING.sm, borderRadius: RADIUS.sm, alignItems: "center" },
   segmentText: { fontFamily: FONTS.semibold, fontSize: 14 },
   footerNote: { fontFamily: FONTS.regular, fontSize: 12, textAlign: "center", marginTop: SPACING.xl },
+  saveBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.md,
+    paddingHorizontal: SPACING.xl,
+    paddingTop: SPACING.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  discardBtn: { paddingVertical: SPACING.md, paddingHorizontal: SPACING.md },
+  discardText: { fontFamily: FONTS.semibold, fontSize: 14 },
+  saveBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: SPACING.sm,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.md,
+  },
+  saveBtnText: { fontFamily: FONTS.bold, fontSize: 15, color: "#fff" },
   toast: {
     position: "absolute",
     alignSelf: "center",

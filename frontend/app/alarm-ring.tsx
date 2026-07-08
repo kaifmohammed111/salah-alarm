@@ -49,12 +49,18 @@ export default function AlarmRingScreen() {
     } catch {}
   };
 
-  const dismiss = () => {
+  const dismiss = async () => {
     if (dismissedRef.current) return;
     dismissedRef.current = true;
     stopAll();
-    clearAlarmNotifications();
-    clearPendingAlarm();
+    // Must await both — previously these were fired without waiting, and
+    // BackHandler.exitApp() below killed the process almost immediately
+    // after, before the notification cancel / storage clear actually
+    // completed. That left stale data behind, which the next app launch
+    // would find and re-show the same ring screen, fighting the user's own
+    // dismiss action in a loop.
+    await clearAlarmNotifications();
+    await clearPendingAlarm();
     // Fully close the app rather than navigating to the home tab — mirrors
     // standard alarm clock behavior: dismissing returns the user to whatever
     // was on screen before (lock screen, home screen), not into the app.

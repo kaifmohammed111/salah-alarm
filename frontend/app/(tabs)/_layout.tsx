@@ -1,12 +1,23 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { Platform } from "react-native";
+import { Alert, Platform } from "react-native";
+import { useNavigationState } from "@react-navigation/native";
 import { useApp } from "@/src/context/AppContext";
 import { FONTS } from "@/src/theme";
+import { settingsGuard } from "@/src/utils/settingsGuard";
 
 export default function TabsLayout() {
   const { colors, isDark } = useApp();
+  // Tracks the currently focused tab route name so the tabPress interceptor
+  // below can tell whether the user is navigating AWAY from Settings
+  // specifically (vs. just re-pressing it, or pressing another tab while
+  // already elsewhere).
+  const currentRouteName = useNavigationState((state) => {
+    if (!state) return undefined;
+    return state.routes[state.index]?.name;
+  });
+
   return (
     <Tabs
       screenOptions={{
@@ -21,9 +32,42 @@ export default function TabsLayout() {
         },
         tabBarLabelStyle: { fontFamily: FONTS.medium, fontSize: 10 },
       }}
-      screenListeners={{
-        tabPress: () => Haptics.selectionAsync(),
-      }}
+      screenListeners={({ navigation, route }) => ({
+        tabPress: (e) => {
+          Haptics.selectionAsync();
+
+          // Only intercept when currently ON settings, navigating to a
+          // DIFFERENT tab, with unsaved changes present.
+          if (currentRouteName !== "settings" || route.name === "settings") return;
+          if (!settingsGuard.isDirty) return;
+
+          e.preventDefault();
+          Alert.alert(
+            "Unsaved changes",
+            "You have unsaved settings changes. Save before leaving?",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Discard",
+                style: "destructive",
+                onPress: () => {
+                  settingsGuard.discard();
+                  settingsGuard.isDirty = false;
+                  navigation.navigate(route.name as never);
+                },
+              },
+              {
+                text: "Save",
+                onPress: () => {
+                  settingsGuard.save();
+                  settingsGuard.isDirty = false;
+                  navigation.navigate(route.name as never);
+                },
+              },
+            ],
+          );
+        },
+      })}
     >
       <Tabs.Screen
         name="index"
