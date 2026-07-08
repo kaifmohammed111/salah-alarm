@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as Device from "expo-device";
 import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 
 import { useApp } from "@/src/context/AppContext";
 import { storage } from "@/src/utils/storage";
@@ -15,6 +16,13 @@ import { settingsGuard } from "@/src/utils/settingsGuard";
 import type { Settings } from "@/src/context/AppContext";
 
 const K_BACKUP = "salah.backup";
+
+const ALARM_BG_OPTIONS: { id: string; label: string; colors: [string, string, string] }[] = [
+  { id: "default", label: "Default", colors: ["#2C5750", "#20403B", "#132925"] },
+  { id: "nightsky", label: "Night Sky", colors: ["#0B1E3D", "#01122D", "#000814"] },
+  { id: "playful", label: "Playful", colors: ["#7C3AED", "#DB2777", "#F59E0B"] },
+  { id: "kids", label: "Kids", colors: ["#FDE68A", "#93C5FD", "#C4B5FD"] },
+];
 
 // OEMs known to hide/split background permissions behind vendor-specific
 // settings screens that can't be reliably deep-linked into from a standard
@@ -265,6 +273,42 @@ export default function SettingsScreen() {
           />
         </View>
 
+        {/* Alarm Screen */}
+        <Text style={[styles.section, { color: colors.onSurfaceTertiary }]}>ALARM SCREEN</Text>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.rowSub, { color: colors.onSurfaceTertiary, marginBottom: SPACING.md }]}>
+            Background shown when an alarm rings
+          </Text>
+          <View style={styles.alarmBgGrid}>
+            {ALARM_BG_OPTIONS.map((opt) => {
+              const active = draft.alarmBackground === opt.id;
+              return (
+                <Pressable
+                  key={opt.id}
+                  testID={`alarm-bg-${opt.id}`}
+                  onPress={() => setDraft((d) => ({ ...d, alarmBackground: opt.id as any }))}
+                  style={styles.alarmBgItem}
+                >
+                  <LinearGradient
+                    colors={opt.colors}
+                    style={[
+                      styles.alarmBgSwatch,
+                      { borderColor: active ? colors.brand : "transparent", borderWidth: active ? 3 : 0 },
+                    ]}
+                  >
+                    {active ? (
+                      <View style={styles.alarmBgCheck}>
+                        <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                      </View>
+                    ) : null}
+                  </LinearGradient>
+                  <Text style={[styles.alarmBgLabel, { color: colors.onSurface }]}>{opt.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
         {/* Timetable */}
         <Text style={[styles.section, { color: colors.onSurfaceTertiary }]}>TIMETABLE</Text>
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -403,6 +447,17 @@ const styles = StyleSheet.create({
   segmentItem: { flex: 1, paddingVertical: SPACING.sm, borderRadius: RADIUS.sm, alignItems: "center" },
   segmentText: { fontFamily: FONTS.semibold, fontSize: 14 },
   footerNote: { fontFamily: FONTS.regular, fontSize: 12, textAlign: "center", marginTop: SPACING.xl },
+  alarmBgGrid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.md },
+  alarmBgItem: { alignItems: "center", width: 76 },
+  alarmBgSwatch: {
+    width: 64,
+    height: 64,
+    borderRadius: RADIUS.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  alarmBgCheck: { alignItems: "center", justifyContent: "center" },
+  alarmBgLabel: { fontFamily: FONTS.medium, fontSize: 11, marginTop: SPACING.xs, textAlign: "center" },
   saveBar: {
     flexDirection: "row",
     alignItems: "center",

@@ -9,8 +9,16 @@ import { useAudioPlayer } from "expo-audio";
 import { FONTS, SPACING } from "@/src/theme";
 import SwipeToDismiss from "@/src/components/SwipeToDismiss";
 import { clearAlarmNotifications, clearPendingAlarm } from "@/src/lib/alarm";
+import { useApp } from "@/src/context/AppContext";
 
 const HERO_BG = "#20403B";
+
+const ALARM_BACKGROUNDS: Record<string, { colors: [string, string, string]; dark: boolean }> = {
+  default: { colors: ["#2C5750", "#20403B", "#132925"], dark: true },
+  nightsky: { colors: ["#0B1E3D", "#01122D", "#000814"], dark: true },
+  playful: { colors: ["#7C3AED", "#DB2777", "#F59E0B"], dark: true },
+  kids: { colors: ["#FDE68A", "#93C5FD", "#C4B5FD"], dark: false },
+};
 const beepSource = require("../assets/sounds/beep.mp3");
 const SOUND_SOURCES: Record<string, any> = {
   beep: require("../assets/sounds/beep.mp3"),
@@ -25,6 +33,7 @@ const SOUND_SOURCES: Record<string, any> = {
 const APP_STATE_GRACE_MS = 2000;
 
 export default function AlarmRingScreen() {
+  const { settings } = useApp();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const params = useLocalSearchParams<{
@@ -37,6 +46,9 @@ export default function AlarmRingScreen() {
   const label = (params.label as string) || "Prayer";
   const pre = parseInt((params.pre as string) || "0", 10);
   const player = useAudioPlayer(beepSource);
+  const bgStyle = ALARM_BACKGROUNDS[settings.alarmBackground] || ALARM_BACKGROUNDS.default;
+  const textColor = bgStyle.dark ? "#FFFFFF" : "#1F2937";
+  const textColorMuted = bgStyle.dark ? "rgba(255,255,255,0.75)" : "rgba(31,41,55,0.7)";
   const dismissedRef = useRef(false);
   const mountedAtRef = useRef(Date.now());
 
@@ -136,20 +148,20 @@ export default function AlarmRingScreen() {
   }, []);
 
   return (
-    <View style={[styles.root, { backgroundColor: HERO_BG }]}>
+    <View style={[styles.root, { backgroundColor: bgStyle.colors[1] }]}>
       <LinearGradient
-        colors={["#2C5750", "#20403B", "#132925"]}
+        colors={bgStyle.colors}
         style={StyleSheet.absoluteFill}
       />
       <View style={[styles.content, { paddingTop: insets.top + SPACING.xxxl }]}>
-        <View style={styles.iconWrap}>
-          <Ionicons name="alarm" size={64} color="#FFFFFF" />
+        <View style={[styles.iconWrap, { backgroundColor: bgStyle.dark ? "rgba(255,255,255,0.12)" : "rgba(31,41,55,0.10)" }]}>
+          <Ionicons name="alarm" size={64} color={textColor} />
         </View>
-        <Text style={styles.kicker}>{pre > 0 ? `In ${pre} minutes` : "It's time for"}</Text>
-        <Text style={styles.prayer} testID="alarm-ring-label">
+        <Text style={[styles.kicker, { color: textColorMuted }]}>{pre > 0 ? `In ${pre} minutes` : "It's time for"}</Text>
+        <Text style={[styles.prayer, { color: textColor }]} testID="alarm-ring-label">
           {label}
         </Text>
-        <Text style={styles.sub}>{pre > 0 ? `${label} prayer is approaching` : `${label} prayer`}</Text>
+        <Text style={[styles.sub, { color: textColorMuted }]}>{pre > 0 ? `${label} prayer is approaching` : `${label} prayer`}</Text>
       </View>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + SPACING.xl }]}>

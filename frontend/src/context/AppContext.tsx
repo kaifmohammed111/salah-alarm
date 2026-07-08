@@ -30,12 +30,15 @@ import { QUOTES } from "@/src/lib/quotes";
 
 type ThemeMode = "light" | "dark" | "system";
 
+export type AlarmBackgroundStyle = "default" | "nightsky" | "playful" | "kids";
+
 export type Settings = {
   is24h: boolean;
   themeMode: ThemeMode;
   asrMethod: "hanafi" | "shafi";
   showSunrise: boolean;
   preAlarmAnchor: "start" | "jamaat";
+  alarmBackground: AlarmBackgroundStyle;
 };
 
 const DEFAULT_SETTINGS: Settings = {
@@ -44,6 +47,7 @@ const DEFAULT_SETTINGS: Settings = {
   asrMethod: "hanafi",
   showSunrise: true,
   preAlarmAnchor: "jamaat",
+  alarmBackground: "default",
 };
 
 function defaultConfigs(): Record<PrayerKey, AlarmConfig> {

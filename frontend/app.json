@@ -46,6 +46,7 @@
       "./plugins/withAlarmActivity",
       "./plugins/withAlarmSounds",
       "./plugins/withLockScreenModule",
+      "./plugins/withHomeWidget",
       [
         "expo-splash-screen",
         {

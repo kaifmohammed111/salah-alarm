@@ -7,6 +7,7 @@ import { useRouter } from "expo-router";
 import Animated, { FadeIn } from "react-native-reanimated";
 
 import { useApp } from "@/src/context/AppContext";
+import { updateWidget } from "@/src/lib/widget";
 import { useNow } from "@/src/context/NowContext";
 import { FONTS, RADIUS, SPACING } from "@/src/theme";
 import { formatHijri } from "@/src/lib/hijri";
@@ -83,6 +84,27 @@ export default function HomeScreen() {
   const { time, period } = clockText(now, settings.is24h);
 
   const keys = PRAYER_ORDER.filter((k) => (k === "sunrise" ? settings.showSunrise : true));
+
+  // Push today's prayer summary to the home screen widget whenever it
+  // changes. Only for the actual "today" view (not when browsing another
+  // date), and only using already-computed display values — no calculation
+  // logic is duplicated on the native side.
+  useEffect(() => {
+    if (!isToday || !viewRow) return;
+    const rows = keys
+      .filter((k) => k !== "sunrise")
+      .map((k) => ({
+        label: PRAYER_LABELS[k],
+        time: formatTime(startJamaat(viewRow, k).start, settings.is24h),
+      }));
+    updateWidget(
+      next ? PRAYER_LABELS[next.key] : "—",
+      next ? formatTime(next.time, settings.is24h) : "--:--",
+      next ? countdownString(next.date, now) : "",
+      rows,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isToday, viewRow, next?.key, settings.is24h]);
 
   const dateStr = viewDate.toLocaleDateString(undefined, {
     weekday: "long",
