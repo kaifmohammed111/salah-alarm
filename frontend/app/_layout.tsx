@@ -1,6 +1,6 @@
 import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppState, LogBox, Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -9,6 +9,7 @@ import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 import { AppProvider } from "@/src/context/AppContext";
+import CustomSplashOverlay from "@/src/components/CustomSplashOverlay";
 import {
   getLaunchAlarm,
   registerBackgroundAlarmHandler,
@@ -105,21 +106,29 @@ export default function RootLayout() {
     "Jakarta-Bold": require("../assets/fonts/PlusJakartaSans-Bold.ttf"),
   });
   const ready = (iconsLoaded || iconsError) && (fontsLoaded || fontsError);
+  const [showCustomSplash, setShowCustomSplash] = useState(true);
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();
   }, [ready]);
-  if (!ready) return null;
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <AppProvider>
-          <BottomSheetModalProvider>
-            <StatusBar style="auto" />
-            <AlarmGate />
-            <Stack screenOptions={{ headerShown: false }} />
-          </BottomSheetModalProvider>
-        </AppProvider>
-      </SafeAreaProvider>
+      {ready ? (
+        <SafeAreaProvider>
+          <AppProvider>
+            <BottomSheetModalProvider>
+              <StatusBar style="auto" />
+              <AlarmGate />
+              <Stack screenOptions={{ headerShown: false }} />
+            </BottomSheetModalProvider>
+          </AppProvider>
+        </SafeAreaProvider>
+      ) : null}
+      {showCustomSplash ? (
+        <CustomSplashOverlay
+          visible={!ready}
+          onFinished={() => setShowCustomSplash(false)}
+        />
+      ) : null}
     </GestureHandlerRootView>
   );
 }
