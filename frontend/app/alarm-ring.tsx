@@ -54,7 +54,14 @@ export default function AlarmRingScreen() {
     dismissedRef.current = true;
     stopAll();
     clearAlarmNotifications();
-    router.replace("/");
+    // Fully close the app rather than navigating to the home tab — mirrors
+    // standard alarm clock behavior: dismissing returns the user to whatever
+    // was on screen before (lock screen, home screen), not into the app.
+    try {
+      BackHandler.exitApp();
+    } catch {
+      router.replace("/");
+    }
   };
 
   // Start audio (once) + vibration on mount. Built-in sounds (beep/short_adhan/
