@@ -13,6 +13,17 @@ import {
 } from "./prayer";
 
 const CHANNEL_ID = "prayer-alarm";
+// Built-in sounds get their own native channel with a bundled raw resource,
+// so playback follows the Notification volume slider (Android's guaranteed
+// behavior for channel sounds). Custom uploaded sounds keep using JS playback
+// via expo-audio, which follows Media volume — see SOUND_SOURCES in
+// alarm-ring.tsx and the warning text in AlarmSettingsSheet.
+const SOUND_CHANNELS: Record<string, string> = {
+  beep: "prayer-alarm-beep",
+  short_adhan: "prayer-alarm-short_adhan",
+  full_adhan: "prayer-alarm-full_adhan",
+  custom: "prayer-alarm-custom",
+};
 const DAY_MS = 24 * 60 * 60 * 1000;
 const HORIZON_DAYS = 7; // schedule this many days ahead
 const MAX_SCHEDULED = 60; // stay under the OS pending-alarm limit
@@ -44,14 +55,39 @@ export async function setupAlarms(): Promise<void> {
   const m = nf();
   if (!m || Platform.OS !== "android") return;
   try {
-    await m.default.createChannel({
-      id: CHANNEL_ID,
-      name: "Prayer Alarms",
+    const base = {
       importance: m.AndroidImportance.HIGH,
       visibility: m.AndroidVisibility.PUBLIC,
       vibration: true,
       vibrationPattern: [300, 500, 300, 500],
       bypassDnd: true,
+    };
+    // Built-in sounds: each channel references a bundled native raw resource
+    // (see plugins/withAlarmSounds.js), so playback follows Notification volume.
+    await m.default.createChannel({
+      id: SOUND_CHANNELS.beep,
+      name: "Prayer Alarms (Beep)",
+      sound: "beep",
+      ...base,
+    });
+    await m.default.createChannel({
+      id: SOUND_CHANNELS.short_adhan,
+      name: "Prayer Alarms (Short Adhan)",
+      sound: "short_adhan",
+      ...base,
+    });
+    await m.default.createChannel({
+      id: SOUND_CHANNELS.full_adhan,
+      name: "Prayer Alarms (Full Adhan)",
+      sound: "full_adhan",
+      ...base,
+    });
+    // Custom uploaded sounds: no native channel sound — played via JS in the
+    // ring screen instead, since the sound file isn't a bundled native resource.
+    await m.default.createChannel({
+      id: SOUND_CHANNELS.custom,
+      name: "Prayer Alarms (Custom)",
+      ...base,
     });
   } catch (e) {
     console.warn("setupAlarms failed", e);
@@ -203,7 +239,7 @@ export async function scheduleAlarms(
               ? `${j.label} ${preAlarmAnchor} is in ${j.pre} minutes.`
               : `It's time for ${j.label} prayer.`,
           android: {
-            channelId: CHANNEL_ID,
+            channelId: SOUND_CHANNELS[j.sound] || SOUND_CHANNELS.custom,
             importance: AndroidImportance.HIGH,
             category: AndroidCategory.ALARM,
             visibility: AndroidVisibility.PUBLIC,

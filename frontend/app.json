@@ -48,13 +48,14 @@
     "plugins": [
       "expo-router",
       "./plugins/withAlarmActivity",
+      "./plugins/withAlarmSounds",
       [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-image.png",
-          "imageWidth": 200,
+          "imageWidth": 900,
           "resizeMode": "contain",
-          "backgroundColor": "#000000"
+          "backgroundColor": "#01122D"
         }
       ],
       "expo-audio",

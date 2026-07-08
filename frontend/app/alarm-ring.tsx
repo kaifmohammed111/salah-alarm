@@ -57,20 +57,22 @@ export default function AlarmRingScreen() {
     router.replace("/");
   };
 
-  // Start audio (once) + vibration on mount.
+  // Start audio (once) + vibration on mount. Built-in sounds (beep/short_adhan/
+  // full_adhan) now play automatically via their native notification channel,
+  // so JS playback here is only needed for custom user-uploaded sounds.
   useEffect(() => {
     mountedAtRef.current = Date.now();
     try {
       const sound = (params.sound as string) || "beep";
-      const src =
-        sound === "custom" && params.customUri
-          ? { uri: params.customUri as string }
-          : SOUND_SOURCES[sound] || beepSource;
-      player.replace(src);
-      player.volume = 1;
-      player.seekTo(0);
-      player.play();
-      console.log("ALARM RING: audio play() called", sound);
+      if (sound === "custom" && params.customUri) {
+        player.replace({ uri: params.customUri as string });
+        player.volume = 1;
+        player.seekTo(0);
+        player.play();
+        console.log("ALARM RING: audio play() called (custom)");
+      } else {
+        console.log("ALARM RING: skipping JS audio, native channel sound handles it", sound);
+      }
       Vibration.vibrate([0, 600, 400, 600, 400, 600], false);
     } catch (e) {
       console.log("ALARM RING: audio setup failed", e);

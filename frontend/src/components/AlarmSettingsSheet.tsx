@@ -250,6 +250,13 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
             <Text style={[styles.customHint, { color: colors.muted }]}>
               Plays on Preview here, and as your full alarm sound in the built app.
             </Text>
+            <View style={[styles.warningBox, { backgroundColor: colors.surfaceSecondary, borderColor: colors.warning || "#D97706" }]}>
+              <Ionicons name="alert-circle-outline" size={16} color={colors.warning || "#D97706"} />
+              <Text style={[styles.warningText, { color: colors.onSurfaceSecondary }]}>
+                Custom sounds use your phone's media volume, not the notification volume. Built-in sounds
+                (Beep, Short Adhan, Full Adhan) always follow your notification volume for more reliable alarms.
+              </Text>
+            </View>
           </View>
         ) : null}
 
@@ -401,6 +408,16 @@ const styles = StyleSheet.create({
   },
   uploadText: { fontFamily: FONTS.semibold, fontSize: 14, flex: 1 },
   customHint: { fontFamily: FONTS.regular, fontSize: 11, marginTop: SPACING.sm },
+  warningBox: {
+    flexDirection: "row",
+    gap: SPACING.sm,
+    padding: SPACING.md,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    marginTop: SPACING.sm,
+    alignItems: "flex-start",
+  },
+  warningText: { fontFamily: FONTS.regular, fontSize: 12, flex: 1, lineHeight: 17 },
   preHint: { fontFamily: FONTS.regular, fontSize: 12, marginBottom: SPACING.sm },
   preRow: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: SPACING.sm },
   preChip: {
