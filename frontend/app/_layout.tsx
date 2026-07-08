@@ -120,7 +120,20 @@ export default function RootLayout() {
               <BottomSheetModalProvider>
                 <StatusBar style="auto" />
                 <AlarmGate />
-                <Stack screenOptions={{ headerShown: false }} />
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen
+                    name="alarm-ring"
+                    options={{
+                      gestureEnabled: false,
+                      // Disabling the stack navigator's own swipe-back gesture
+                      // here specifically — without this, it can compete with
+                      // (and win over) our custom SwipeToDismiss component
+                      // whenever this screen is reached via in-app foreground
+                      // navigation (rather than a fresh cold-launched Activity),
+                      // making the swipe-to-dismiss gesture unresponsive.
+                    }}
+                  />
+                </Stack>
               </BottomSheetModalProvider>
             </AppProvider>
           </NowProvider>
