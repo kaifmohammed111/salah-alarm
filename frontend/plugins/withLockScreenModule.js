@@ -22,7 +22,7 @@ class LockScreenModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun showOverLockScreen() {
-        val activity = currentActivity ?: return
+        val activity = reactApplicationContext.currentActivity ?: return
         activity.runOnUiThread {
             activity.window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
         }
@@ -30,7 +30,7 @@ class LockScreenModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun clearOverLockScreen() {
-        val activity = currentActivity ?: return
+        val activity = reactApplicationContext.currentActivity ?: return
         activity.runOnUiThread {
             activity.window.clearFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED)
         }
