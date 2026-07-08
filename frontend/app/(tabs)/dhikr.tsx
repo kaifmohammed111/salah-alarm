@@ -33,8 +33,7 @@ const BEAD_STYLES: BeadStyle[] = [
 
 const MAX_VISUAL_BEADS = 33;
 const SCREEN_WIDTH = Dimensions.get("window").width;
-// Bead size + gap computed so the full string always fits within the
-// screen width, regardless of device size — no horizontal overflow.
+const STRING_HEIGHT = 90;
 const STRING_PADDING = SPACING.xl * 2;
 const AVAILABLE_WIDTH = SCREEN_WIDTH - STRING_PADDING;
 
@@ -52,23 +51,40 @@ export default function DhikrScreen() {
   const beadStyle = BEAD_STYLES[beadStyleIdx];
   const totalBeads = Math.min(item.target, MAX_VISUAL_BEADS);
 
-  const beadSize = Math.max(14, Math.min(28, Math.floor(AVAILABLE_WIDTH / totalBeads) - 4));
-  const beadOverlap = Math.max(2, Math.floor(beadSize * 0.15));
+  const beadSize = Math.max(16, Math.min(30, Math.floor(AVAILABLE_WIDTH / totalBeads) - 2));
 
   const progress = Math.min(count / item.target, 1);
   const filledBeads = count === 0 ? 0 : count % totalBeads === 0 ? totalBeads : count % totalBeads;
 
-  const beadPositions = useMemo(() => {
+  // Precise absolute position for each bead, rising left-to-right along a
+  // gentle curve, so we can draw real thread segments connecting their
+  // exact centers (not just an approximate visual arc).
+  const beadCenters = useMemo(() => {
+    const usableWidth = AVAILABLE_WIDTH - beadSize;
+    const usableHeight = STRING_HEIGHT - beadSize;
     return Array.from({ length: totalBeads }, (_, i) => {
-      const t = i / Math.max(totalBeads - 1, 1);
-      const arcOffset = Math.sin(t * Math.PI) * (beadSize * 0.9);
-      return arcOffset;
+      const t = totalBeads > 1 ? i / (totalBeads - 1) : 0;
+      const eased = Math.pow(t, 1.15); // slight sag near the start
+      const x = eased * usableWidth + beadSize / 2;
+      const y = STRING_HEIGHT - beadSize / 2 - eased * usableHeight;
+      return { x, y };
     });
   }, [totalBeads, beadSize]);
 
-  // Slide/flick animation applied to the whole bead string on every tap,
-  // giving the sense of beads physically moving as you count — a subtle
-  // shift-and-settle rather than a static number update.
+  const threadSegments = useMemo(() => {
+    const segs = [];
+    for (let i = 0; i < beadCenters.length - 1; i++) {
+      const a = beadCenters[i];
+      const b = beadCenters[i + 1];
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const length = Math.sqrt(dx * dx + dy * dy);
+      const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
+      segs.push({ x: a.x, y: a.y, length, angle });
+    }
+    return segs;
+  }, [beadCenters]);
+
   const shiftX = useSharedValue(0);
   const animatedStringStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: shiftX.value }],
@@ -144,8 +160,6 @@ export default function DhikrScreen() {
         })}
       </ScrollView>
 
-      {/* Large tap zone — the entire area below covering count + beads +
-          dhikr text is tappable, not just a small button. */}
       <Pressable testID="dhikr-tap-zone" onPress={increment} style={{ flex: 1 }}>
         <View style={styles.body}>
           <View style={styles.countRow}>
@@ -156,14 +170,29 @@ export default function DhikrScreen() {
           </View>
           <Text style={[styles.totalText, { color: colors.onSurfaceTertiary }]}>Tap anywhere to count</Text>
 
-          {/* Bead string */}
-          <Animated.View style={[styles.beadStringWrap, animatedStringStyle]} testID="bead-string">
-            {beadPositions.map((offset, i) => {
+          {/* Bead string — thread segments drawn first (behind), beads on top */}
+          <Animated.View style={[styles.beadStringWrap, { width: AVAILABLE_WIDTH, height: STRING_HEIGHT }, animatedStringStyle]} testID="bead-string">
+            {threadSegments.map((seg, i) => (
+              <View
+                key={`thread-${i}`}
+                style={[
+                  styles.thread,
+                  {
+                    left: seg.x,
+                    top: seg.y,
+                    width: seg.length,
+                    transform: [{ rotate: `${seg.angle}deg` }],
+                    backgroundColor: colors.onSurfaceTertiary,
+                  },
+                ]}
+              />
+            ))}
+            {beadCenters.map((c, i) => {
               const filled = i < filledBeads;
               const st = filled ? beadStyle : { colors: [colors.surfaceTertiary, colors.surfaceTertiary] as [string, string], ring: colors.border };
               return (
                 <LinearGradient
-                  key={i}
+                  key={`bead-${i}`}
                   colors={st.colors}
                   style={[
                     styles.bead,
@@ -171,10 +200,10 @@ export default function DhikrScreen() {
                       width: beadSize,
                       height: beadSize,
                       borderRadius: beadSize / 2,
-                      marginHorizontal: -beadOverlap,
-                      marginTop: -offset,
+                      left: c.x - beadSize / 2,
+                      top: c.y - beadSize / 2,
                       borderColor: st.ring,
-                      opacity: filled ? 1 : 0.5,
+                      opacity: filled ? 1 : 0.55,
                     },
                   ]}
                 />
@@ -201,8 +230,6 @@ export default function DhikrScreen() {
         </View>
       </Pressable>
 
-      {/* Controls — deliberately outside the tap zone so they don't trigger
-          an accidental count when pressed. */}
       <View style={[styles.controlsWrap, { backgroundColor: colors.surface, borderTopColor: colors.border, paddingBottom: insets.bottom + SPACING.sm }]}>
         {showStylePicker ? (
           <View style={styles.styleSwatchRow}>
@@ -272,23 +299,18 @@ const styles = StyleSheet.create({
   chip: { paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm, borderRadius: RADIUS.pill, marginRight: SPACING.sm },
   chipText: { fontFamily: FONTS.semibold, fontSize: 13 },
   body: { alignItems: "center", padding: SPACING.xl },
-  countRow: { flexDirection: "row", alignItems: "flex-end", gap: 4, marginTop: SPACING.lg },
-  countBig: { fontFamily: FONTS.bold, fontSize: 64 },
-  countTarget: { fontFamily: FONTS.semibold, fontSize: 22, marginBottom: 12 },
+  countRow: { flexDirection: "row", alignItems: "flex-end", gap: 6, marginTop: SPACING.md },
+  countBig: { fontFamily: FONTS.bold, fontSize: 92 },
+  countTarget: { fontFamily: FONTS.bold, fontSize: 30, marginBottom: 16 },
   totalText: { fontFamily: FONTS.regular, fontSize: 12, marginTop: 2, marginBottom: SPACING.xl },
-  beadStringWrap: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "center",
-    width: "100%",
-    height: 60,
-    marginBottom: SPACING.xl,
-  },
-  bead: { borderWidth: 1 },
+  beadStringWrap: { position: "relative" },
+  thread: { position: "absolute", height: 2, borderRadius: 1 },
+  bead: { position: "absolute", borderWidth: 1 },
   progressTrack: {
     width: "100%",
     height: 8,
     borderRadius: 4,
+    marginTop: SPACING.xl,
     marginBottom: SPACING.xxl,
     overflow: "hidden",
   },
