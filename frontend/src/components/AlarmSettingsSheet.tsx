@@ -22,6 +22,8 @@ type VolumeSliderProps = {
   minColor: string;
   maxColor: string;
   thumbColor: string;
+  onSlideStart?: () => void;
+  onSlideEnd?: () => void;
 };
 
 const VolumeSlider = React.memo(function VolumeSlider({
@@ -30,6 +32,8 @@ const VolumeSlider = React.memo(function VolumeSlider({
   minColor,
   maxColor,
   thumbColor,
+  onSlideStart,
+  onSlideEnd,
 }: VolumeSliderProps) {
   const [v, setV] = useState(initial);
   const [text, setText] = useState(String(Math.round(initial * 100)));
@@ -51,7 +55,7 @@ const VolumeSlider = React.memo(function VolumeSlider({
     <View style={{ flexDirection: "row", alignItems: "center", gap: SPACING.sm }}>
       <Slider
         testID="volume-slider"
-        style={{ width: 120 }}
+        style={{ width: 170, height: 40 }}
         minimumValue={0}
         maximumValue={1}
         step={0.05}
@@ -59,6 +63,7 @@ const VolumeSlider = React.memo(function VolumeSlider({
         minimumTrackTintColor={minColor}
         maximumTrackTintColor={maxColor}
         thumbTintColor={thumbColor}
+        onSlidingStart={() => onSlideStart?.()}
         onValueChange={(nv) => {
           setV(nv);
           setText(String(Math.round(nv * 100)));
@@ -67,6 +72,7 @@ const VolumeSlider = React.memo(function VolumeSlider({
           setV(nv);
           setText(String(Math.round(nv * 100)));
           onCommit(nv);
+          onSlideEnd?.();
         }}
       />
       <TextInput
@@ -129,6 +135,11 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
   const player = useAudioPlayer(beepSource);
   // Explicit preview flag so the button label doesn't flicker with raw playback status.
   const [previewing, setPreviewing] = useState(false);
+  // Disabled while the volume slider is actively being dragged. The bottom
+  // sheet's own content-panning gesture otherwise competes with the slider's
+  // touch handling, which made it register as a single tap instead of a
+  // continuous drag.
+  const [panEnabled, setPanEnabled] = useState(true);
 
   useImperativeHandle(ref, () => ({
     present: (k: PrayerKey) => {
@@ -202,6 +213,7 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
       backdropComponent={renderBackdrop}
       handleIndicatorStyle={{ backgroundColor: colors.borderStrong }}
       backgroundStyle={{ backgroundColor: colors.surface }}
+      enableContentPanningGesture={panEnabled}
       enablePanDownToClose
     >
       <BottomSheetScrollView
@@ -314,6 +326,8 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
               minColor={colors.brand}
               maxColor={colors.surfaceTertiary}
               thumbColor={colors.brand}
+              onSlideStart={() => setPanEnabled(false)}
+              onSlideEnd={() => setPanEnabled(true)}
             />
           }
         />

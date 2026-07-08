@@ -57,6 +57,17 @@ export default function SettingsScreen() {
     Linking.openURL("https://tools.nanonets.com/image-to-csv");
   };
 
+  const MOSQUES = [
+    { name: "Ghamkol Sharif", url: "https://gsmosque.org/prayer-time-table/" },
+    {
+      name: "Zia Ul Quran",
+      url: "https://www.facebook.com/media/set/?set=a.454605720032175&type=3&locale=en_GB",
+    },
+    { name: "Faizan E Medina", url: "https://dawateislamimidlands.net/stechford-birminghan/" },
+    { name: "Misbah Ul Quran", url: "https://misbahulquran.net/" },
+  ];
+  const openMosqueLink = (url: string) => Linking.openURL(url);
+
   const deviceBrand = (Device.brand || "").toLowerCase();
   const oemHint = OEM_INSTRUCTIONS[deviceBrand];
 
@@ -261,6 +272,30 @@ export default function SettingsScreen() {
             </View>
             <Ionicons name="open-outline" size={18} color={colors.muted} />
           </Pressable>
+        </View>
+
+        {/* Mosque Timetables */}
+        <Text style={[styles.section, { color: colors.onSurfaceTertiary }]}>MOSQUE TIMETABLES</Text>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {MOSQUES.map((m, i) => (
+            <Pressable
+              key={m.name}
+              testID={`mosque-link-${i}`}
+              onPress={() => openMosqueLink(m.url)}
+              style={[
+                styles.row,
+                i === MOSQUES.length - 1
+                  ? { borderBottomWidth: 0 }
+                  : { borderBottomColor: colors.divider },
+              ]}
+            >
+              <View style={styles.rowLeft}>
+                {iconTile("business-outline", colors.brandTertiary, colors.brand)}
+                <Text style={[styles.rowLabel, { color: colors.onSurface }]}>{m.name}</Text>
+              </View>
+              <Ionicons name="open-outline" size={18} color={colors.muted} />
+            </Pressable>
+          ))}
         </View>
 
         {/* Data */}
