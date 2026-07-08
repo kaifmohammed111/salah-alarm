@@ -135,11 +135,6 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
   const player = useAudioPlayer(beepSource);
   // Explicit preview flag so the button label doesn't flicker with raw playback status.
   const [previewing, setPreviewing] = useState(false);
-  // Disabled while the volume slider is actively being dragged. The bottom
-  // sheet's own content-panning gesture otherwise competes with the slider's
-  // touch handling, which made it register as a single tap instead of a
-  // continuous drag.
-  const [panEnabled, setPanEnabled] = useState(true);
 
   useImperativeHandle(ref, () => ({
     present: (k: PrayerKey) => {
@@ -213,7 +208,7 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
       backdropComponent={renderBackdrop}
       handleIndicatorStyle={{ backgroundColor: colors.borderStrong }}
       backgroundStyle={{ backgroundColor: colors.surface }}
-      enableContentPanningGesture={panEnabled}
+      enableContentPanningGesture={false}
       enablePanDownToClose
     >
       <BottomSheetScrollView
@@ -326,8 +321,6 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
               minColor={colors.brand}
               maxColor={colors.surfaceTertiary}
               thumbColor={colors.brand}
-              onSlideStart={() => setPanEnabled(false)}
-              onSlideEnd={() => setPanEnabled(true)}
             />
           }
         />
