@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
 import * as Haptics from "expo-haptics";
+import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 
 import { useApp } from "@/src/context/AppContext";
@@ -25,6 +26,7 @@ import { parseTimetableCsv } from "@/src/lib/csv";
 import { readFileText } from "@/src/lib/files";
 import { storage } from "@/src/utils/storage";
 import TimeField from "@/src/components/TimeField";
+import { CALC_METHODS, CalcMethodKey, generateTimetableForMonth } from "@/src/lib/calculate";
 
 const EDIT_KEYS: (keyof DayRow)[] = ["fajr", "sunrise", "zuhr", "asr", "maghrib", "isha"];
 const K_SEEN_INSTRUCTIONS = "upload.seenInstructions";
@@ -47,6 +49,13 @@ export default function UploadScreen() {
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [overrides, setOverrides] = useState<Partial<Record<CsvFieldKey, number>>>({});
   const [pickerFor, setPickerFor] = useState<ColumnMap | null>(null);
+  const [showMethodPicker, setShowMethodPicker] = useState(false);
+  const [calculating, setCalculating] = useState(false);
+  const [asrMethod, setAsrMethod] = useState<"hanafi" | "shafi">("hanafi");
+  const [locationMode, setLocationMode] = useState<"gps" | "manual">("gps");
+  const [manualLat, setManualLat] = useState("");
+  const [manualLon, setManualLon] = useState("");
+  const [locationError, setLocationError] = useState<string | null>(null);
   const [showInstructions, setShowInstructions] = useState(false);
 
   useEffect(() => {
@@ -144,6 +153,75 @@ export default function UploadScreen() {
     Linking.openURL("https://tools.nanonets.com/image-to-csv");
   };
 
+  const calculateByLocation = async (methodKey: CalcMethodKey) => {
+    setLocationError(null);
+
+    let latitude: number;
+    let longitude: number;
+
+    if (locationMode === "manual") {
+      const lat = parseFloat(manualLat);
+      const lon = parseFloat(manualLon);
+      if (isNaN(lat) || lat < -90 || lat > 90) {
+        setLocationError("Enter a valid latitude between -90 and 90.");
+        return;
+      }
+      if (isNaN(lon) || lon < -180 || lon > 180) {
+        setLocationError("Enter a valid longitude between -180 and 180.");
+        return;
+      }
+      latitude = lat;
+      longitude = lon;
+    } else {
+      setLoadingLabel("Getting your location…");
+      setLoading(true);
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") {
+          throw new Error("Location permission is needed to calculate prayer times for your area.");
+        }
+        let pos = await Location.getLastKnownPositionAsync();
+        if (!pos) {
+          pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+        }
+        if (!pos) throw new Error("Could not determine your location.");
+        latitude = pos.coords.latitude;
+        longitude = pos.coords.longitude;
+      } catch (e: any) {
+        setLoading(false);
+        setLocationError(typeof e?.message === "string" ? e.message : "Could not determine your location.");
+        return;
+      }
+    }
+
+    setShowMethodPicker(false);
+    setError(null);
+    setSaved(false);
+    setCalculating(true);
+    setLoadingLabel("Calculating prayer times…");
+    setLoading(true);
+    try {
+      const tt = generateTimetableForMonth(
+        latitude,
+        longitude,
+        now.getFullYear(),
+        now.getMonth(),
+        methodKey,
+        asrMethod,
+      );
+      setFileName(null);
+      setCsvText(null);
+      setCsvHeaders([]);
+      setMapping(null);
+      applyDraft(tt);
+    } catch (e: any) {
+      setError(typeof e?.message === "string" ? e.message : "Could not calculate prayer times.");
+    } finally {
+      setLoading(false);
+      setCalculating(false);
+    }
+  };
+
   const row = draft?.rows?.[rowIdx];
 
   return (
@@ -199,6 +277,15 @@ export default function UploadScreen() {
           >
             <Ionicons name="cloud-upload-outline" size={18} color={colors.onBrandPrimary} />
             <Text style={[styles.csvBtnText, { color: colors.onBrandPrimary }]}>Import CSV file</Text>
+          </Pressable>
+
+          <Pressable
+            testID="calculate-location-btn"
+            onPress={() => setShowMethodPicker(true)}
+            style={[styles.csvBtn, { backgroundColor: colors.surfaceSecondary, borderWidth: 1, borderColor: colors.brand, marginTop: SPACING.sm }]}
+          >
+            <Ionicons name="location-outline" size={18} color={colors.brand} />
+            <Text style={[styles.csvBtnText, { color: colors.brand }]}>Calculate by my location</Text>
           </Pressable>
 
           <Pressable testID="have-photo-link" onPress={openConverter} style={styles.convertLink}>
@@ -400,6 +487,137 @@ export default function UploadScreen() {
                   </Pressable>
                 );
               })}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Calculation method picker */}
+      <Modal
+        visible={showMethodPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowMethodPicker(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setShowMethodPicker(false)}>
+          <Pressable
+            style={[styles.modalSheet, { backgroundColor: colors.surface, paddingBottom: insets.bottom + SPACING.lg }]}
+            onPress={() => {}}
+          >
+            <View style={styles.modalHandle} />
+            <Text style={[styles.modalTitle, { color: colors.onSurface }]}>Calculation method</Text>
+            <Text style={[styles.modalSub, { color: colors.onSurfaceTertiary }]}>
+              Choose the method your region typically uses. Times are estimated from your GPS
+              location — jamaat (congregation) times aren't included since those are set by
+              individual mosques.
+            </Text>
+
+            <View style={{ flexDirection: "row", gap: SPACING.sm, marginBottom: SPACING.md }}>
+              <Pressable
+                testID="asr-method-hanafi"
+                onPress={() => setAsrMethod("hanafi")}
+                style={[
+                  styles.preChip,
+                  { backgroundColor: asrMethod === "hanafi" ? colors.brand : colors.surfaceSecondary },
+                ]}
+              >
+                <Text style={[styles.preChipText, { color: asrMethod === "hanafi" ? "#fff" : colors.onSurfaceSecondary }]}>
+                  Hanafi Asr
+                </Text>
+              </Pressable>
+              <Pressable
+                testID="asr-method-shafi"
+                onPress={() => setAsrMethod("shafi")}
+                style={[
+                  styles.preChip,
+                  { backgroundColor: asrMethod === "shafi" ? colors.brand : colors.surfaceSecondary },
+                ]}
+              >
+                <Text style={[styles.preChipText, { color: asrMethod === "shafi" ? "#fff" : colors.onSurfaceSecondary }]}>
+                  Shafi/Maliki/Hanbali Asr
+                </Text>
+              </Pressable>
+            </View>
+
+            <View style={{ flexDirection: "row", gap: SPACING.sm, marginBottom: SPACING.sm }}>
+              <Pressable
+                testID="location-mode-gps"
+                onPress={() => {
+                  setLocationMode("gps");
+                  setLocationError(null);
+                }}
+                style={[
+                  styles.preChip,
+                  { backgroundColor: locationMode === "gps" ? colors.brand : colors.surfaceSecondary },
+                ]}
+              >
+                <Text style={[styles.preChipText, { color: locationMode === "gps" ? "#fff" : colors.onSurfaceSecondary }]}>
+                  Use my GPS location
+                </Text>
+              </Pressable>
+              <Pressable
+                testID="location-mode-manual"
+                onPress={() => {
+                  setLocationMode("manual");
+                  setLocationError(null);
+                }}
+                style={[
+                  styles.preChip,
+                  { backgroundColor: locationMode === "manual" ? colors.brand : colors.surfaceSecondary },
+                ]}
+              >
+                <Text style={[styles.preChipText, { color: locationMode === "manual" ? "#fff" : colors.onSurfaceSecondary }]}>
+                  Enter coordinates
+                </Text>
+              </Pressable>
+            </View>
+
+            {locationMode === "manual" ? (
+              <View style={{ flexDirection: "row", gap: SPACING.sm, marginBottom: SPACING.sm }}>
+                <TextInput
+                  testID="manual-lat-input"
+                  value={manualLat}
+                  onChangeText={setManualLat}
+                  placeholder="Latitude (e.g. 51.5072)"
+                  placeholderTextColor={colors.muted}
+                  keyboardType="numbers-and-punctuation"
+                  style={[
+                    styles.preInput,
+                    { flex: 1, backgroundColor: colors.surfaceSecondary, color: colors.onSurface, borderColor: colors.border },
+                  ]}
+                />
+                <TextInput
+                  testID="manual-lon-input"
+                  value={manualLon}
+                  onChangeText={setManualLon}
+                  placeholder="Longitude (e.g. -0.1276)"
+                  placeholderTextColor={colors.muted}
+                  keyboardType="numbers-and-punctuation"
+                  style={[
+                    styles.preInput,
+                    { flex: 1, backgroundColor: colors.surfaceSecondary, color: colors.onSurface, borderColor: colors.border },
+                  ]}
+                />
+              </View>
+            ) : null}
+
+            {locationError ? (
+              <Text style={[styles.errorText, { color: colors.error, marginBottom: SPACING.sm }]}>{locationError}</Text>
+            ) : null}
+
+            <ScrollView style={{ maxHeight: 340 }} showsVerticalScrollIndicator={false}>
+              {CALC_METHODS.map((m) => (
+                <Pressable
+                  key={m.key}
+                  testID={`calc-method-${m.key}`}
+                  onPress={() => calculateByLocation(m.key)}
+                  style={[styles.modalOpt, { borderBottomColor: colors.divider }]}
+                >
+                  <Ionicons name="navigate-outline" size={16} color={colors.brand} />
+                  <Text style={[styles.modalOptText, { color: colors.onSurface }]}>{m.label}</Text>
+                  <Ionicons name="chevron-forward" size={14} color={colors.muted} />
+                </Pressable>
+              ))}
             </ScrollView>
           </Pressable>
         </Pressable>

@@ -8,7 +8,7 @@ import { useAudioPlayer } from "expo-audio";
 
 import { FONTS, SPACING } from "@/src/theme";
 import SwipeToDismiss from "@/src/components/SwipeToDismiss";
-import { clearAlarmNotifications } from "@/src/lib/alarm";
+import { clearAlarmNotifications, clearPendingAlarm } from "@/src/lib/alarm";
 
 const HERO_BG = "#20403B";
 const beepSource = require("../assets/sounds/beep.mp3");
@@ -54,6 +54,7 @@ export default function AlarmRingScreen() {
     dismissedRef.current = true;
     stopAll();
     clearAlarmNotifications();
+    clearPendingAlarm();
     // Fully close the app rather than navigating to the home tab — mirrors
     // standard alarm clock behavior: dismissing returns the user to whatever
     // was on screen before (lock screen, home screen), not into the app.

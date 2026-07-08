@@ -347,3 +347,14 @@ export async function clearAlarmNotifications(): Promise<void> {
     await m.default.cancelDisplayedNotifications();
   } catch {}
 }
+
+// Must be called whenever the ring screen is dismissed, regardless of which
+// path routed there (foreground event vs. AsyncStorage fallback). Without
+// this, a stale entry can sit in storage and get picked up again by the next
+// app-resume check, routing straight back to the ring screen and fighting
+// the user's own dismiss action in a loop.
+export async function clearPendingAlarm(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(PENDING_ALARM_KEY);
+  } catch {}
+}

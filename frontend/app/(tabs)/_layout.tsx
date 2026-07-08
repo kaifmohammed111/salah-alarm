@@ -2,13 +2,11 @@ import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Platform } from "react-native";
-
 import { useApp } from "@/src/context/AppContext";
 import { FONTS } from "@/src/theme";
 
 export default function TabsLayout() {
   const { colors, isDark } = useApp();
-
   return (
     <Tabs
       screenOptions={{
@@ -21,7 +19,7 @@ export default function TabsLayout() {
           height: Platform.OS === "ios" ? 88 : 64,
           paddingTop: 6,
         },
-        tabBarLabelStyle: { fontFamily: FONTS.medium, fontSize: 11 },
+        tabBarLabelStyle: { fontFamily: FONTS.medium, fontSize: 10 },
       }}
       screenListeners={{
         tabPress: () => Haptics.selectionAsync(),
@@ -46,6 +44,13 @@ export default function TabsLayout() {
         options={{
           title: "Qibla",
           tabBarIcon: ({ color, size }) => <Ionicons name="compass" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="dhikr"
+        options={{
+          title: "Dhikr",
+          tabBarIcon: ({ color, size }) => <Ionicons name="finger-print" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
