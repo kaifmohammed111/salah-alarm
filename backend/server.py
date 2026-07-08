@@ -1,7 +1,6 @@
 from fastapi import FastAPI, APIRouter, HTTPException
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import json
 import logging
@@ -10,20 +9,20 @@ import uuid
 from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import Optional, List
-from datetime import datetime, timezone
 
 import base64 as b64lib
-import tempfile
-from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent, FileContentWithMimeType
+import google.generativeai as genai
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+# Flash models stay on Gemini's free tier. Override via env var if Google
+# renames/deprecates this model — check available models at aistudio.google.com.
+GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash')
 
-EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
@@ -69,16 +68,25 @@ Return ONLY valid minified JSON, no markdown, no commentary, with this exact sch
 
 def _extract_json(text: str) -> dict:
     text = text.strip()
-    # strip code fences
     if text.startswith("```"):
         text = re.sub(r"^```[a-zA-Z]*", "", text).strip()
         text = re.sub(r"```$", "", text).strip()
-    # find first { ... last }
     start = text.find("{")
     end = text.rfind("}")
     if start != -1 and end != -1:
         text = text[start:end + 1]
     return json.loads(text)
+
+
+def _run_gemini(prompt_text: str, mime_type: str, raw_bytes: bytes) -> str:
+    model = genai.GenerativeModel(
+        model_name=GEMINI_MODEL,
+        system_instruction=OCR_SYSTEM,
+    )
+    response = model.generate_content(
+        [prompt_text, {"mime_type": mime_type, "data": raw_bytes}],
+    )
+    return response.text
 
 
 @api_router.get("/")
@@ -88,52 +96,40 @@ async def root():
 
 @api_router.post("/ocr/timetable", response_model=OcrResponse)
 async def ocr_timetable(req: OcrRequest):
-    if not EMERGENT_LLM_KEY:
-        raise HTTPException(status_code=500, detail="LLM key not configured")
+    if not GEMINI_API_KEY:
+        raise HTTPException(status_code=500, detail="Gemini API key not configured")
 
     img_b64 = req.image_base64
     if "," in img_b64 and img_b64.strip().startswith("data:"):
         img_b64 = img_b64.split(",", 1)[1]
 
-    chat = LlmChat(
-        api_key=EMERGENT_LLM_KEY,
-        session_id=f"ocr-{uuid.uuid4()}",
-        system_message=OCR_SYSTEM,
-    ).with_model("gemini", "gemini-3.1-pro-preview")
-
-    message = UserMessage(
-        text="Extract the full prayer timetable from this image as JSON per the schema.",
-        file_contents=[ImageContent(image_base64=img_b64)],
-    )
+    try:
+        img_bytes = b64lib.b64decode(img_b64, validate=False)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid image data. Please retake the photo.")
 
     try:
-        result = await chat.send_message(message)
+        raw = _run_gemini(
+            "Extract the full prayer timetable from this image as JSON per the schema.",
+            "image/jpeg",
+            img_bytes,
+        )
     except Exception as e:
         logger.exception("OCR LLM call failed")
         raise HTTPException(status_code=502, detail=f"OCR failed: {e}")
 
-    raw = result if isinstance(result, str) else str(result)
     try:
         parsed = _extract_json(raw)
     except Exception:
         logger.error("Failed to parse OCR JSON: %s", raw[:500])
         raise HTTPException(status_code=422, detail="Could not parse timetable from image. Please retry or enter manually.")
 
-    resp = OcrResponse(
+    return OcrResponse(
         month=parsed.get("month"),
         year=parsed.get("year"),
         rows=parsed.get("rows", []),
         raw=None,
     )
-
-    await db.timetables.insert_one({
-        "id": resp.id,
-        "month": resp.month,
-        "year": resp.year,
-        "rows": resp.rows,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    })
-    return resp
 
 
 class PdfRequest(BaseModel):
@@ -142,61 +138,37 @@ class PdfRequest(BaseModel):
 
 @api_router.post("/ocr/pdf", response_model=OcrResponse)
 async def ocr_pdf(req: PdfRequest):
-    if not EMERGENT_LLM_KEY:
-        raise HTTPException(status_code=500, detail="LLM key not configured")
+    if not GEMINI_API_KEY:
+        raise HTTPException(status_code=500, detail="Gemini API key not configured")
 
     data = req.file_base64
     if "," in data and data.strip().startswith("data:"):
         data = data.split(",", 1)[1]
 
-    tmp_path = None
     try:
-        try:
-            raw_bytes = b64lib.b64decode(data, validate=False)
-        except Exception:
-            raise HTTPException(status_code=400, detail="Invalid PDF data. Please pick a valid PDF file.")
-        if not raw_bytes:
-            raise HTTPException(status_code=400, detail="Empty PDF data.")
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tf:
-            tf.write(raw_bytes)
-            tmp_path = tf.name
+        raw_bytes = b64lib.b64decode(data, validate=False)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid PDF data. Please pick a valid PDF file.")
+    if not raw_bytes:
+        raise HTTPException(status_code=400, detail="Empty PDF data.")
 
-        chat = LlmChat(
-            api_key=EMERGENT_LLM_KEY,
-            session_id=f"ocr-pdf-{uuid.uuid4()}",
-            system_message=OCR_SYSTEM,
-        ).with_model("gemini", "gemini-3.1-pro-preview")
-
-        message = UserMessage(
-            text="Extract the full prayer timetable from this PDF document as JSON per the schema.",
-            file_contents=[FileContentWithMimeType(file_path=tmp_path, mime_type="application/pdf")],
+    try:
+        raw = _run_gemini(
+            "Extract the full prayer timetable from this PDF document as JSON per the schema.",
+            "application/pdf",
+            raw_bytes,
         )
-        result = await chat.send_message(message)
-    except HTTPException:
-        raise
     except Exception as e:
         logger.exception("PDF OCR failed")
         raise HTTPException(status_code=502, detail=f"PDF OCR failed: {e}")
-    finally:
-        if tmp_path and os.path.exists(tmp_path):
-            try:
-                os.remove(tmp_path)
-            except Exception:
-                pass
 
-    raw = result if isinstance(result, str) else str(result)
     try:
         parsed = _extract_json(raw)
     except Exception:
         logger.error("Failed to parse PDF OCR JSON: %s", raw[:500])
         raise HTTPException(status_code=422, detail="Could not parse timetable from PDF. Please retry or enter manually.")
 
-    resp = OcrResponse(month=parsed.get("month"), year=parsed.get("year"), rows=parsed.get("rows", []))
-    await db.timetables.insert_one({
-        "id": resp.id, "month": resp.month, "year": resp.year, "rows": resp.rows,
-        "source": "pdf", "created_at": datetime.now(timezone.utc).isoformat(),
-    })
-    return resp
+    return OcrResponse(month=parsed.get("month"), year=parsed.get("year"), rows=parsed.get("rows", []))
 
 
 app.include_router(api_router)
@@ -208,8 +180,3 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.on_event("shutdown")
-async def shutdown_db_client():
-    client.close()
