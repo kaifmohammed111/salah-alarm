@@ -9,6 +9,7 @@ import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 import { AppProvider } from "@/src/context/AppContext";
+import { NowProvider } from "@/src/context/NowContext";
 import CustomSplashOverlay from "@/src/components/CustomSplashOverlay";
 import {
   getLaunchAlarm,
@@ -114,13 +115,15 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       {ready ? (
         <SafeAreaProvider>
-          <AppProvider>
-            <BottomSheetModalProvider>
-              <StatusBar style="auto" />
-              <AlarmGate />
-              <Stack screenOptions={{ headerShown: false }} />
-            </BottomSheetModalProvider>
-          </AppProvider>
+          <NowProvider>
+            <AppProvider>
+              <BottomSheetModalProvider>
+                <StatusBar style="auto" />
+                <AlarmGate />
+                <Stack screenOptions={{ headerShown: false }} />
+              </BottomSheetModalProvider>
+            </AppProvider>
+          </NowProvider>
         </SafeAreaProvider>
       ) : null}
       {showCustomSplash ? (

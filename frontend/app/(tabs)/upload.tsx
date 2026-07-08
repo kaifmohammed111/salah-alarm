@@ -17,6 +17,7 @@ import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 
 import { useApp } from "@/src/context/AppContext";
+import { useNow } from "@/src/context/NowContext";
 import { FONTS, RADIUS, SPACING } from "@/src/theme";
 import { DayRow, PRAYER_LABELS, Timetable, findTodayRow } from "@/src/lib/prayer";
 import type { ColumnMap, CsvFieldKey } from "@/src/lib/prayer";
@@ -29,7 +30,8 @@ const EDIT_KEYS: (keyof DayRow)[] = ["fajr", "sunrise", "zuhr", "asr", "maghrib"
 const K_SEEN_INSTRUCTIONS = "upload.seenInstructions";
 
 export default function UploadScreen() {
-  const { colors, timetable, saveTimetable, now } = useApp();
+  const { colors, timetable, saveTimetable } = useApp();
+  const now = useNow();
   const insets = useSafeAreaInsets();
   const router = useRouter();
 

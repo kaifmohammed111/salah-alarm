@@ -54,7 +54,6 @@ function defaultConfigs(): Record<PrayerKey, AlarmConfig> {
 
 type AppState = {
   ready: boolean;
-  now: Date;
   colors: ThemeColors;
   isDark: boolean;
   quoteStartIndex: number;
@@ -86,12 +85,25 @@ const K_QUOTE_IDX = "salah.quoteIndex";
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
-  const [now, setNow] = useState(new Date());
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [timetable, setTimetable] = useState<Timetable | null>(null);
   const [configs, setConfigs] = useState<Record<PrayerKey, AlarmConfig>>(defaultConfigs());
   const [systemScheme, setSystemScheme] = useState(Appearance.getColorScheme());
   const [quoteStartIndex, setQuoteStartIndex] = useState(0);
+  // Deliberately NOT subscribed to the fast per-second tick (useNow()) here.
+  // todayRow only actually needs to change once a day, at midnight — so we
+  // track just the date-of-month locally, refreshed on a slow interval. This
+  // keeps AppProvider (and therefore every screen using useApp()) from
+  // re-rendering every second, which previously caused visible jank during
+  // interactions like dragging the volume slider.
+  const [dateOfMonth, setDateOfMonth] = useState(() => new Date().getDate());
+  useEffect(() => {
+    const id = setInterval(() => {
+      const d = new Date().getDate();
+      setDateOfMonth((prev) => (prev !== d ? d : prev));
+    }, 60000);
+    return () => clearInterval(id);
+  }, []);
 
   // Load persisted state.
   useEffect(() => {
@@ -120,12 +132,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     })();
   }, []);
 
-  // Ticking clock (1s).
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
-
   // System theme listener.
   useEffect(() => {
     const sub = Appearance.addChangeListener(({ colorScheme }) => setSystemScheme(colorScheme));
@@ -138,9 +144,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const colors = isDark ? DARK : LIGHT;
 
   const todayRow = useMemo(
-    () => findTodayRow(timetable, now),
+    () => findTodayRow(timetable, new Date()),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [timetable, now.getDate()],
+    [timetable, dateOfMonth],
   );
 
   const needsNextMonth = useMemo(() => {
@@ -209,7 +215,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const value: AppState = {
     ready,
-    now,
     colors,
     isDark,
     quoteStartIndex,

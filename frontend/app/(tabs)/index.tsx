@@ -7,6 +7,7 @@ import { useRouter } from "expo-router";
 import Animated, { FadeIn } from "react-native-reanimated";
 
 import { useApp } from "@/src/context/AppContext";
+import { useNow } from "@/src/context/NowContext";
 import { FONTS, RADIUS, SPACING } from "@/src/theme";
 import { formatHijri } from "@/src/lib/hijri";
 import { QUOTES } from "@/src/lib/quotes";
@@ -44,8 +45,9 @@ function clockText(now: Date, is24h: boolean): { time: string; period: string } 
 }
 
 export default function HomeScreen() {
-  const { colors, now, settings, timetable, configs, setConfig, needsNextMonth, quoteStartIndex } =
+  const { colors, settings, timetable, configs, setConfig, needsNextMonth, quoteStartIndex } =
     useApp();
+  const now = useNow();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const sheetRef = useRef<AlarmSheetRef>(null);

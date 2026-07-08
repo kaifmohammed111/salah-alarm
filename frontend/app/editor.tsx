@@ -15,6 +15,7 @@ import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 
 import { useApp } from "@/src/context/AppContext";
+import { useNow } from "@/src/context/NowContext";
 import { FONTS, RADIUS, SPACING } from "@/src/theme";
 import { DayRow, PRAYER_LABELS, Timetable, findTodayRow } from "@/src/lib/prayer";
 import TimeField from "@/src/components/TimeField";
@@ -41,7 +42,8 @@ function blankMonth(days: number): Timetable {
 }
 
 export default function EditorScreen() {
-  const { colors, timetable, saveTimetable, now } = useApp();
+  const { colors, timetable, saveTimetable } = useApp();
+  const now = useNow();
   const insets = useSafeAreaInsets();
   const router = useRouter();
 

@@ -32,26 +32,64 @@ const VolumeSlider = React.memo(function VolumeSlider({
   thumbColor,
 }: VolumeSliderProps) {
   const [v, setV] = useState(initial);
+  const [text, setText] = useState(String(Math.round(initial * 100)));
   useEffect(() => {
     setV(initial);
+    setText(String(Math.round(initial * 100)));
   }, [initial]);
+
+  const commitFromText = (raw: string) => {
+    const n = parseInt(raw.replace(/[^0-9]/g, ""), 10);
+    const clamped = isNaN(n) ? 0 : Math.max(0, Math.min(100, n));
+    const nv = clamped / 100;
+    setV(nv);
+    setText(String(clamped));
+    onCommit(nv);
+  };
+
   return (
-    <Slider
-      testID="volume-slider"
-      style={{ width: 140 }}
-      minimumValue={0}
-      maximumValue={1}
-      step={0.05}
-      value={v}
-      minimumTrackTintColor={minColor}
-      maximumTrackTintColor={maxColor}
-      thumbTintColor={thumbColor}
-      onValueChange={setV}
-      onSlidingComplete={(nv) => {
-        setV(nv);
-        onCommit(nv);
-      }}
-    />
+    <View style={{ flexDirection: "row", alignItems: "center", gap: SPACING.sm }}>
+      <Slider
+        testID="volume-slider"
+        style={{ width: 120 }}
+        minimumValue={0}
+        maximumValue={1}
+        step={0.05}
+        value={v}
+        minimumTrackTintColor={minColor}
+        maximumTrackTintColor={maxColor}
+        thumbTintColor={thumbColor}
+        onValueChange={(nv) => {
+          setV(nv);
+          setText(String(Math.round(nv * 100)));
+        }}
+        onSlidingComplete={(nv) => {
+          setV(nv);
+          setText(String(Math.round(nv * 100)));
+          onCommit(nv);
+        }}
+      />
+      <TextInput
+        testID="volume-input"
+        value={text}
+        onChangeText={setText}
+        onEndEditing={() => commitFromText(text)}
+        onSubmitEditing={() => commitFromText(text)}
+        keyboardType="number-pad"
+        maxLength={3}
+        style={{
+          width: 44,
+          textAlign: "center",
+          fontSize: 13,
+          fontFamily: "System",
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: maxColor,
+          borderRadius: 6,
+          paddingVertical: 4,
+          color: thumbColor,
+        }}
+      />
+    </View>
   );
 });
 

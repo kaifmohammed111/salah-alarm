@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useApp } from "@/src/context/AppContext";
+import { useNow } from "@/src/context/NowContext";
 import { FONTS, RADIUS, SPACING } from "@/src/theme";
 import {
   PRAYER_LABELS,
@@ -16,7 +17,8 @@ import PrayerCard from "@/src/components/PrayerCard";
 import AlarmSettingsSheet, { AlarmSheetRef } from "@/src/components/AlarmSettingsSheet";
 
 export default function AlarmsScreen() {
-  const { colors, now, settings, todayRow, timetable, configs, setConfig } = useApp();
+  const { colors, settings, todayRow, timetable, configs, setConfig } = useApp();
+  const now = useNow();
   const insets = useSafeAreaInsets();
   const sheetRef = useRef<AlarmSheetRef>(null);
 
