@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -21,9 +22,11 @@ import { DayRow, PRAYER_LABELS, Timetable, findTodayRow } from "@/src/lib/prayer
 import type { ColumnMap, CsvFieldKey } from "@/src/lib/prayer";
 import { parseTimetableCsv } from "@/src/lib/csv";
 import { readFileText } from "@/src/lib/files";
+import { storage } from "@/src/utils/storage";
 import TimeField from "@/src/components/TimeField";
 
 const EDIT_KEYS: (keyof DayRow)[] = ["fajr", "sunrise", "zuhr", "asr", "maghrib", "isha"];
+const K_SEEN_INSTRUCTIONS = "upload.seenInstructions";
 
 export default function UploadScreen() {
   const { colors, timetable, saveTimetable, now } = useApp();
@@ -42,6 +45,7 @@ export default function UploadScreen() {
   const [csvHeaders, setCsvHeaders] = useState<string[]>([]);
   const [overrides, setOverrides] = useState<Partial<Record<CsvFieldKey, number>>>({});
   const [pickerFor, setPickerFor] = useState<ColumnMap | null>(null);
+  const [showInstructions, setShowInstructions] = useState(false);
 
   useEffect(() => {
     if (timetable && !draft) {
@@ -52,6 +56,17 @@ export default function UploadScreen() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [timetable]);
+
+  // Show the instructions the first time this screen is ever opened.
+  useEffect(() => {
+    (async () => {
+      const seen = await storage.getItem(K_SEEN_INSTRUCTIONS, "");
+      if (!seen) {
+        setShowInstructions(true);
+        await storage.setItem(K_SEEN_INSTRUCTIONS, "1");
+      }
+    })();
+  }, []);
 
   const applyDraft = (tt: Timetable) => {
     setDraft(tt);
@@ -88,7 +103,6 @@ export default function UploadScreen() {
     }
   };
 
-  // Re-run the parser with a manual column override for a single field.
   const reassign = (key: CsvFieldKey, index: number | null) => {
     if (!csvText) return;
     const next = { ...overrides };
@@ -124,15 +138,31 @@ export default function UploadScreen() {
     setTimeout(() => router.push("/"), 600);
   };
 
+  const openConverter = () => {
+    Linking.openURL("https://tools.nanonets.com/image-to-csv");
+  };
+
   const row = draft?.rows?.[rowIdx];
 
   return (
     <View style={[styles.root, { backgroundColor: colors.surface }]}>
       <View style={[styles.header, { paddingTop: insets.top + SPACING.md, borderBottomColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.onSurface }]}>Timetable</Text>
-        <Text style={[styles.subtitle, { color: colors.onSurfaceTertiary }]}>
-          Import your monthly timetable as a CSV file
-        </Text>
+        <View style={styles.headerRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.title, { color: colors.onSurface }]}>Timetable</Text>
+            <Text style={[styles.subtitle, { color: colors.onSurfaceTertiary }]}>
+              Import your monthly timetable as a CSV file
+            </Text>
+          </View>
+          <Pressable
+            testID="upload-help-btn"
+            onPress={() => setShowInstructions(true)}
+            hitSlop={10}
+            style={styles.helpBtn}
+          >
+            <Ionicons name="help-circle-outline" size={26} color={colors.brand} />
+          </Pressable>
+        </View>
       </View>
 
       <KeyboardAvoidingView
@@ -169,6 +199,13 @@ export default function UploadScreen() {
             <Text style={[styles.csvBtnText, { color: colors.onBrandPrimary }]}>Import CSV file</Text>
           </Pressable>
 
+          <Pressable testID="have-photo-link" onPress={openConverter} style={styles.convertLink}>
+            <Ionicons name="image-outline" size={16} color={colors.brand} />
+            <Text style={[styles.convertLinkText, { color: colors.brand }]}>
+              Have a photo or PDF instead? Convert it to CSV
+            </Text>
+          </Pressable>
+
           <View style={[styles.formatBox, { backgroundColor: colors.brandTertiary }]}>
             <Text style={[styles.formatTitle, { color: colors.onBrandTertiary }]}>Expected CSV columns</Text>
             <Text style={[styles.formatText, { color: colors.onBrandTertiary }]}>
@@ -202,7 +239,6 @@ export default function UploadScreen() {
             </View>
           ) : null}
 
-          {/* Detected column mapping — sanity-check for non-standard CSVs */}
           {mapping && !error ? (
             <View
               testID="mapping-card"
@@ -366,6 +402,82 @@ export default function UploadScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {/* Instructions modal */}
+      <Modal
+        visible={showInstructions}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowInstructions(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setShowInstructions(false)}>
+          <Pressable
+            style={[styles.modalSheet, { backgroundColor: colors.surface, paddingBottom: insets.bottom + SPACING.lg }]}
+            onPress={() => {}}
+          >
+            <View style={styles.modalHandle} />
+            <Text style={[styles.modalTitle, { color: colors.onSurface }]}>How to import your timetable</Text>
+            <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
+              <View style={styles.stepRow}>
+                <View style={[styles.stepBadge, { backgroundColor: colors.brand }]}>
+                  <Text style={styles.stepBadgeText}>1</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.stepTitle, { color: colors.onSurface }]}>Get your timetable as a CSV</Text>
+                  <Text style={[styles.stepText, { color: colors.onSurfaceTertiary }]}>
+                    If your mosque already provides a CSV or spreadsheet file, you're set — skip to step 3.
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.stepRow}>
+                <View style={[styles.stepBadge, { backgroundColor: colors.brand }]}>
+                  <Text style={styles.stepBadgeText}>2</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.stepTitle, { color: colors.onSurface }]}>Have a photo or PDF instead?</Text>
+                  <Text style={[styles.stepText, { color: colors.onSurfaceTertiary }]}>
+                    Use a free online converter to turn it into a CSV file first.
+                  </Text>
+                  <Pressable testID="instructions-convert-link" onPress={openConverter} style={styles.stepLinkBtn}>
+                    <Ionicons name="open-outline" size={14} color={colors.brand} />
+                    <Text style={[styles.stepLinkText, { color: colors.brand }]}>Open converter tool</Text>
+                  </Pressable>
+                </View>
+              </View>
+              <View style={styles.stepRow}>
+                <View style={[styles.stepBadge, { backgroundColor: colors.brand }]}>
+                  <Text style={styles.stepBadgeText}>3</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.stepTitle, { color: colors.onSurface }]}>Import it here</Text>
+                  <Text style={[styles.stepText, { color: colors.onSurfaceTertiary }]}>
+                    Tap “Import CSV file” below and select the file from your device.
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.stepRow}>
+                <View style={[styles.stepBadge, { backgroundColor: colors.brand }]}>
+                  <Text style={styles.stepBadgeText}>4</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.stepTitle, { color: colors.onSurface }]}>Check the detected columns</Text>
+                  <Text style={[styles.stepText, { color: colors.onSurfaceTertiary }]}>
+                    We'll show which column feeds each prayer time — tap any row to fix it if something
+                    looks off, then confirm and save.
+                  </Text>
+                </View>
+              </View>
+            </ScrollView>
+            <Pressable
+              testID="instructions-close-btn"
+              onPress={() => setShowInstructions(false)}
+              style={[styles.saveBtn, { backgroundColor: colors.brand, marginTop: SPACING.lg }]}
+            >
+              <Text style={styles.saveText}>Got it</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -373,6 +485,8 @@ export default function UploadScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   header: { paddingHorizontal: SPACING.xl, paddingBottom: SPACING.md, borderBottomWidth: StyleSheet.hairlineWidth },
+  headerRow: { flexDirection: "row", alignItems: "flex-start" },
+  helpBtn: { padding: 2, marginTop: 2 },
   title: { fontFamily: FONTS.bold, fontSize: 26 },
   subtitle: { fontFamily: FONTS.regular, fontSize: 13, marginTop: 2 },
   preview: { width: "100%", height: 180, borderRadius: RADIUS.lg },
@@ -397,6 +511,14 @@ const styles = StyleSheet.create({
     marginTop: SPACING.md,
   },
   csvBtnText: { fontFamily: FONTS.bold, fontSize: 15 },
+  convertLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: SPACING.xs,
+    marginTop: SPACING.md,
+  },
+  convertLinkText: { fontFamily: FONTS.semibold, fontSize: 13 },
   formatBox: { padding: SPACING.lg, borderRadius: RADIUS.md, marginTop: SPACING.lg },
   formatTitle: { fontFamily: FONTS.bold, fontSize: 13, marginBottom: SPACING.xs },
   formatText: { fontFamily: FONTS.regular, fontSize: 12, lineHeight: 18 },
@@ -476,7 +598,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginBottom: SPACING.md,
   },
-  modalTitle: { fontFamily: FONTS.bold, fontSize: 18 },
+  modalTitle: { fontFamily: FONTS.bold, fontSize: 18, marginBottom: SPACING.md },
   modalSub: { fontFamily: FONTS.regular, fontSize: 13, marginTop: 2, marginBottom: SPACING.sm },
   modalOpt: {
     flexDirection: "row",
@@ -486,4 +608,17 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   modalOptText: { fontFamily: FONTS.medium, fontSize: 15, flex: 1 },
+  stepRow: { flexDirection: "row", gap: SPACING.md, marginBottom: SPACING.lg },
+  stepBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepBadgeText: { fontFamily: FONTS.bold, fontSize: 13, color: "#fff" },
+  stepTitle: { fontFamily: FONTS.bold, fontSize: 15 },
+  stepText: { fontFamily: FONTS.regular, fontSize: 13, marginTop: 2, lineHeight: 18 },
+  stepLinkBtn: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: SPACING.sm },
+  stepLinkText: { fontFamily: FONTS.semibold, fontSize: 13 },
 });

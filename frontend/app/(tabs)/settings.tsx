@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { Linking, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -51,6 +51,10 @@ export default function SettingsScreen() {
 
   const doBatteryExemption = async () => {
     await requestBatteryOptimizationExemption(true);
+  };
+
+  const openConverter = () => {
+    Linking.openURL("https://tools.nanonets.com/image-to-csv");
   };
 
   const deviceBrand = (Device.brand || "").toLowerCase();
@@ -226,7 +230,7 @@ export default function SettingsScreen() {
           <Pressable
             testID="manual-edit-btn"
             onPress={() => router.push("/editor")}
-            style={[styles.row, { borderBottomWidth: 0 }]}
+            style={[styles.row, { borderBottomColor: colors.divider }]}
           >
             <View style={styles.rowLeft}>
               {iconTile("create-outline", colors.brandTertiary, colors.brand)}
@@ -238,6 +242,24 @@ export default function SettingsScreen() {
               </View>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+          </Pressable>
+          <Pressable
+            testID="convert-csv-link"
+            onPress={openConverter}
+            style={[styles.row, { borderBottomWidth: 0 }]}
+          >
+            <View style={styles.rowLeft}>
+              {iconTile("image-outline", colors.brandTertiary, colors.brand)}
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.rowLabel, { color: colors.onSurface }]}>
+                  Have a photo or PDF instead?
+                </Text>
+                <Text style={[styles.rowSub, { color: colors.onSurfaceTertiary }]}>
+                  Convert it to a CSV file first, then import it here
+                </Text>
+              </View>
+            </View>
+            <Ionicons name="open-outline" size={18} color={colors.muted} />
           </Pressable>
         </View>
 

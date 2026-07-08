@@ -6,6 +6,7 @@ import { Image } from "expo-image";
 import * as Location from "expo-location";
 import { Magnetometer } from "expo-sensors";
 import * as Haptics from "expo-haptics";
+import { useFocusEffect } from "@react-navigation/native";
 
 import { useApp } from "@/src/context/AppContext";
 import { FONTS, RADIUS, SPACING } from "@/src/theme";
@@ -37,6 +38,9 @@ export default function QiblaScreen() {
     magSub.current?.remove();
     magSub.current = null;
     if (fallbackTimer.current) clearTimeout(fallbackTimer.current);
+    // Reset alignment tracking so re-entering the screen doesn't immediately
+    // fire a stale haptic based on the last known heading before we left.
+    wasAligned.current = false;
   }, []);
 
   // Direct magnetometer hardware reading (fallback / continuous updates).
@@ -99,18 +103,26 @@ export default function QiblaScreen() {
     }
   }, [startMagnetometer]);
 
-  useEffect(() => {
-    (async () => {
-      const { status, canAskAgain: cAsk } = await Location.getForegroundPermissionsAsync();
-      setCanAskAgain(cAsk);
-      if (status === "granted") {
-        start();
-      } else {
-        setPerm(status === "denied" ? "denied" : "undetermined");
-      }
-    })();
-    return () => stopHeading();
-  }, [start, stopHeading]);
+  // Start sensors only while this tab is actually focused, and stop them the
+  // instant it loses focus (tab switch) — not just on true unmount. Expo
+  // Router keeps tab screens mounted in the background, so a plain useEffect
+  // cleanup on unmount alone would leave the compass/magnetometer running
+  // (and vibrating) while the user is on a different tab entirely.
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        const { status, canAskAgain: cAsk } = await Location.getForegroundPermissionsAsync();
+        setCanAskAgain(cAsk);
+        if (status === "granted") {
+          start();
+        } else {
+          setPerm(status === "denied" ? "denied" : "undetermined");
+        }
+      })();
+      return () => stopHeading();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [start, stopHeading]),
+  );
 
   const qiblaRelative = qibla != null ? (qibla - heading + 360) % 360 : 0;
   const aligned = qibla != null && (qiblaRelative < 6 || qiblaRelative > 354);

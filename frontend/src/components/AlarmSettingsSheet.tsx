@@ -62,6 +62,28 @@ const SOUND_SOURCES: Record<string, any> = {
   full_adhan: require("../../assets/sounds/azan.mp3"),
 };
 
+// Defined at module level (not inside AlarmSettingsSheet) so its component
+// identity stays stable across renders. Defining it inline inside the sheet
+// caused React to fully unmount + remount every Row (and its children, like
+// the volume slider) on every re-render — including the once-per-second
+// re-renders triggered by AppContext's ticking clock — which reset the
+// slider's drag position mid-interaction.
+type RowProps = {
+  colors: any;
+  icon: string;
+  label: string;
+  right: React.ReactNode;
+};
+const Row = ({ colors, icon, label, right }: RowProps) => (
+  <View style={[styles.row, { borderColor: colors.divider }]}>
+    <View style={styles.rowLeft}>
+      <Ionicons name={icon as any} size={20} color={colors.brand} />
+      <Text style={[styles.rowLabel, { color: colors.onSurface }]}>{label}</Text>
+    </View>
+    {right}
+  </View>
+);
+
 const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
   const { colors, configs, setConfig, settings } = useApp();
   const modalRef = useRef<BottomSheetModal>(null);
@@ -134,24 +156,6 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
     [],
   );
 
-  const Row = ({
-    icon,
-    label,
-    right,
-  }: {
-    icon: string;
-    label: string;
-    right: React.ReactNode;
-  }) => (
-    <View style={[styles.row, { borderColor: colors.divider }]}>
-      <View style={styles.rowLeft}>
-        <Ionicons name={icon as any} size={20} color={colors.brand} />
-        <Text style={[styles.rowLabel, { color: colors.onSurface }]}>{label}</Text>
-      </View>
-      {right}
-    </View>
-  );
-
   return (
     <BottomSheetModal
       ref={modalRef}
@@ -171,6 +175,7 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
         </Text>
 
         <Row
+          colors={colors}
           icon="alarm-outline"
           label="Enable alarm"
           right={
@@ -261,6 +266,7 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
         ) : null}
 
         <Row
+          colors={colors}
           icon="volume-high-outline"
           label="Volume"
           right={
@@ -275,6 +281,7 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
         />
 
         <Row
+          colors={colors}
           icon="phone-portrait-outline"
           label="Vibration"
           right={
@@ -288,6 +295,7 @@ const AlarmSettingsSheet = forwardRef<AlarmSheetRef>((_props, ref) => {
         />
 
         <Row
+          colors={colors}
           icon="time-outline"
           label="Snooze"
           right={

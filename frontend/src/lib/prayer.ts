@@ -133,7 +133,7 @@ export function timeToDate(hhmm: string, base: Date = new Date()): Date | null {
 }
 
 export function formatTime(hhmm: string, is24h: boolean): string {
-  if (!hhmm || !/^\d{1,2}:\d{2}$/.test(hhmm)) return "--:--";
+  if (!hhmm || !/^\d{1,2}:\d{2}$/.test(hhmm)) return "N/A";
   const [h, m] = hhmm.split(":").map((x) => parseInt(x, 10));
   if (is24h) return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
   const period = h >= 12 ? "PM" : "AM";

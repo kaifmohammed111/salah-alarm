@@ -1,14 +1,38 @@
 import { ColumnMap, CsvFieldKey, DayRow, Timetable } from "./prayer";
 
-// Convert a 12-hour "h:mm" (accepts "." or ":" separators, no AM/PM) to 24-hour "HH:MM".
-function to24(t: string, period: "AM" | "PM"): string {
+// Convert a time string to 24-hour "HH:MM". Handles three cases:
+// 1. Explicit AM/PM marker in the cell itself (e.g. "2:30 PM", "2:30pm", "2:30 p.m.") — always wins.
+// 2. Already 24-hour format with no marker (e.g. "14:30", "00:15") — passed through as-is.
+// 3. Bare 12-hour with no marker (e.g. "2:30") — falls back to the assumed period based on
+//    which prayer column it came from (Fajr/Sunrise = AM, others = PM), same as before.
+function to24(t: string, assumedPeriod: "AM" | "PM"): string {
   if (!t) return "";
   const cleaned = t.trim();
-  const m = cleaned.match(/^(\d{1,2})[:.](\d{2})/);
-  if (!m) return "";
-  let h = parseInt(m[1], 10);
-  const min = m[2];
-  if (period === "AM") {
+  const timeMatch = cleaned.match(/(\d{1,2})[:.](\d{2})/);
+  if (!timeMatch) return "";
+  let h = parseInt(timeMatch[1], 10);
+  const min = timeMatch[2];
+  if (h > 23 || parseInt(min, 10) > 59) return "";
+
+  const explicitMatch = cleaned.match(/\b([ap])\.?\s?m\.?\b/i);
+  if (explicitMatch) {
+    const period = explicitMatch[1].toLowerCase() === "a" ? "AM" : "PM";
+    if (period === "AM") {
+      if (h === 12) h = 0;
+    } else {
+      if (h !== 12) h += 12;
+    }
+    return `${String(h).padStart(2, "0")}:${min}`;
+  }
+
+  // No explicit marker. If the hour is already outside the 1-12 range, it's
+  // already in 24-hour form (e.g. "14:30" or "00:15") — leave it untouched.
+  if (h === 0 || h > 12) {
+    return `${String(h).padStart(2, "0")}:${min}`;
+  }
+
+  // Bare 12-hour value with no marker — use the assumed period for this column.
+  if (assumedPeriod === "AM") {
     if (h === 12) h = 0;
   } else {
     if (h !== 12) h += 12;
@@ -41,7 +65,7 @@ function splitLine(line: string): string[] {
  * Expected headers (case/spacing tolerant):
  * Day,Date,Hijri,Fajr Start,Fajr Jamaat,Sunrise,Zuhr Start,Zuhr Jamaat,
  * Asr Start,Asr Jamaat,Maghrib,Isha Start,Isha Jamaat
- * Times are 12-hour without AM/PM: Fajr & Sunrise are AM, the rest are PM.
+ * Times may be 12-hour with or without AM/PM, or already 24-hour — auto-detected per cell.
  */
 export function parseTimetableCsv(
   text: string,
@@ -52,10 +76,9 @@ export function parseTimetableCsv(
   const lines = text
     .replace(/\r/g, "")
     .split("\n")
-    .filter((l) => l.split(",").some((c) => c.trim() !== "")); // drop fully-empty rows
+    .filter((l) => l.split(",").some((c) => c.trim() !== ""));
   if (lines.length < 2) throw new Error("CSV has no data rows");
 
-  // Find the header row (the one that has a "Date" column). Skips any title rows.
   let headerIdx = -1;
   for (let i = 0; i < Math.min(lines.length, 8); i++) {
     const toks = splitLine(lines[i]).map(norm);
@@ -82,7 +105,6 @@ export function parseTimetableCsv(
     const subRaw = splitLine(lines[headerIdx + 1]);
     const subHasTiers = subRaw.map(norm).some((t) => t.includes("start") || t.includes("jamat") || t.includes("jamaat"));
     if (subHasTiers) {
-      // Two-tier header: forward-fill merged prayer names, then append Start/Jamat.
       const filled = [...headerRaw];
       for (let k = 1; k < filled.length; k++) {
         if (!filled[k] || !filled[k].trim()) filled[k] = filled[k - 1];
@@ -98,18 +120,13 @@ export function parseTimetableCsv(
     dataStart = headerIdx + 1;
   }
 
-  // Normalized (alpha-only, lowercased) view of the FINAL header list.
   const hNorm = headers.map(norm);
 
-  // Find a single column by substring match, ignoring any header that also
-  // matches one of the `exclude` fragments (e.g. phantom "Zuha-e-Kubra" columns).
   const findCol = (variants: string[], exclude: string[] = []) =>
     hNorm.findIndex(
       (h) => variants.some((v) => h.includes(v)) && !exclude.some((e) => h.includes(e)),
     );
 
-  // For a prayer, locate its Start / Jamaat / plain (untiered) columns by name.
-  // Resilient to extra columns, alternate spellings and inline vs. two-tier headers.
   const prayerCols = (variants: string[], exclude: string[] = []) => {
     let start = -1;
     let jamaat = -1;
@@ -132,13 +149,11 @@ export function parseTimetableCsv(
   const iHijri = findCol(["hijri"]);
 
   const fajr = prayerCols(["fajr", "sehri", "suhoor", "sehar"]);
-  // "Zuhur"/"Zuhr"/"Zuhar"/"Dhuhr" — never "Zuha-e-Kubra" (excluded via "kubra").
   const zuhr = prayerCols(["zuhur", "zuhr", "zuhar", "dhuhr"], ["kubra"]);
   const asr = prayerCols(["asr"]);
   const maghrib = prayerCols(["maghrib"]);
   const isha = prayerCols(["isha"]);
 
-  // Apply any manual column overrides supplied by the user in the review UI.
   const ov = overrides ?? {};
   const use = (k: CsvFieldKey, base: number) => (typeof ov[k] === "number" ? (ov[k] as number) : base);
 
@@ -155,7 +170,6 @@ export function parseTimetableCsv(
   const iIs = use("ishaStart", isha.start !== -1 ? isha.start : isha.plain);
   const iIj = use("ishaJamaat", isha.jamaat);
 
-  // Ramadan-only columns
   const iSehri = use("sehri", findCol(["sehriend", "sehri", "suhoor", "sehar"]));
   const iIftar = use("iftar", findCol(["iftari", "iftar", "iftaar", "iftaari"]));
   const isRamadan = iSehri !== -1 || iIftar !== -1;
@@ -172,11 +186,7 @@ export function parseTimetableCsv(
 
     const sehriEnd = iSehri >= 0 ? to24(get(c, iSehri), "AM") : "";
     const iftar = iIftar >= 0 ? to24(get(c, iIftar), "PM") : "";
-    // In Ramadan tables Fajr has no explicit "start"; Sehri End is when Fajr begins.
     const fajrStart = iFs >= 0 ? to24(get(c, iFs), "AM") : sehriEnd;
-    // Maghrib: prefer its explicit Start column, fall back to its Jamaat column,
-    // then to Iftari (Ramadan tables). Values that aren't times (e.g. "B.Night")
-    // convert to "" and are treated as absent.
     const maghribStart = iMs >= 0 ? to24(get(c, iMs), "PM") : "";
     const maghribJamaat = iMj >= 0 ? to24(get(c, iMj), "PM") : "";
     const maghribBase = maghribStart || maghribJamaat || iftar;
@@ -194,8 +204,6 @@ export function parseTimetableCsv(
       ...(isRamadan ? { sehriEnd, iftar } : {}),
     };
 
-    // Skip padding rows that have a date number but no actual prayer times
-    // (e.g. day 30/31 left blank in a 29/30-day month).
     const hasTimes =
       row.fajr.start ||
       row.fajr.jamaat ||
@@ -216,8 +224,6 @@ export function parseTimetableCsv(
 
   if (!rows.length) throw new Error("No valid rows found in CSV");
 
-  // Human-readable summary of which CSV header fed each prayer field, so the
-  // user can sanity-check odd/non-standard files and re-assign columns before saving.
   const col = (i: number) => (i >= 0 && i < headers.length ? headers[i].trim() || null : null);
   const m = (key: CsvFieldKey, label: string, index: number): ColumnMap => ({
     key,
