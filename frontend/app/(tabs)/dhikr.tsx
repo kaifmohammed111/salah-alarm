@@ -7,8 +7,8 @@ import * as Haptics from "expo-haptics";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSequence,
   withTiming,
+  Easing,
 } from "react-native-reanimated";
 
 import { useApp } from "@/src/context/AppContext";
@@ -46,14 +46,18 @@ export default function DhikrScreen() {
   const [vibrationOn, setVibrationOn] = useState(true);
   const [beadStyleIdx, setBeadStyleIdx] = useState(1); // default: Pearl
   const [showStylePicker, setShowStylePicker] = useState(false);
+  const [showTargetPicker, setShowTargetPicker] = useState(false);
+  // Per-phrase target override. null = use that phrase's own default target.
+  const [targetOverride, setTargetOverride] = useState<number | null>(null);
 
   const item = DHIKR_LIST[index];
+  const target = targetOverride ?? item.target;
   const beadStyle = BEAD_STYLES[beadStyleIdx];
-  const totalBeads = Math.min(item.target, MAX_VISUAL_BEADS);
+  const totalBeads = Math.min(target, MAX_VISUAL_BEADS);
 
   const beadSize = Math.max(16, Math.min(30, Math.floor(AVAILABLE_WIDTH / totalBeads) - 2));
 
-  const progress = Math.min(count / item.target, 1);
+  const progress = Math.min(count / target, 1);
   const filledBeads = count === 0 ? 0 : count % totalBeads === 0 ? totalBeads : count % totalBeads;
 
   // Precise absolute position for each bead, rising left-to-right along a
@@ -94,19 +98,27 @@ export default function DhikrScreen() {
     setIndex(i);
     setCount(0);
     setHitTarget(false);
+    setTargetOverride(null);
     Haptics.selectionAsync();
   };
+
+  const SLIDE_RANGE = 46;
 
   const increment = () => {
     const next = count + 1;
     setCount(next);
 
-    shiftX.value = withSequence(
-      withTiming(-14, { duration: 70 }),
-      withTiming(0, { duration: 160 }),
-    );
+    const nextFilled = next % totalBeads === 0 ? totalBeads : next % totalBeads;
+    const laneProgress = nextFilled / totalBeads;
+    // Fluid, continuous slide of the whole string toward the left as beads
+    // are counted — rather than a static instant color-fill jump. Wraps
+    // back smoothly at the start of each new lap around the string.
+    shiftX.value = withTiming(-laneProgress * SLIDE_RANGE, {
+      duration: 260,
+      easing: Easing.out(Easing.cubic),
+    });
 
-    if (next === item.target) {
+    if (next === target) {
       setHitTarget(true);
       if (vibrationOn) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } else if (vibrationOn) {
@@ -166,9 +178,50 @@ export default function DhikrScreen() {
             <Text style={[styles.countBig, { color: hitTarget ? colors.success : colors.brand }]} testID="dhikr-count">
               {count}
             </Text>
-            <Text style={[styles.countTarget, { color: colors.onSurfaceTertiary }]}>/ {item.target}</Text>
+            <Pressable testID="dhikr-target-btn" onPress={() => setShowTargetPicker((s) => !s)}>
+              <Text style={[styles.countTarget, { color: colors.onSurfaceTertiary }]}>/ {target}</Text>
+            </Pressable>
           </View>
           <Text style={[styles.totalText, { color: colors.onSurfaceTertiary }]}>Tap anywhere to count</Text>
+
+          {showTargetPicker ? (
+            <View style={styles.targetPickerRow} testID="dhikr-target-picker">
+              {[33, 99, 100].map((t) => {
+                const active = target === t;
+                return (
+                  <Pressable
+                    key={t}
+                    testID={`dhikr-target-${t}`}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      setTargetOverride(t);
+                      setCount(0);
+                      setHitTarget(false);
+                      setShowTargetPicker(false);
+                      Haptics.selectionAsync();
+                    }}
+                    style={[styles.targetChip, { backgroundColor: active ? colors.brand : colors.surface, borderColor: colors.border }]}
+                  >
+                    <Text style={[styles.targetChipText, { color: active ? "#fff" : colors.onSurface }]}>{t}</Text>
+                  </Pressable>
+                );
+              })}
+              <Pressable
+                testID="dhikr-target-default"
+                onPress={(e) => {
+                  e.stopPropagation();
+                  setTargetOverride(null);
+                  setCount(0);
+                  setHitTarget(false);
+                  setShowTargetPicker(false);
+                  Haptics.selectionAsync();
+                }}
+                style={[styles.targetChip, { backgroundColor: targetOverride === null ? colors.brand : colors.surface, borderColor: colors.border }]}
+              >
+                <Text style={[styles.targetChipText, { color: targetOverride === null ? "#fff" : colors.onSurface }]}>Default</Text>
+              </Pressable>
+            </View>
+          ) : null}
 
           {/* Bead string — thread segments drawn first (behind), beads on top */}
           <Animated.View style={[styles.beadStringWrap, { width: AVAILABLE_WIDTH, height: STRING_HEIGHT }, animatedStringStyle]} testID="bead-string">
@@ -303,6 +356,9 @@ const styles = StyleSheet.create({
   countBig: { fontFamily: FONTS.bold, fontSize: 92 },
   countTarget: { fontFamily: FONTS.bold, fontSize: 30, marginBottom: 16 },
   totalText: { fontFamily: FONTS.regular, fontSize: 12, marginTop: 2, marginBottom: SPACING.xl },
+  targetPickerRow: { flexDirection: "row", gap: SPACING.sm, marginBottom: SPACING.lg },
+  targetChip: { paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm, borderRadius: RADIUS.pill, borderWidth: StyleSheet.hairlineWidth },
+  targetChipText: { fontFamily: FONTS.semibold, fontSize: 13 },
   beadStringWrap: { position: "relative" },
   thread: { position: "absolute", height: 2, borderRadius: 1 },
   bead: { position: "absolute", borderWidth: 1 },

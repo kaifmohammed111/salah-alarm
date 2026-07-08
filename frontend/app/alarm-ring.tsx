@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { AppState, BackHandler, StyleSheet, Text, View, Vibration } from "react-native";
+import { AppState, BackHandler, NativeModules, StyleSheet, Text, View, Vibration } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -40,6 +40,20 @@ export default function AlarmRingScreen() {
   const dismissedRef = useRef(false);
   const mountedAtRef = useRef(Date.now());
 
+  // Show over the lock screen ONLY while this ring screen is actually
+  // mounted — cleared immediately on unmount/dismiss so normal app usage
+  // always requires the phone to be unlocked, as it should.
+  useEffect(() => {
+    try {
+      NativeModules.LockScreenModule?.showOverLockScreen();
+    } catch {}
+    return () => {
+      try {
+        NativeModules.LockScreenModule?.clearOverLockScreen();
+      } catch {}
+    };
+  }, []);
+
   const stopAll = () => {
     try {
       player.pause();
@@ -53,6 +67,9 @@ export default function AlarmRingScreen() {
     if (dismissedRef.current) return;
     dismissedRef.current = true;
     stopAll();
+    try {
+      NativeModules.LockScreenModule?.clearOverLockScreen();
+    } catch {}
     // Must await both — previously these were fired without waiting, and
     // BackHandler.exitApp() below killed the process almost immediately
     // after, before the notification cancel / storage clear actually

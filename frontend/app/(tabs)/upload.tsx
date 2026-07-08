@@ -427,7 +427,7 @@ export default function UploadScreen() {
         </ScrollView>
 
         {row ? (
-          <View style={[styles.footer, { paddingBottom: insets.bottom + SPACING.md, backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+          <View style={[styles.footer, { paddingBottom: SPACING.lg, backgroundColor: colors.surface, borderTopColor: colors.border }]}>
             <Pressable
               testID="confirm-save-btn"
               onPress={onSave}

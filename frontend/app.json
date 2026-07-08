@@ -45,6 +45,7 @@
       "expo-router",
       "./plugins/withAlarmActivity",
       "./plugins/withAlarmSounds",
+      "./plugins/withLockScreenModule",
       [
         "expo-splash-screen",
         {
