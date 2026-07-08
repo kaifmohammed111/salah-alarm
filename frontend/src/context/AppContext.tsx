@@ -27,7 +27,6 @@ import {
 } from "@/src/lib/alarm";
 import { QUOTES } from "@/src/lib/quotes";
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 
 type ThemeMode = "light" | "dark" | "system";
 
@@ -67,8 +66,6 @@ type AppState = {
   updateSettings: (patch: Partial<Settings>) => void;
   setConfig: (key: PrayerKey, patch: Partial<AlarmConfig>) => void;
   saveTimetable: (tt: Timetable) => Promise<void>;
-  runOcr: (base64: string) => Promise<Timetable>;
-  runOcrPdf: (base64: string) => Promise<Timetable>;
   clearTimetable: () => Promise<void>;
   reschedule: () => Promise<number>;
   exportBackup: () => string;
@@ -189,33 +186,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await storage.removeItem(K_TIMETABLE);
   };
 
-  const runOcr = async (base64: string): Promise<Timetable> => {
-    const res = await fetch(`${BACKEND_URL}/api/ocr/timetable`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ image_base64: base64 }),
-    });
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error(txt || `OCR failed (${res.status})`);
-    }
-    const data = await res.json();
-    return { id: data.id, month: data.month, year: data.year, rows: data.rows || [] };
-  };
 
-  const runOcrPdf = async (base64: string): Promise<Timetable> => {
-    const res = await fetch(`${BACKEND_URL}/api/ocr/pdf`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file_base64: base64 }),
-    });
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error(txt || `PDF OCR failed (${res.status})`);
-    }
-    const data = await res.json();
-    return { id: data.id, month: data.month, year: data.year, rows: data.rows || [] };
-  };
 
   const exportBackup = () =>
     JSON.stringify({ settings, timetable, configs, version: 1 });
@@ -250,8 +221,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     updateSettings,
     setConfig,
     saveTimetable,
-    runOcr,
-    runOcrPdf,
     clearTimetable,
     reschedule,
     exportBackup,

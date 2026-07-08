@@ -12,8 +12,6 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.emergent.salahalarm.lxw9zs",
       "infoPlist": {
-        "NSCameraUsageDescription": "Scan your mosque prayer timetable",
-        "NSPhotoLibraryUsageDescription": "Upload your saved timetable image",
         "NSLocationWhenInUseUsageDescription": "Find the Qibla direction from your location"
       }
     },
@@ -25,8 +23,6 @@
       "edgeToEdgeEnabled": true,
       "package": "com.emergent.salahalarm.lxw9zs",
       "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.READ_MEDIA_IMAGES",
         "android.permission.SCHEDULE_EXACT_ALARM",
         "android.permission.USE_EXACT_ALARM",
         "android.permission.USE_FULL_SCREEN_INTENT",
@@ -66,13 +62,6 @@
         }
       ],
       [
-        "expo-image-picker",
-        {
-          "photosPermission": "Upload your saved timetable image",
-          "cameraPermission": "Scan your mosque prayer timetable"
-        }
-      ],
-      [
         "expo-location",
         {
           "locationWhenInUsePermission": "Find the Qibla direction from your location"
@@ -81,13 +70,6 @@
     ],
     "experiments": {
       "typedRoutes": true
-    },
-    "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "92a13a6a-444a-471f-b671-0496e8479605"
-      }
-    },
-    "owner": "kaif0121"
+    }
   }
 }
