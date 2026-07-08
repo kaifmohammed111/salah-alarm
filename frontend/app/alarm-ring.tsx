@@ -70,22 +70,21 @@ export default function AlarmRingScreen() {
     try {
       NativeModules.LockScreenModule?.clearOverLockScreen();
     } catch {}
-    // Must await both — previously these were fired without waiting, and
-    // BackHandler.exitApp() below killed the process almost immediately
-    // after, before the notification cancel / storage clear actually
-    // completed. That left stale data behind, which the next app launch
-    // would find and re-show the same ring screen, fighting the user's own
-    // dismiss action in a loop.
     await clearAlarmNotifications();
     await clearPendingAlarm();
-    // Fully close the app rather than navigating to the home tab — mirrors
-    // standard alarm clock behavior: dismissing returns the user to whatever
-    // was on screen before (lock screen, home screen), not into the app.
+    // Always reset navigation to home FIRST, regardless of exitApp().
+    // BackHandler.exitApp() does not reliably kill the underlying process —
+    // on many Android versions/devices it just finishes the current
+    // Activity, while the process and JS context stay alive in Android's
+    // cache. Reopening the app then just resumes that same still-running
+    // instance, meaning the navigation stack was never actually reset —
+    // this screen would still be the "current route", appearing stuck.
+    // Resetting navigation explicitly here fixes that regardless of
+    // whether the subsequent exitApp() call actually kills the process.
+    router.replace("/");
     try {
       BackHandler.exitApp();
-    } catch {
-      router.replace("/");
-    }
+    } catch {}
   };
 
   // Start audio (once) + vibration on mount. Built-in sounds (beep/short_adhan/

@@ -1,0 +1,591 @@
+--------- beginning of main
+07-08 22:18:47.591 16436 16436 W binder:16436_8: type=1400 audit(0.0:4480663): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:47.607 16436 16436 W binder:16436_8: type=1400 audit(0.0:4480664): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:47.623 16436 16436 W binder:16436_8: type=1400 audit(0.0:4480665): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:47.639 16436 16436 W binder:16436_8: type=1400 audit(0.0:4480666): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:47.655 16436 16436 W binder:16436_8: type=1400 audit(0.0:4480667): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:47.836 14283 14283 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.facs.internal.service.START dat=chimera-action:/... xflg=0x4 cmp=com.google.android.gms/.chimera.GmsInternalApiService }
+07-08 22:18:47.944 20930 27085 I NullBinder: NullBinder for android.net.action.RECOMMEND_NETWORKS triggering remote TransactionTooLargeException due to Service without Chimera impl, calling uid: 1000, calling pid: 0
+07-08 22:18:47.944 20930 27085 W .gms.persistent: Large reply transaction of 1056768 bytes, interface descriptor , code 1
+07-08 22:18:47.951 22694 22900 D WM-WorkConstraintsTrack: NetworkRequestConstraintController onCapabilitiesChanged callback
+07-08 22:18:47.954 20930  2106 I NearbyMediums: Wifi changed new SSID: "VM7877023"
+07-08 22:18:47.954 20930  2106 I NearbyMediums: WifiLanConnectivityInfo is not changed, skip notify.
+07-08 22:18:47.956 14209 17602 I NearbyMediums: Wifi changed new SSID: "VM7877023"
+07-08 22:18:47.956 14209 17602 I NearbyMediums: WifiLanConnectivityInfo is not changed, skip notify.
+07-08 22:18:48.279 20930  2371 I .gms.persistent: Explicit concurrent copying GC freed 16MB AllocSpace bytes, 9(3456KB) LOS objects, 50% free, 28MB/57MB, paused 247us,39us total 141.798ms
+07-08 22:18:48.451 20930  2106 I NearbySharing: Network state changed: NetworkState(isRestricted=false, isOnline=true, isCongested=false, isMetered=false, isWifiConnected=true)
+07-08 22:18:48.452 20930 28878 I NearbySharing: Network state changed: NetworkState(isRestricted=false, isOnline=true, isCongested=false, isMetered=false, isWifiConnected=true)
+07-08 22:18:48.603 16436 16436 W binder:16436_8: type=1400 audit(0.0:4480728): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:48.619 16436 16436 W binder:16436_8: type=1400 audit(0.0:4480729): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:48.635 16436 16436 W binder:16436_8: type=1400 audit(0.0:4480730): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:48.655 16436 16436 W binder:16436_8: type=1400 audit(0.0:4480731): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:48.671 16436 16436 W binder:16436_8: type=1400 audit(0.0:4480732): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:48.828 20930 28878 I NearbyMediums: No BLE Fast/GATT advertisements found in the latest cycle.
+07-08 22:18:48.828 20930 28878 I NearbyMediums: Current Tracked Scanning Clients are : {NearbyConnections.EnvironmentMonitor, NearbySharing}
+07-08 22:18:48.885  2483  2483 D nativeloader: Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+07-08 22:18:48.886  2483  2483 E oadcastreceiver: BBinder_init Processname  com.google.android.cellbroadcastreceiver  
+07-08 22:18:48.886  2483  2483 E oadcastreceiver: BBinder_init hasGetProcessName  com.google.android.cellbroadcastreceiver
+07-08 22:18:48.905  2483  2483 D ApplicationLoaders: Returning zygote-cached class loader: /system_ext/framework/androidx.window.extensions.jar
+07-08 22:18:48.905  2483  2483 D ApplicationLoaders: Returning zygote-cached class loader: /system_ext/framework/androidx.window.sidecar.jar
+07-08 22:18:48.910  2483  2483 D nativeloader: Configuring clns-shared-9 for other apk /apex/com.android.cellbroadcast/priv-app/GoogleCellBroadcastApp@371017160/GoogleCellBroadcastApp.apk. target_sdk_version=37, uses_libraries=, library_path=/apex/com.android.cellbroadcast/priv-app/GoogleCellBroadcastApp@371017160/lib/arm64:/system/lib64:/system_ext/lib64, permitted_path=/data:/mnt/expand:/data/user_de/0/com.google.android.cellbroadcastreceiver:/apex/com.android.cellbroadcast/priv-app/GoogleCellBroadcastApp@371017160:/system/lib64:/system_ext/lib64
+07-08 22:18:48.910  2483  2483 D nativeloader: InitApexLibraries:
+07-08 22:18:48.910  2483  2483 D nativeloader:   com_android_adservices: libhpke_jni.so:libtflite_support_classifiers_native.so
+07-08 22:18:48.910  2483  2483 D nativeloader:   com_android_appsearch: libappsearchservice.so:libicing_anywhere.so
+07-08 22:18:48.910  2483  2483 D nativeloader:   com_android_art: libartservice.so
+07-08 22:18:48.910  2483  2483 D nativeloader:   com_android_bt: libbluetooth_jni.so
+07-08 22:18:48.910  2483  2483 D nativeloader:   com_android_conscrypt: libjavacrypto.so
+07-08 22:18:48.910  2483  2483 D nativeloader:   com_android_mediaprovider: libpdfclient.so
+07-08 22:18:48.910  2483  2483 D nativeloader:   com_android_ondevicepersonalization: libfcp_cpp_dep_jni.so:libfcp_hpke_jni.so
+07-08 22:18:48.910  2483  2483 D nativeloader:   com_android_os_statsd: libstats_jni.so
+07-08 22:18:48.910  2483  2483 D nativeloader:   com_android_tethering: libandroid_net_connectivity_com_android_net_module_util_jni.so:libandroid_net_connectivity_com_android_net_module_util_jni_CommonConnectivityJni.so:libcrypto_httpengine.so:libframework-connectivity-jni.so:libframework-connectivity-tiramisu-jni.so:libhttpengine.so:libservice-connectivity.so:libservice-thread-jni.so
+07-08 22:18:48.910  2483  2483 D nativeloader:   com_android_uwb: libuwb_uci_jni_rust.so
+07-08 22:18:48.910  2483  2483 D nativeloader:   com_android_virt: libvirtualizationservice_jni.so:libvirtualmachine_jni.so
+07-08 22:18:48.910  2483  2483 D nativeloader:   com_android_wifi: libservice-wifi-jni.so
+07-08 22:18:48.969  2483  2483 I oadcastreceiver: AssetManager2(0xb4000077a02861d8) locale list changing from [] to [en-GB]
+07-08 22:18:48.977  2483  2483 V GraphicsEnvironment: Currently set values for:
+07-08 22:18:48.977  2483  2483 V GraphicsEnvironment:   angle_gl_driver_selection_pkgs=[com.android.angle, com.linecorp.b612.android, com.campmobile.snow, com.google.android.apps.tachyon]
+07-08 22:18:48.977  2483  2483 V GraphicsEnvironment:   angle_gl_driver_selection_values=[angle, native, native, native]
+07-08 22:18:48.977  2483  2483 V GraphicsEnvironment: com.google.android.cellbroadcastreceiver is not listed in per-application setting
+07-08 22:18:48.977  2483  2483 V GraphicsEnvironment: ANGLE allowlist from config: 
+07-08 22:18:48.977  2483  2483 V GraphicsEnvironment: com.google.android.cellbroadcastreceiver is not listed in ANGLE allowlist or settings, returning default
+07-08 22:18:48.977  2483  2483 V GraphicsEnvironment: Neither updatable production driver nor prerelease driver is supported.
+07-08 22:18:48.994  2483  2483 D CellBroadcastReceiver: onReceive Intent { act=android.intent.action.SERVICE_STATE flg=0x1000010 xflg=0x4 cmp=com.google.android.cellbroadcastreceiver/com.android.cellbroadcastreceiver.CellBroadcastReceiver (has extras) }
+07-08 22:18:48.997  2483  2483 I oadcastreceiver: AssetManager2(0xb4000077a028b958) locale list changing from [] to [en-GB]
+07-08 22:18:48.998  2483  2483 D CellBroadcastReceiver: onServiceStateChanged, ss: 0
+07-08 22:18:48.999  2483  2483 D CellBroadcastReceiver: networkOperator: 23420
+07-08 22:18:49.002  2483  2483 D CellBroadcastReceiver: mockmodem is running? = false
+07-08 22:18:49.003  2483  2483 D CellBroadcastReceiver: update supported roaming operator as 
+07-08 22:18:49.006  2483  2483 D CellBroadcastReceiver: onReceive Intent { act=android.intent.action.SERVICE_STATE flg=0x1000010 xflg=0x4 cmp=com.google.android.cellbroadcastreceiver/com.android.cellbroadcastreceiver.CellBroadcastReceiver (has extras) }
+07-08 22:18:49.006  2483  2483 D CellBroadcastReceiver: onServiceStateChanged, ss: 0
+07-08 22:18:49.006  2483  2483 D CellBroadcastReceiver: networkOperator: 23420
+07-08 22:18:49.006  2483  2483 D CellBroadcastReceiver: mockmodem is running? = false
+07-08 22:18:49.006  2483  2483 D CellBroadcastReceiver: update supported roaming operator as 
+07-08 22:18:49.034  2483  2483 D CellBroadcastReceiver: onReceive Intent { act=android.intent.action.SERVICE_STATE flg=0x1000010 xflg=0x4 cmp=com.google.android.cellbroadcastreceiver/com.android.cellbroadcastreceiver.CellBroadcastReceiver (has extras) }
+07-08 22:18:49.034  2483  2483 D CellBroadcastReceiver: onServiceStateChanged, ss: 0
+07-08 22:18:49.034  2483  2483 D CellBroadcastReceiver: networkOperator: 23420
+07-08 22:18:49.034  2483  2483 D CellBroadcastReceiver: mockmodem is running? = false
+07-08 22:18:49.034  2483  2483 D CellBroadcastReceiver: update supported roaming operator as 
+07-08 22:18:49.615 16436 16436 W binder:16436_8: type=1400 audit(0.0:4480791): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:49.631 16436 16436 W binder:16436_8: type=1400 audit(0.0:4480792): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:49.647 16436 16436 W binder:16436_8: type=1400 audit(0.0:4480793): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:49.667 16436 16436 W binder:16436_8: type=1400 audit(0.0:4480794): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:49.671 18195 18218 E IPCThreadState: Binder transaction failure. id: 188755746, BR_*: 29201, error: -28 (No space left on device)
+07-08 22:18:49.672 18195 18218 W BpBinder: Large outgoing transaction of 7059744 bytes, interface descriptor , code 23 was sent
+07-08 22:18:49.672 18195 18218 E JavaBinder: !!! FAILED BINDER TRANSACTION !!!  (parcel size = 7059744)
+07-08 22:18:49.683 16436 16436 W binder:16436_8: type=1400 audit(0.0:4480795): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:50.631 16436 16436 W binder:16436_8: type=1400 audit(0.0:4480855): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:50.645 20930 21020 I ActivityScheduler: nextTriggerTime: 156673662, in 67231ms, detectorType: 39, FULL_TYPE alarmWindowMillis: 7500
+07-08 22:18:50.647 16436 16436 W binder:16436_8: type=1400 audit(0.0:4480856): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:50.667 16436 16436 W binder:16436_8: type=1400 audit(0.0:4480857): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:50.683 16436 16436 W binder:16436_8: type=1400 audit(0.0:4480858): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:50.699 16436 16436 W binder:16436_8: type=1400 audit(0.0:4480859): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:50.925  2483  2483 D CellBroadcastReceiver: onReceive Intent { act=android.intent.action.SERVICE_STATE flg=0x1000010 xflg=0x4 cmp=com.google.android.cellbroadcastreceiver/com.android.cellbroadcastreceiver.CellBroadcastReceiver (has extras) }
+07-08 22:18:50.925  2483  2483 D CellBroadcastReceiver: onServiceStateChanged, ss: 0
+07-08 22:18:50.925  2483  2483 D CellBroadcastReceiver: networkOperator: 23420
+07-08 22:18:50.925  2483  2483 D CellBroadcastReceiver: mockmodem is running? = false
+07-08 22:18:50.925  2483  2483 D CellBroadcastReceiver: update supported roaming operator as 
+07-08 22:18:51.566 28667 28698 I ProtoXDBBufferWrapper: ProtoXDBBufferWrapper.flushToStorage():158 Flushed 12 data item(s) to storage.
+07-08 22:18:51.649 20930 20930 D BoundBrokerSvc: onRebind: Intent { act=com.google.android.gms.libs.gmscorelogger.service.START dat=chimera-action:/... xflg=0x4 cmp=com.google.android.gms/.chimera.PersistentDirectBootAwareApiService }
+07-08 22:18:51.647 16436 16436 W binder:16436_8: type=1400 audit(0.0:4480919): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:51.663 16436 16436 W binder:16436_4: type=1400 audit(0.0:4480920): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:51.679 16436 16436 W binder:16436_4: type=1400 audit(0.0:4480921): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:51.695 16436 16436 W binder:16436_4: type=1400 audit(0.0:4480922): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:51.711 16436 16436 W binder:16436_4: type=1400 audit(0.0:4480923): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:52.659 16436 16436 W binder:16436_8: type=1400 audit(0.0:4480983): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:52.679 16436 16436 W binder:16436_8: type=1400 audit(0.0:4480984): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:52.695 16436 16436 W binder:16436_8: type=1400 audit(0.0:4480985): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:52.711 16436 16436 W binder:16436_8: type=1400 audit(0.0:4480986): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:52.727 16436 16436 W binder:16436_8: type=1400 audit(0.0:4480987): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:53.134 25105 25843 I bt_shim_scanner: [le_scanning_manager.cc(919)] handle_remote_properties: handle_remote_properties update device_type=0x2 addr_type=0x1
+07-08 22:18:53.287 20930  2105 I Auth    : [GaiaIdSync] successfully updated accountId and email [CONTEXT service_id=153 ]
+07-08 22:18:53.296 20930 20930 I NearbyDiscovery: (REDACTED) DiscoveryService onStartCommand action: %s
+07-08 22:18:53.297 20930 28738 I NearbyDiscovery: FastPairApiHandler: trigger firmware update check [CONTEXT service_id=265 ]
+07-08 22:18:53.299 20930 22425 I NearbyDiscovery: (REDACTED) FastPairApiHandler: Send result, package=(%s), requestType=(%s), status=(%s)
+07-08 22:18:53.679 16436 16436 W binder:16436_8: type=1400 audit(0.0:4481047): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:53.691 16436 16436 W binder:16436_8: type=1400 audit(0.0:4481048): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:53.711 16436 16436 W binder:16436_8: type=1400 audit(0.0:4481049): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:53.727 16436 16436 W binder:16436_8: type=1400 audit(0.0:4481050): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:53.743 16436 16436 W binder:16436_7: type=1400 audit(0.0:4481051): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:54.200 20930 21021 I NullBinder: NullBinder for android.net.action.RECOMMEND_NETWORKS triggering remote TransactionTooLargeException due to Service without Chimera impl, calling uid: 1000, calling pid: 0
+07-08 22:18:54.200 20930 21021 W .gms.persistent: Large reply transaction of 1056768 bytes, interface descriptor , code 1
+07-08 22:18:54.208 20930 28878 I NearbyMediums: Wifi changed new SSID: "VM7877023"
+07-08 22:18:54.208 20930 28878 I NearbyMediums: WifiLanConnectivityInfo is not changed, skip notify.
+07-08 22:18:54.212 22694 22900 D WM-WorkConstraintsTrack: NetworkRequestConstraintController onCapabilitiesChanged callback
+07-08 22:18:54.218 14209 17602 I NearbyMediums: Wifi changed new SSID: "VM7877023"
+07-08 22:18:54.219 14209 17602 I NearbyMediums: WifiLanConnectivityInfo is not changed, skip notify.
+07-08 22:18:54.691 16436 16436 W binder:16436_8: type=1400 audit(0.0:4481112): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:54.707 20930  2106 I NearbySharing: Network state changed: NetworkState(isRestricted=false, isOnline=true, isCongested=false, isMetered=false, isWifiConnected=true)
+07-08 22:18:54.707 20930 28878 I NearbySharing: Network state changed: NetworkState(isRestricted=false, isOnline=true, isCongested=false, isMetered=false, isWifiConnected=true)
+07-08 22:18:54.707 16436 16436 W binder:16436_8: type=1400 audit(0.0:4481113): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:54.723 16436 16436 W binder:16436_8: type=1400 audit(0.0:4481114): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:54.743 16436 16436 W binder:16436_8: type=1400 audit(0.0:4481115): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:54.759 16436 16436 W binder:16436_8: type=1400 audit(0.0:4481116): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:55.707 16436 16436 W binder:16436_7: type=1400 audit(0.0:4481175): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:55.723 16436 16436 W binder:16436_7: type=1400 audit(0.0:4481176): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:55.739 16436 16436 W binder:16436_7: type=1400 audit(0.0:4481177): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:55.755 16436 16436 W binder:16436_7: type=1400 audit(0.0:4481178): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:55.771 16436 16436 W binder:16436_7: type=1400 audit(0.0:4481179): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:56.723 16436 16436 W binder:16436_7: type=1400 audit(0.0:4481238): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:56.739 16436 16436 W binder:16436_7: type=1400 audit(0.0:4481239): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:56.755 16436 16436 W binder:16436_7: type=1400 audit(0.0:4481240): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:56.771 16436 16436 W binder:16436_7: type=1400 audit(0.0:4481241): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:56.783 16436 16436 W binder:16436_7: type=1400 audit(0.0:4481242): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:57.147 25105 25843 I bt_shim_scanner: [le_scanning_manager.cc(919)] handle_remote_properties: handle_remote_properties update device_type=0x2 addr_type=0x1
+07-08 22:18:57.285 20930  2098 I Auth    : [GaiaIdSync] successfully updated accountId and email [CONTEXT service_id=153 ]
+07-08 22:18:57.297 20930 20930 I NearbyDiscovery: (REDACTED) DiscoveryService onStartCommand action: %s
+07-08 22:18:57.298 20930 28738 I NearbyDiscovery: FastPairApiHandler: trigger firmware update check [CONTEXT service_id=265 ]
+07-08 22:18:57.299 20930 32628 I NearbyDiscovery: (REDACTED) FastPairApiHandler: Send result, package=(%s), requestType=(%s), status=(%s)
+07-08 22:18:57.312 20930 27085 I NullBinder: NullBinder for android.net.action.RECOMMEND_NETWORKS triggering remote TransactionTooLargeException due to Service without Chimera impl, calling uid: 1000, calling pid: 0
+07-08 22:18:57.312 20930 27085 W .gms.persistent: Large reply transaction of 1056768 bytes, interface descriptor , code 1
+07-08 22:18:57.316 22694 22900 D WM-WorkConstraintsTrack: NetworkRequestConstraintController onCapabilitiesChanged callback
+07-08 22:18:57.318 20930  2105 I NearbyMediums: Wifi changed new SSID: "VM7877023"
+07-08 22:18:57.318 20930  2105 I NearbyMediums: WifiLanConnectivityInfo is not changed, skip notify.
+07-08 22:18:57.323 14209 17602 I NearbyMediums: Wifi changed new SSID: "VM7877023"
+07-08 22:18:57.323 14209 17602 I NearbyMediums: WifiLanConnectivityInfo is not changed, skip notify.
+07-08 22:18:57.731 16436 16436 W binder:16436_8: type=1400 audit(0.0:4481303): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:57.747 16436 16436 W binder:16436_8: type=1400 audit(0.0:4481304): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:57.767 16436 16436 W binder:16436_8: type=1400 audit(0.0:4481305): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:57.783 16436 16436 W binder:16436_7: type=1400 audit(0.0:4481306): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:57.799 16436 16436 W binder:16436_7: type=1400 audit(0.0:4481307): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:57.821 20930  2105 I NearbySharing: Network state changed: NetworkState(isRestricted=false, isOnline=true, isCongested=false, isMetered=false, isWifiConnected=true)
+07-08 22:18:57.822 20930  2098 I NearbySharing: Network state changed: NetworkState(isRestricted=false, isOnline=true, isCongested=false, isMetered=false, isWifiConnected=true)
+07-08 22:18:58.061 25105 25746 I bluetooth: [le_impl.h(1453)] OnPause: OnPause armed state:ConnectabilityState::ARMED
+07-08 22:18:58.061 25105 25746 I bluetooth: [le_impl.h(1181)] disarm_connectability: disarm_connectability armed state:ConnectabilityState::ARMED
+07-08 22:18:58.061 25105 25746 I bluetooth: [le_impl.h(1184)] disarm_connectability: Disarming LE connection state machine with create connection cancel
+07-08 22:18:58.092 25105 25746 I bluetooth: [le_impl.h(1477)] on_create_connection_cancel_complete: Received on_create_connection_cancel_complete
+07-08 22:18:58.093 25105 25746 I bluetooth: [le_address_manager.cc(536)] GetNextPrivateAddressIntervalRange: nonwake=8m34s, wake=13m35s
+07-08 22:18:58.093 25105 25746 I bluetooth: [le_address_manager.cc(358)] resume_registered_clients: Resuming registered clients
+07-08 22:18:58.093 25105 25746 I bluetooth: [le_impl.h(971)] arm_connectability: arm_connectability start doing connection
+07-08 22:18:58.099 25105 25746 I bluetooth: [le_impl.h(1081)] arm_connectability: conn_interval_min: 24, conn_interval_max: 40, phys=0
+07-08 22:18:58.099 25105 25746 I bluetooth: [le_impl.h(1147)] arm_connectability: conn_interval_min : 24 , conn_interval_max : 40, phys=0xff
+07-08 22:18:58.103 25105 25746 I bluetooth: [le_address_manager.cc(709)] OnCommandComplete: Received command complete with op_code LE_SET_RANDOM_ADDRESS(0x2005)
+07-08 22:18:58.103 25105 25746 I bluetooth: [le_address_manager.cc(730)] OnCommandComplete: update random address : xx:xx:xx:xx:fa:bf
+07-08 22:18:58.103 25105 25746 I bluetooth: [le_address_manager.cc(358)] resume_registered_clients: Resuming registered clients
+07-08 22:18:58.103 25105 25746 W bluetooth: [le_address_manager.cc(361)] resume_registered_clients: client is not paused ClientState::RESUMED(0x3)
+07-08 22:18:58.103 25105 25746 W bluetooth: [le_address_manager.cc(361)] resume_registered_clients: client is not paused ClientState::RESUMED(0x3)
+07-08 22:18:58.103 25105 25746 W bluetooth: [le_address_manager.cc(361)] resume_registered_clients: client is not paused ClientState::RESUMED(0x3)
+07-08 22:18:58.112 25105 25746 I bluetooth: [le_impl.h(922)] on_extended_create_connection: on_extended_create_connection and update_connectability_state
+07-08 22:18:58.112 25105 25746 I bluetooth: [le_impl.h(896)] update_connectability_state_after_armed: Previous armed state:ConnectabilityState::ARMING status:SUCCESS(0x00)
+07-08 22:18:58.112 25105 25746 I bluetooth: [le_impl.h(912)] update_connectability_state_after_armed: Le connection state machine armed state:ConnectabilityState::ARMED status:SUCCESS(0x00)
+07-08 22:18:58.360 20930 27110 I NullBinder: NullBinder for android.net.action.RECOMMEND_NETWORKS triggering remote TransactionTooLargeException due to Service without Chimera impl, calling uid: 1000, calling pid: 0
+07-08 22:18:58.360 20930 27110 W .gms.persistent: Large reply transaction of 1056768 bytes, interface descriptor , code 1
+07-08 22:18:58.364 20930  2098 I NearbyMediums: Wifi changed new SSID: "VM7877023"
+07-08 22:18:58.364 20930  2098 I NearbyMediums: WifiLanConnectivityInfo is not changed, skip notify.
+07-08 22:18:58.370 22694 22900 D WM-WorkConstraintsTrack: NetworkRequestConstraintController onCapabilitiesChanged callback
+07-08 22:18:58.375 14209 17602 I NearbyMediums: Wifi changed new SSID: "VM7877023"
+07-08 22:18:58.375 14209 17602 I NearbyMediums: WifiLanConnectivityInfo is not changed, skip notify.
+07-08 22:18:58.751 16436 16436 W binder:16436_7: type=1400 audit(0.0:4481370): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:58.767 16436 16436 W binder:16436_7: type=1400 audit(0.0:4481371): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:58.783 16436 16436 W binder:16436_7: type=1400 audit(0.0:4481372): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:58.795 16436 16436 W binder:16436_7: type=1400 audit(0.0:4481373): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:58.815 16436 16436 W binder:16436_7: type=1400 audit(0.0:4481374): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:58.830 20930  2098 I NearbyMediums: No BLE Fast/GATT advertisements found in the latest cycle.
+07-08 22:18:58.830 20930  2098 I NearbyMediums: Current Tracked Scanning Clients are : {NearbyConnections.EnvironmentMonitor, NearbySharing}
+07-08 22:18:58.862 20930  2098 I NearbySharing: Network state changed: NetworkState(isRestricted=false, isOnline=true, isCongested=false, isMetered=false, isWifiConnected=true)
+07-08 22:18:58.864 20930  2105 I NearbySharing: Network state changed: NetworkState(isRestricted=false, isOnline=true, isCongested=false, isMetered=false, isWifiConnected=true)
+07-08 22:18:59.763 16436 16436 W binder:16436_8: type=1400 audit(0.0:4481434): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:59.783 16436 16436 W binder:16436_8: type=1400 audit(0.0:4481435): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:59.795 16436 16436 W binder:16436_8: type=1400 audit(0.0:4481436): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:59.815 16436 16436 W binder:16436_7: type=1400 audit(0.0:4481437): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:18:59.831 16436 16436 W binder:16436_7: type=1400 audit(0.0:4481438): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:19:00.027 16436 16482 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":3,"detail":{"notification":{"title":"Isha time","data":{"customUri":"","label":"Isha","type":"alarm","pre":"0","sound":"beep","prayer":"isha"},"id":"alarm-isha-0-1783545540000","body":"It\'s time for Isha prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-08 22:19:00.027 16436 16482 I ReactNativeJS: 'FOREGROUND ALARM EVENT:', '{\n  "customUri": "",\n  "label": "Isha",\n  "type": "alarm",\n  "pre": "0",\n  "sound": "beep",\n  "prayer": "isha"\n}'
+07-08 22:19:00.032  7529 31696 I eokz    : (REDACTED) HDM. appOpsListener %s %s
+07-08 22:19:00.032  7529 31696 I eokz    : (REDACTED) HDM. Ignoring irrelevant audio permission changes for package %s
+07-08 22:19:00.037 16436 16436 I ExoPlayerImpl: Init 1664cb1 [AndroidXMedia3/1.8.0] [V2309, V2309, vivo, 36]
+07-08 22:19:00.048 16436 16436 W [RNScreens]: backTitleVisible prop is not available on Android
+07-08 22:19:00.048 16436 16436 W [RNScreens]: backTitleFontFamily prop is not available on Android
+07-08 22:19:00.048 16436 16436 W [RNScreens]: disableBackButtonMenu prop is not available on Android
+07-08 22:19:00.048 16436 16436 W [RNScreens]: largeTitleFontFamily prop is not available on Android
+07-08 22:19:00.048 16436 16436 W [RNScreens]: largeTitleFontWeight prop is not available on Android
+07-08 22:19:00.048 16436 16436 W [RNScreens]: largeTitleHideShadow prop is not available on Android
+07-08 22:19:00.050 16436 16436 I ExoPlayerImpl: Release ed4e129 [AndroidXMedia3/1.8.0] [V2309, V2309, vivo, 36] [media3.common, media3.exoplayer, media3.decoder, media3.datasource, media3.extractor]
+07-08 22:19:00.050 16436 16482 I ReactNativeJS: 'ALARM RING: skipping JS audio, native channel sound handles it', 'beep'
+07-08 22:19:00.051 16436 16519 D MediaCodec: [0xb4000077b03594a0] setState: 7
+07-08 22:19:00.058 16436 16519 D CCodecBuffers: [c2.android.mp3.decoder#72:1D-Output.Impl[N]] Client returned a buffer it does not own according to our record: 0
+07-08 22:19:00.058 16436 16519 D CCodecBuffers: [c2.android.mp3.decoder#72:1D-Output.Impl[N]] Client returned a buffer it does not own according to our record: 1
+07-08 22:19:00.058 16436 16519 D CCodecBuffers: [c2.android.mp3.decoder#72:1D-Output.Impl[N]] Client returned a buffer it does not own according to our record: 2
+07-08 22:19:00.058 16436 16519 D MediaCodec: [0xb4000077b03594a0] setState: 8
+07-08 22:19:00.058 16436 16507 D MediaCodec: keep callback message for reclaim
+07-08 22:19:00.058 16436 16519 D MediaCodec: [0xb4000077b03594a0] setState: 6
+07-08 22:19:00.060 14283  2559 I FSA2_GmsContactsSyncAdapter: @onPerformSync
+07-08 22:19:00.062 14283  2559 W FSA2_ContactsSyncAdapter: @onPerformSync Sync started
+07-08 22:19:00.062  7529 31696 I eokz    : (REDACTED) HDM. appOpsListener %s %s
+07-08 22:19:00.062  7529 31696 I eokz    : (REDACTED) HDM. Ignoring irrelevant audio permission changes for package %s
+07-08 22:19:00.064 16436 16519 I CCodecConfig: query failed after returning 8 values (BAD_INDEX)
+07-08 22:19:00.064 16436 16519 D BufferPoolAccessor2.0: bufferpool2 0xb4000078b02cc578 : 1(8192 size) total buffers - 1(8192 size) used buffers - 14/20 (recycle/alloc) - 8/36 (fetch/transfer)
+07-08 22:19:00.065 16436 16519 W Codec2Client: query -- param skipped: index = 1342179345.
+07-08 22:19:00.065 16436 16519 W Codec2Client: query -- param skipped: index = 2415921170.
+07-08 22:19:00.070 16436 16507 D MediaCodec: [0xb4000077b03594a0] [c2.android.mp3.decoder] releaseAsync
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: Handler (android.media.MediaCodec$EventHandler) {d1f44fc} sending message to a Handler on a dead thread
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: java.lang.IllegalStateException: Handler (android.media.MediaCodec$EventHandler) {d1f44fc} sending message to a Handler on a dead thread
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: 	at android.os.MessageQueue.enqueueMessageLegacy(MessageQueue.java:1295)
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: 	at android.os.MessageQueue.enqueueMessage(MessageQueue.java:1411)
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: 	at android.os.Handler.enqueueMessage(Handler.java:846)
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: 	at android.os.Handler.sendMessageAtTime(Handler.java:743)
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: 	at android.os.Handler.sendMessageDelayed(Handler.java:713)
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: 	at android.os.Handler.sendMessage(Handler.java:651)
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: 	at android.media.MediaCodec.postEventFromNative(MediaCodec.java:6230)
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: Handler (android.media.MediaCodec$EventHandler) {d1f44fc} sending message to a Handler on a dead thread
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: java.lang.IllegalStateException: Handler (android.media.MediaCodec$EventHandler) {d1f44fc} sending message to a Handler on a dead thread
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: 	at android.os.MessageQueue.enqueueMessageLegacy(MessageQueue.java:1295)
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: 	at android.os.MessageQueue.enqueueMessage(MessageQueue.java:1411)
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: 	at android.os.Handler.enqueueMessage(Handler.java:846)
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: 	at android.os.Handler.sendMessageAtTime(Handler.java:743)
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: 	at android.os.Handler.sendMessageDelayed(Handler.java:713)
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: 	at android.os.Handler.sendMessage(Handler.java:651)
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: 	at android.media.MediaCodec.postEventFromNative(MediaCodec.java:6230)
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: Handler (android.media.MediaCodec$EventHandler) {d1f44fc} sending message to a Handler on a dead thread
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: java.lang.IllegalStateException: Handler (android.media.MediaCodec$EventHandler) {d1f44fc} sending message to a Handler on a dead thread
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: 	at android.os.MessageQueue.enqueueMessageLegacy(MessageQueue.java:1295)
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: 	at android.os.MessageQueue.enqueueMessage(MessageQueue.java:1411)
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: 	at android.os.Handler.enqueueMessage(Handler.java:846)
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: 	at android.os.Handler.sendMessageAtTime(Handler.java:743)
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: 	at android.os.Handler.sendMessageDelayed(Handler.java:713)
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: 	at android.os.Handler.sendMessage(Handler.java:651)
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: 	at android.media.MediaCodec.postEventFromNative(MediaCodec.java:6230)
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: Handler (android.media.MediaCodec$EventHandler) {d1f44fc} sending message to a Handler on a dead thread
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: java.lang.IllegalStateException: Handler (android.media.MediaCodec$EventHandler) {d1f44fc} sending message to a Handler on a dead thread
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: 	at android.os.MessageQueue.enqueueMessageLegacy(MessageQueue.java:1295)
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: 	at android.os.MessageQueue.enqueueMessage(MessageQueue.java:1411)
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: 	at android.os.Handler.enqueueMessage(Handler.java:846)
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: 	at android.os.Handler.sendMessageAtTime(Handler.java:743)
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: 	at android.os.Handler.sendMessageDelayed(Handler.java:713)
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: 	at android.os.Handler.sendMessage(Handler.java:651)
+07-08 22:19:00.070 16436 16519 W LegacyMessageQueue: 	at android.media.MediaCodec.postEventFromNative(MediaCodec.java:6230)
+07-08 22:19:00.070 16436 16519 I MediaCodec: ++kWhatRelease   mState :6
+07-08 22:19:00.070 16436 16519 D MediaCodec: [0xb4000077b03594a0] setState: 10
+07-08 22:19:00.070 14283  2559 W ChimeraUtils: Module com.google.android.gms.people missing resource null(0)
+07-08 22:19:00.070 16436 16519 D CCodecBufferChannel: [c2.android.mp3.decoder#72] MediaCodec discarded an unknown buffer
+07-08 22:19:00.070 16436 16519 D CCodecBufferChannel: [c2.android.mp3.decoder#72] MediaCodec discarded an unknown buffer
+07-08 22:19:00.070 16436 16519 D CCodecBufferChannel: [c2.android.mp3.decoder#72] MediaCodec discarded an unknown buffer
+07-08 22:19:00.070 16436 16519 D CCodecBufferChannel: [c2.android.mp3.decoder#72] MediaCodec discarded an unknown buffer
+07-08 22:19:00.070 16436  2558 I AudioTrack: flush(3409): 0xb4000078403d98c0 , prior state:STATE_STOPPED, sessionId:24481, calling package is:com.emergent.salahalarm.lxw9zs
+07-08 22:19:00.072 16436 16507 D VivoSpatializer: unregisterAudioFeatureCallback succeeded for tag: NOTIFY_V_SPAT_STATE_CHANGED
+07-08 22:19:00.073 16436  2558 I AudioTrack: stop(3409): 0xb4000078403d98c0, prior state:STATE_FLUSHED, packageName: com.emergent.salahalarm.lxw9zs
+07-08 22:19:00.073 16436  2558 I PlayerBase: baseStop() piid=24543
+07-08 22:19:00.073 16436  2558 V PlayerBase: baseRelease() piid=24543 state=4
+07-08 22:19:00.073 16436  2558 D AudioTrack: ~AudioTrack(3409): 0xb4000078403d98c0
+07-08 22:19:00.074 16436  2558 I AudioTrack: stop(3409): 0xb4000078403d98c0, prior state:STATE_FLUSHED, packageName: com.emergent.salahalarm.lxw9zs
+07-08 22:19:00.074 16436  2558 D AudioTrackShared: this(0xb4000077202873b0), mCblk(0x7986914000), front(6000), mIsOut 1, interrupt() FUTEX_WAKE
+07-08 22:19:00.074 16436  2558 D AudioTrack: requestExitAndWait start
+07-08 22:19:00.074 16436  2558 D AudioTrack: requestExitAndWait end
+07-08 22:19:00.074 25105 25105 D AudioManager: dispatching onPlaybackConfigChanged()
+07-08 22:19:00.074 25105 25105 D AudioManager: dispatching onPlaybackConfigChanged()
+07-08 22:19:00.078 16436 16519 I hw-BpHwBinder: onLastStrongRef automatically unlinking death recipients
+07-08 22:19:00.078 16436 16519 D BufferPoolAccessor2.0: Destruction - bufferpool2 0xb4000078b02cc578 cached: 0/0M, 0/0% in use; allocs: 24, 58% recycled; transfers: 36, 78% unfetched
+07-08 22:19:00.078 16436 16519 D MediaCodec: [0xb4000077b03594a0] [c2.android.mp3.decoder] kWhatReleaseCompleted
+07-08 22:19:00.078 16436 16519 D MediaCodec: [0xb4000077b03594a0] setState: 0
+07-08 22:19:00.079 16436 16519 I CCodecBufferChannel: Destructor 0xb4000078402ddae0
+07-08 22:19:00.087 16436  2546 D VivoSpatializer: checkGoogleApiEnabled, mGoogleApiEnabled: false, originalArdVersion: 34, deniedPkg: false, clientPkg: com.emergent.salahalarm.lxw9zs
+07-08 22:19:00.087 16436  2546 D VivoSpatializer: registerAudioFeatureCallback succeeded for tag: NOTIFY_V_SPAT_STATE_CHANGED
+07-08 22:19:00.088 16436  2546 I DMCodecAdapterFactory: Creating an asynchronous MediaCodec adapter for track type audio
+07-08 22:19:00.088 16436  2546 D MediaCodec: CreateByComponentName: name c2.android.mp3.decoder
+07-08 22:19:00.089 16436  2546 W libc    : Access denied finding property "vendor.debug.stagefright.mediacodec.trace"
+07-08 22:19:00.089 16436  2546 W libc    : Access denied finding property "vendor.media.c2.frameworks.debug.log"
+07-08 22:19:00.090 16436  2546 W libc    : Access denied finding property "vendor.debug.stagefright.BufferCount"
+07-08 22:19:00.090 16436  2546 W libc    : Access denied finding property "vendor.media.c2.frameworks.debug.log"
+07-08 22:19:00.090 16436  2546 W libc    : Access denied finding property "vendor.media.c2.frameworks.buffercount.trace"
+07-08 22:19:00.090 16436  2546 D CCodecBufferChannel: mBufferCountTrace=0 mIsUserLoad=1
+07-08 22:19:00.090 16436  2546 I CCodecBufferChannel: Constructor 0xb40000784063f860
+07-08 22:19:00.090 16436  2546 I CCodecBufferChannel: mIsVivoLogEnable = 0
+07-08 22:19:00.090 16436  2546 I CCodecBufferChannel: CCodecBufferChannel[0xb40000784063f860], mNumOutputsSlotAdd: 0
+07-08 22:19:00.090 16436  2546 W libc    : Access denied finding property "vendor.media.c2.frameworks.debug.log"
+07-08 22:19:00.090 16436  2546 D MediaCodec: [0xb4000077b0361fb0] init: CCodec 0xb4000078b02ff100, CCodecBufferChannel 0xb40000784063f860
+07-08 22:19:00.090 16436  2563 D MediaCodec: [0xb4000077b0361fb0] setState: 1
+07-08 22:19:00.090 16436  2563 D CCodec  : allocate(c2.android.mp3.decoder)
+07-08 22:19:00.091 14283  2559 W FSA2_GoogleAccountUtil: Syncing device contacts is on.
+07-08 22:19:00.091 16436  2563 I CCodec  : setting up 'default' as default (vendor) store
+07-08 22:19:00.101 16436  2563 I CCodec  : Created component [c2.android.mp3.decoder] for [c2.android.mp3.decoder]
+07-08 22:19:00.101 16436  2563 D CCodecBufferChannel: [0xb40000784063f860] setComponent: mName c2.android.mp3.decoder#690, mPipelineWatcher 0xb40000784063fd50
+07-08 22:19:00.101 16436  2563 D CCodecBufferChannel: PipelineWatcher debug info [c2.android.mp3.decoder#690] enable=0
+07-08 22:19:00.101 16436  2563 D CCodecConfig: read media type: audio/mpeg
+07-08 22:19:00.102 16436  2563 D ReflectedParamUpdater: extent() != 1 for single value type: algo.buffers.max-count.values
+07-08 22:19:00.103 16436  2563 D ReflectedParamUpdater: extent() != 1 for single value type: output.subscribed-indices.values
+07-08 22:19:00.103 16436  2563 D ReflectedParamUpdater: extent() != 1 for single value type: input.buffers.allocator-ids.values
+07-08 22:19:00.103 16436  2563 D ReflectedParamUpdater: extent() != 1 for single value type: output.buffers.allocator-ids.values
+07-08 22:19:00.103 16436  2563 D ReflectedParamUpdater: extent() != 1 for single value type: algo.buffers.allocator-ids.values
+07-08 22:19:00.103 16436  2563 D ReflectedParamUpdater: extent() != 1 for single value type: output.buffers.pool-ids.values
+07-08 22:19:00.104 16436  2563 D ReflectedParamUpdater: extent() != 1 for single value type: algo.buffers.pool-ids.values
+07-08 22:19:00.104 16436  2563 I CCodecConfig: query failed after returning 8 values (BAD_INDEX)
+07-08 22:19:00.104 16436  2563 D CCodecConfig: c2 config diff is Dict {
+07-08 22:19:00.104 16436  2563 D CCodecConfig:   c2::u32 coded.bitrate.value = 64000
+07-08 22:19:00.104 16436  2563 D CCodecConfig:   c2::u32 input.buffers.max-size.value = 8192
+07-08 22:19:00.104 16436  2563 D CCodecConfig:   c2::u32 input.delay.value = 0
+07-08 22:19:00.104 16436  2563 D CCodecConfig:   string input.media-type.value = "audio/mpeg"
+07-08 22:19:00.104 16436  2563 D CCodecConfig:   c2::u32 output.large-frame.max-size = 0
+07-08 22:19:00.104 16436  2563 D CCodecConfig:   c2::u32 output.large-frame.threshold-size = 0
+07-08 22:19:00.104 16436  2563 D CCodecConfig:   string output.media-type.value = "audio/raw"
+07-08 22:19:00.104 16436  2563 D CCodecConfig:   c2::u32 raw.channel-count.value = 2
+07-08 22:19:00.104 16436  2563 D CCodecConfig:   c2::u32 raw.sample-rate.value = 44100
+07-08 22:19:00.104 16436  2563 D CCodecConfig: }
+07-08 22:19:00.104 16436  2563 D MediaCodec: [0xb4000077b0361fb0] setState: 2
+07-08 22:19:00.105 16436  2546 D MediaCodec: mInitName[c2.android.mp3.decoder], mMediacodec[0xb4000077b0361fb0], mCodec[0xb4000078b02ff100], mBufferChannel[0xb40000784063f860]
+07-08 22:19:00.105 16436  2546 D MediaCodec: createbyComponent:pid:-1 16436 tid=2546
+07-08 22:19:00.105 16436  2563 I MediaCodec: MediaCodec will operate in async mode
+07-08 22:19:00.106 16436  2546 D MediaCodec: [0xb4000077b0361fb0] [c2.android.mp3.decoder] configure
+07-08 22:19:00.106 16436  2546 D VivoCodecProcessSdk: get client pid:16436
+07-08 22:19:00.106 16436  2546 E MediaCodec: Media Quality Service not found.
+07-08 22:19:00.106 16436  2563 D MediaCodec: [0xb4000077b0361fb0] setState: 3
+07-08 22:19:00.107 16436  2563 D CCodec  : [c2.android.mp3.decoder] buffers are bound to CCodec for this session
+07-08 22:19:00.107 16436  2563 D CCodecConfig: no c2 equivalents for log-session-id
+07-08 22:19:00.107 16436  2563 D CCodecConfig: no c2 equivalents for importance
+07-08 22:19:00.107 16436  2563 D CCodecConfig: no c2 equivalents for flags
+07-08 22:19:00.109 16436  2563 D CCodecConfig: config failed => CORRUPTED
+07-08 22:19:00.109 16436  2563 D CCodecConfig: c2 config diff is   c2::u32 raw.sample-rate.value = 24000
+07-08 22:19:00.110 16436  2563 W Codec2Client: query -- param skipped: index = 1107298332.
+07-08 22:19:00.110 16436  2563 D CCodec  : client requested max input size 4096, which is smaller than what component recommended (8192); overriding with component recommendation.
+07-08 22:19:00.110 16436  2563 W CCodec  : This behavior is subject to change. It is recommended that app developers double check whether the requested max input size is in reasonable range.
+07-08 22:19:00.110 16436  2563 D CCodec  : encoding statistics level = 0
+07-08 22:19:00.110 16436  2563 D CCodec  : setup formats input: AMessage(what = 0x00000000) = {
+07-08 22:19:00.110 16436  2563 D CCodec  :   int32_t bitrate = 64000
+07-08 22:19:00.110 16436  2563 D CCodec  :   int32_t channel-count = 2
+07-08 22:19:00.110 16436  2563 D CCodec  :   int32_t max-input-size = 8192
+07-08 22:19:00.110 16436  2563 D CCodec  :   string mime = "audio/mpeg"
+07-08 22:19:00.110 16436  2563 D CCodec  :   int32_t sample-rate = 24000
+07-08 22:19:00.110 16436  2563 D CCodec  : }
+07-08 22:19:00.110 16436  2563 D CCodec  : setup formats output: AMessage(what = 0x00000000) = {
+07-08 22:19:00.110 16436  2563 D CCodec  :   int32_t bitrate = 64000
+07-08 22:19:00.110 16436  2563 D CCodec  :   int32_t buffer-batch-max-output-size = 0
+07-08 22:19:00.110 16436  2563 D CCodec  :   int32_t buffer-batch-threshold-output-size = 0
+07-08 22:19:00.110 16436  2563 D CCodec  :   int32_t channel-count = 2
+07-08 22:19:00.110 16436  2563 D CCodec  :   string mime = "audio/raw"
+07-08 22:19:00.110 16436  2563 D CCodec  :   int32_t sample-rate = 24000
+07-08 22:19:00.110 16436  2563 D CCodec  :   int32_t android._config-pcm-encoding = 2
+07-08 22:19:00.110 16436  2563 D CCodec  : }
+07-08 22:19:00.110 16436  2563 I CCodecConfig: query failed after returning 8 values (BAD_INDEX)
+07-08 22:19:00.110 16436  2563 E lahalarm.lxw9zs: Failed to query component interface for required system resources: 6
+07-08 22:19:00.110 16436  2563 D MediaCodec: [0xb4000077b0361fb0] setState: 4
+07-08 22:19:00.111 16436  2546 D MediaCodec: keep callback message for reclaim
+07-08 22:19:00.111 16436  2563 D MediaCodec: [0xb4000077b0361fb0] setState: 5
+07-08 22:19:00.111 16436  2563 W Codec2Client: query -- param skipped: index = 1342179345.
+07-08 22:19:00.112 16436  2563 W Codec2Client: query -- param skipped: index = 2415921170.
+07-08 22:19:00.112 16436  2563 I CCodecBufferChannel: mIsVivoLogEnable = 0
+07-08 22:19:00.112 16436  2563 D CCodecBufferChannel: [c2.android.mp3.decoder#690] Created input block pool with allocatorID 16 => poolID 18 - OK (0)
+07-08 22:19:00.113 16436  2563 I CCodecBufferChannel: [c2.android.mp3.decoder#690] Created output block pool with allocatorID 16 => poolID 4696 - OK
+07-08 22:19:00.113 16436  2563 D CCodecBufferChannel: [c2.android.mp3.decoder#690] Configured output block pool ids 4696 => OK
+07-08 22:19:00.113 16436  2563 D CCodecBufferChannel: [0xb40000784063f860] [c2.android.mp3.decoder#690] start: output->outputDelay 0, output->numSlots 4
+07-08 22:19:00.114 16436  2563 I CCodecBufferChannel: [0xb40000784063f860][c2.android.mp3.decoder#690],using arrayMode ouputBuffers for linear outputstream.
+07-08 22:19:00.114 16436  2563 D CCodecBuffers: [c2.android.mp3.decoder#690:1D-Output.Impl[N]] converted 0 buffers to array mode of 4
+07-08 22:19:00.115 16436  2563 D MediaCodec: [0xb4000077b0361fb0] setState: 6
+07-08 22:19:00.115 16436  2546 W LoudnessCodecController: MediaCodec mime type not supported for loudness annotation
+07-08 22:19:00.115 16436  2546 V LoudnessCodecController: Could not extract codec loudness information
+07-08 22:19:00.117 16436  2563 D PipelineWatcher: [0xb40000784063fd50] pipelineFull: too many frames in pipeline (4)
+07-08 22:19:00.120 16436  2563 I MediaCodec: [c2.android.mp3.decoder] output format changed to: AMessage(what = 0x00000000) = {
+07-08 22:19:00.120 16436  2563 I MediaCodec:       int32_t bitrate = 64000
+07-08 22:19:00.120 16436  2563 I MediaCodec:       int32_t buffer-batch-max-output-size = 0
+07-08 22:19:00.120 16436  2563 I MediaCodec:       int32_t buffer-batch-threshold-output-size = 0
+07-08 22:19:00.120 16436  2563 I MediaCodec:       int32_t channel-count = 2
+07-08 22:19:00.120 16436  2563 I MediaCodec:       string mime = "audio/raw"
+07-08 22:19:00.120 16436  2563 I MediaCodec:       int32_t sample-rate = 24000
+07-08 22:19:00.120 16436  2563 I MediaCodec:       int32_t android._config-pcm-encoding = 2
+07-08 22:19:00.120 16436  2563 I MediaCodec:     }
+07-08 22:19:00.120 16436  2563 D MediaCodec: get mPcmBytesMs = 96.000000
+07-08 22:19:00.183 14283  2559 I People_AppSearchUtilities: Using PlatformStorage API
+07-08 22:19:00.185 14283  2559 I CpgSchemaBuilder: Creating session
+07-08 22:19:00.194 14283  2559 W People_AppSearchUtilities: getSignature failed for package com.google.android.dialer
+07-08 22:19:00.195 14283  2559 I CpgSchemaBuilder: CPG schemas visible to supported apps, build skipped.
+07-08 22:19:00.196 14283  2559 I CpgSchemaBuilder: Nested schema visibility is already hidden.{G3AttributionInfo}
+07-08 22:19:00.208 14283  2559 I FSA2_FirstFullSyncsDetector: First full syncs finished before.
+07-08 22:19:00.213 14283  2559 W ChimeraUtils: Module com.google.android.gms.people missing resource null(0)
+07-08 22:19:00.224 14283 14283 D BoundBrokerSvc: onBind: Intent { act=com.google.android.gms.people.contactssync.service.START dat=chimera-action:/... xflg=0x4 cmp=com.google.android.gms/.chimera.GmsBoundBrokerService }
+07-08 22:19:00.224 14283 14283 D BoundBrokerSvc: Loading bound service for intent: Intent { act=com.google.android.gms.people.contactssync.service.START dat=chimera-action:/... xflg=0x4 cmp=com.google.android.gms/.chimera.GmsBoundBrokerService }
+07-08 22:19:00.227 14283 14376 I PeopleChimeraService: onService. callbacks = dbia@b181abb, request = com.google.android.gms.common.internal.GetServiceRequest@90a8bd8
+07-08 22:19:00.241 28995 28995 I info    : Auto-reply is off, please turn it On 
+07-08 22:19:00.246 14283  2559 I FSA2_SyncState: @readSyncState: # fdvl@75e6258e
+07-08 22:19:00.251 14283  2559 I FSA2_SyncState: @readSyncState: # fdvl@75e6258e
+07-08 22:19:00.288 14283  2559 I FSA2_RawContactSyncer: Before sync, callingCardsWithOnlyMetadataCount: 0, callingCardsWithOnlyPhotoCount: 0, callingCardsWithBothMetadataAndPhotoCount: 0
+07-08 22:19:00.293 14283  2559 I FSA2_SyncState: @readSyncState: # fdvl@75e6258e
+--------- beginning of system
+07-08 22:19:00.320  2171  2234 D BatteryStatsService: noteVideoSurfaceChanged  noteWhich: 49,arg1: 1260, arg2: 2800, arg3: 4515, arg4: 72076985815269562, name: com.android.systemui
+07-08 22:19:00.321  2171  2234 D BatteryStatsService: noteVideoSurfaceChanged  noteWhich: 49,arg1: 1260, arg2: 2800, arg3: 4515, arg4: 72076985815269650, name: com.android.systemui
+07-08 22:19:00.322  2171  4714 D BatteryStatsService: noteVideoSurfaceChanged  noteWhich: 49,arg1: -2, arg2: -1, arg3: 4515, arg4: 72076985815269562, name: com.android.systemui
+07-08 22:19:00.322  2171  4714 D BatteryStatsService: noteVideoSurfaceChanged  noteWhich: 49,arg1: -2, arg2: -1, arg3: 4515, arg4: 72076985815269650, name: com.android.systemui
+07-08 22:19:00.324  2171  2234 D BatteryStatsService: noteVideoSurfaceChanged  noteWhich: 49,arg1: 1260, arg2: 2800, arg3: 4515, arg4: 72076985815269650, name: com.android.systemui
+07-08 22:19:00.338  2171  2234 D BatteryStatsService: noteVideoSurfaceChanged  noteWhich: 49,arg1: 1260, arg2: 2800, arg3: 4515, arg4: 72076985815269562, name: com.android.systemui
+07-08 22:19:00.339  2171  5298 D BatteryStatsService: noteVideoSurfaceChanged  noteWhich: 49,arg1: 1260, arg2: 2800, arg3: 4515, arg4: 72076985815269650, name: com.android.systemui
+07-08 22:19:00.340 14283  2559 I FSA2_SyncState: @readSyncState: # fdvl@75e6258e
+07-08 22:19:00.360 14283  2559 I FSA2_RawContactSyncer: Found 0 contacts with unsynced calling cards
+07-08 22:19:00.367 14283  2559 I FSA2_SyncState: @readSyncState: # fdvl@75e6258e
+07-08 22:19:00.428 14283  2559 I FSA2_CallingCardOp: No calling card photos to sync up.
+07-08 22:19:00.430 14283  2559 I FSA2_PhotoSyncer: After CC photo sync up, callingCardsWithOnlyMetadataCount: 0, callingCardsWithOnlyPhotoCount: 0, callingCardsWithBothMetadataAndPhotoCount: 0
+07-08 22:19:00.443 20930 21021 I FacsCacheGmsModule: (REDACTED) Receiving API connection to FACS API from package '%s'...
+07-08 22:19:00.444 20930 21021 I FacsCacheGmsModule: API connection successful!
+07-08 22:19:00.446 20930 21021 I FacsCacheGmsModule: (REDACTED) Received 'getActivityControlsSettings' request from package '%s', instance id '%s', version '%d'...
+07-08 22:19:00.446 20930 21021 I FacsCacheGmsModule: Operation 'getActivityControlsSettings' dispatched!
+07-08 22:19:00.446 20930  2105 I FacsCacheGmsModule: (REDACTED) Executing operation '%s'...
+07-08 22:19:00.449 14283 14283 D BoundBrokerSvc: onBind: Intent { act=com.google.android.gms.facs.internal.service.START dat=chimera-action:/... xflg=0x4 cmp=com.google.android.gms/.chimera.GmsInternalApiService }
+07-08 22:19:00.449 14283 14283 D BoundBrokerSvc: Loading bound service for intent: Intent { act=com.google.android.gms.facs.internal.service.START dat=chimera-action:/... xflg=0x4 cmp=com.google.android.gms/.chimera.GmsInternalApiService }
+07-08 22:19:00.451 14283 14332 I FacsCacheGmsModule: Receiving API connection to internal FACS API...
+07-08 22:19:00.451 20930  2105 I FacsCacheGmsModule: (REDACTED) Operation '%s' successful!
+07-08 22:19:00.451 14283 14332 I FacsCacheGmsModule: API connection successful!
+07-08 22:19:00.454 14283  2559 I FSA2_RawContactSyncer: contact count. before sweep: 128, before sync: 128, after sync down: -1, after sync up: 128
+07-08 22:19:00.454 14283  2559 W FSA2_ContactsSyncAdapter: @onPerformSync Sync finished successfully
+07-08 22:19:00.465 14283  2559 W ChimeraUtils: Module com.google.android.gms.people missing resource null(0)
+07-08 22:19:00.467 14283  2559 W ChimeraUtils: Module com.google.android.gms.people missing resource null(0)
+07-08 22:19:01.096 16436  2546 D AudioTrack: INSP: type=audio,case=1,set=0xb4000078406da6d0,stream_type=-1,sample_rate=24000,format=0x1,channel_mask=0x3,frame_count=6000,flags=0x0,notification_frames=0,session_id=24681,transfer_type=3,uid=10690,pid=16436,packageName=com.emergent.salahalarm.lxw9zs
+07-08 22:19:01.097 16436  2546 D AudioTrack: INSP: type=audio,case=1,attributes=1,content_type=0,usage=1,source=-1,flags=0xa00
+07-08 22:19:01.097 16436  2546 I AudioTrack: set(): streamType -1, sampleRate 24000, format 0x1, channelMask 0x3, frameCount 6000, flags 0, notificationFrames 0, sessionId 24681, transferType 3, uid 10690, pid 16436
+07-08 22:19:01.098 16436  2546 D AudioSystem: +setParameters(): PlaybackCaptureProtectSupport=com.emergent.salahalarm.lxw9zs 
+07-08 22:19:01.102 16436  2546 D AudioTrack: get APPSharePck NULL
+07-08 22:19:01.152 16436  2546 D AudioTrack: createTrack_l(3428): 0xb4000078406da6d0, mCblk = 0x79821a4000, mLatency = 378, mAfLatency = 128, frameCount = 6000, mSampleRate = 24000, mFlags = 0x8, mReqFrameCount = 6000, mNotificationFramesAct = 2000
+07-08 22:19:01.155 16436  2546 D AudioTrack: setVolume(3428): 0xb4000078406da6d0, left = 1.000000, right = 1.000000, sessionId:24681, calling package is:com.emergent.salahalarm.lxw9zs
+07-08 22:19:01.159 16436  2546 D AudioSystem: +setParameters(): AudioTrack-Process=16436;AudioTrack-AudioThread=2546 
+07-08 22:19:01.528 28667 28667 I VoiceInputManagerWrapper: VoiceInputManagerWrapper.shutdownVoiceInternal():153 shutdownVoiceInternal() [RD]
+07-08 22:19:01.529 28667 28667 W NotificationCenter: NotificationCenter.unregisterListener():480 Listener jnl@8163b24 was not registered for notification class pwi
+07-08 22:19:03.613 14209 30720 I WifiScanner: onFullResults
+07-08 22:19:03.615 20930 27110 I WifiScanner: onFullResults
+07-08 22:19:03.617 20930 21021 I WifiScanner: onFullResults
+07-08 22:19:03.983 16436 16436 W binder:16436_4: type=1400 audit(0.0:4481540): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:19:03.995 16436 16436 W binder:16436_4: type=1400 audit(0.0:4481541): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:19:04.003 16436 16436 W binder:16436_4: type=1400 audit(0.0:4481543): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:19:04.015 16436 16436 W binder:16436_4: type=1400 audit(0.0:4481544): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:19:04.322  8905  8905 D VRI[GoogleDiscoverWindow,type=4]: visibilityChanged oldVisibility=false newVisibility=true
+07-08 22:19:04.337  8905  8905 D ViewRootImpl: AppSizeAfterRelayout, size: Point(1260, 2800), rotation: ROTATION_0
+07-08 22:19:04.338  8905  8905 D BufferQueueConsumer: [](id:22c900000087,api:0,p:-1,c:8905) connect: controlledByApp=false
+07-08 22:19:04.338  8905  8905 D BLASTBufferQueue: [VRI[GoogleDiscoverWindow,type=4]#135](f:0,a:0) constructor()
+07-08 22:19:04.338  8905  8905 D BLASTBufferQueue: [VRI[GoogleDiscoverWindow,type=4]#135](f:0,a:0) update width=1260 height=2800 format=-2 mTransformHint=0
+07-08 22:19:04.339 16436 16436 W unknown:BridgelessReact: ReactHost{0}.onHostPause(activity)
+07-08 22:19:04.339 16436 16436 W unknown:BridgelessReact: ReactContext.onHostPause()
+07-08 22:19:04.339  8905  9123 W BLASTBufferQueue: Unable to open /proc/vivo_rsc/frame_set_priority: Permission denied
+07-08 22:19:04.339  8905  9123 I BLASTBufferQueue: QoSAllocBuff Successful. Ret 0 
+07-08 22:19:04.346  8905  9123 D BLASTBufferQueue: [VRI[GoogleDiscoverWindow,type=4]#135](f:0,a:1) acquireNextBufferLocked size=1260x2800 mFrameNumber=1 applyTransaction=true mTimestamp=136740285251611(auto) mPendingTransactions.size=0 graphicBufferId=38246683771567 transform=0
+07-08 22:19:04.348  8905  8905 I cbfe    : onStart
+07-08 22:19:04.349  8905  8905 I byxd    : (REDACTED) [%s] onStart()
+07-08 22:19:04.349  8905  8905 I byzo    : Reloading theme data
+07-08 22:19:04.350  8905  8905 E NetworkErrorMessage: (REDACTED) Invalid connectivity state: %s
+07-08 22:19:04.361  8905  8905 I cbfe    : onResume
+07-08 22:19:04.361  8905  8905 W drep    : missing event name
+07-08 22:19:04.391  8905  8905 I cayp    : (REDACTED) onApplyWindowInsets: systemWindowInsets=%s
+07-08 22:19:04.391  8905  8905 I cayp    : (REDACTED) onApplyWindowInsets: systemWindowInsets=%s
+07-08 22:19:04.408 28667 28667 V InputMethod: unbindInput(): binding=InputBinding{android.os.BinderProxy@65c3ecc / uid 10690 / pid 16436} ic=RemoteInputConnection{idHash=#e311515}
+07-08 22:19:04.412 28667 28667 V InputMethod: bindInput(): binding=InputBinding{android.os.BinderProxy@f5e94d8 / uid 10103 / pid 5063} ic=RemoteInputConnection{idHash=#2fbd289}
+07-08 22:19:04.413 28667 28667 V InputMethod: startInput(): editor=android.view.inputmethod.EditorInfo@e54928e
+07-08 22:19:04.413 28667 28667 V InputMethodService: CALL: doFinishInput
+07-08 22:19:04.413 28667 28667 D InlineSuggestionSessionController: notifyOnFinishInput
+07-08 22:19:04.413 28667 28667 V InputMethodService: CALL: onFinishInput
+07-08 22:19:04.413 28667 28667 I GoogleInputMethodService: GoogleInputMethodService.onFinishInput():2276 
+07-08 22:19:04.414 28667 28667 I Module  : DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatusInternal():129 repeatCheckTimes = 0, locked = false
+07-08 22:19:04.414 28667 28667 V InputMethodService: finishStylusHandwriting()
+07-08 22:19:04.414 28667 28667 D InlineSuggestionSessionController: notifyOnStartInput: com.android.launcher3, 0
+07-08 22:19:04.414 28667 28667 V InputMethodService: CALL: onStartInput
+07-08 22:19:04.414 28667 28667 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1460 onStartInput(EditorInfo{EditorInfo{packageName=com.android.launcher3, inputType=0, inputTypeString=NULL, enableLearning=false, autoCorrection=false, autoComplete=false, imeOptions=0, privateImeOptions=null, actionName=UNSPECIFIED, actionLabel=null, initialSelStart=-1, initialSelEnd=-1, initialCapsMode=0, label=null, fieldId=0, fieldName=null, extras=null, hintText=null, hintLocales=[]}}, false)
+07-08 22:19:04.414 28667 28667 I LatinIMEBase: LatinIMEBase.updateInputViewCoverNavigation():317 Update input view padding, isNavbarOverInputWindow=true, bottom inset=126
+07-08 22:19:04.415 28667 28667 I Module  : DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatusInternal():129 repeatCheckTimes = 1, locked = false
+07-08 22:19:04.533 20930 20955 I Auth    : [BroadcastManager] [BroadcastManager] Broadcasting account capabilities changed. [CONTEXT service_id=343 ]
+07-08 22:19:04.535 20930 20955 I Auth    : [BroadcastManager] [BroadcastManager] Broadcasting account services changed. [CONTEXT service_id=343 ]
+07-08 22:19:04.552 14283  2604 I Auth    : (REDACTED) [SupervisedAccountIntentOperation] onHandleIntent: %s
+07-08 22:19:04.568 20930 27110 I NullBinder: NullBinder for android.net.action.RECOMMEND_NETWORKS triggering remote TransactionTooLargeException due to Service without Chimera impl, calling uid: 1000, calling pid: 0
+07-08 22:19:04.568 20930 27110 W .gms.persistent: Large reply transaction of 1056768 bytes, interface descriptor , code 1
+07-08 22:19:04.582 20930  2106 I NearbyMediums: Wifi changed new SSID: "VM7877023"
+07-08 22:19:04.582 20930  2106 I NearbyMediums: WifiLanConnectivityInfo is not changed, skip notify.
+07-08 22:19:04.586  2171  5298 D BatteryStatsService: noteVideoSurfaceChanged  noteWhich: 49,arg1: -2, arg2: -1, arg3: 4515, arg4: 72076985815269650, name: com.android.systemui
+07-08 22:19:04.592  2171  5298 D BatteryStatsService: noteVideoSurfaceChanged  noteWhich: 49,arg1: -2, arg2: -1, arg3: 4515, arg4: 72076985815269562, name: com.android.systemui
+07-08 22:19:04.592  2171  5298 D BatteryStatsService: noteVideoSurfaceChanged  noteWhich: 49,arg1: -2, arg2: -1, arg3: 4515, arg4: 72076985815269650, name: com.android.systemui
+07-08 22:19:04.598 22694 22900 D WM-WorkConstraintsTrack: NetworkRequestConstraintController onCapabilitiesChanged callback
+07-08 22:19:04.609 14283  2598 W ChimeraUtils: Module com.google.android.gms.advancedprotection missing resource null(0)
+07-08 22:19:04.616 20930 22425 I NetworkScheduler.Stats: (REDACTED) Task %s/%s started execution. cause:%s exec_start_elapsed_seconds: %s
+07-08 22:19:04.625 20930 22425 I NetworkScheduler.Stats: (REDACTED) Task %s/%s finished executing. cause:%s result: %s elapsed_millis: %s uptime_millis: %s exec_start_elapsed_seconds: %s
+07-08 22:19:04.717 14209 17602 I NearbyMediums: Wifi changed new SSID: "VM7877023"
+07-08 22:19:04.718 14209 17602 I NearbyMediums: WifiLanConnectivityInfo is not changed, skip notify.
+07-08 22:19:05.067 16436 16524 D BufferPoolAccessor2.0: evictor expired: 1, evicted: 0
+07-08 22:19:05.077 20930  2098 I NearbySharing: Network state changed: NetworkState(isRestricted=false, isOnline=true, isCongested=false, isMetered=false, isWifiConnected=true)
+07-08 22:19:05.077 20930  2106 I NearbySharing: Network state changed: NetworkState(isRestricted=false, isOnline=true, isCongested=false, isMetered=false, isWifiConnected=true)
+07-08 22:19:05.177 16436 16436 D VRI[MainActivity,type=1]: visibilityChanged oldVisibility=true newVisibility=false
+07-08 22:19:05.189 16436 16462 I HWUI    : [destroy] CanvasContext will be destroyed.
+07-08 22:19:05.194 16436 16436 D ViewRootImpl: AppSizeAfterRelayout, size: Point(1260, 2800), rotation: ROTATION_0
+07-08 22:19:05.195 16436 16436 D BLASTBufferQueue: [VRI[MainActivity,type=1]#1](f:0,a:2) destructor()
+07-08 22:19:05.195 16436 16436 D BufferQueueConsumer: [VRI[MainActivity,type=1]#1(BLAST Consumer)1](id:403400000001,api:0,p:-1,c:16436) disconnect
+07-08 22:19:05.199 16436 16462 I HWUI    : [setStopped] CanvasContext will be destroyed.
+07-08 22:19:05.200 16436 16436 I AutofillManager: onInvisibleForAutofill(): expiringResponse
+07-08 22:19:05.877 16436 16436 D ViewRootImpl: Skipping stats log for color mode
+07-08 22:19:05.878 16436 16436 W unknown:BridgelessReact: ReactHost{0}.onHostResume(activity)
+07-08 22:19:05.878 16436 16436 W unknown:BridgelessReact: ReactContext.onHostResume()
+07-08 22:19:05.881 16436 16482 W ReactNativeJS: `setPositionAsync` is not supported with edge-to-edge enabled.
+07-08 22:19:05.882 16436 16482 W ReactNativeJS: `setBehaviorAsync` is not supported with edge-to-edge enabled.
+07-08 22:19:05.883 16436 16482 W ReactNativeJS: `setBackgroundColorAsync` is not supported with edge-to-edge enabled.
+07-08 22:19:05.886 16436 16482 I ReactNativeJS: 'GET LAUNCH ALARM RESULT (resume):', 'null'
+07-08 22:19:05.888 16436 16436 D ViewRootImpl: AppSizeAfterRelayout, size: Point(1260, 2800), rotation: ROTATION_0
+07-08 22:19:05.888 16436 16436 D BufferQueueConsumer: [](id:403400000007,api:0,p:-1,c:16436) connect: controlledByApp=false
+07-08 22:19:05.888 16436 16436 D BLASTBufferQueue: [VRI[MainActivity,type=1]#7](f:0,a:0) constructor()
+07-08 22:19:05.888 16436 16436 D BLASTBufferQueue: [VRI[MainActivity,type=1]#7](f:0,a:0) update width=1260 height=2800 format=-1 mTransformHint=0
+07-08 22:19:05.890 16436 16462 W BLASTBufferQueue: Unable to open /proc/vivo_rsc/frame_set_priority: Permission denied
+07-08 22:19:05.890 16436 16462 I BLASTBufferQueue: QoSAllocBuff Successful. Ret 0 
+07-08 22:19:05.901 16436 16462 D BLASTBufferQueue: [VRI[MainActivity,type=1]#7](f:0,a:1) acquireNextBufferLocked size=1260x2800 mFrameNumber=1 applyTransaction=true mTimestamp=136741841020457(auto) mPendingTransactions.size=0 graphicBufferId=70592082477087 transform=0
+07-08 22:19:05.916  8905  8905 I cayp    : (REDACTED) onApplyWindowInsets: systemWindowInsets=%s
+07-08 22:19:05.916  8905  8905 I cayp    : (REDACTED) onApplyWindowInsets: systemWindowInsets=%s
+07-08 22:19:05.924 16436 16436 V ImeFocusController: onWindowFocus: com.android.internal.policy.DecorView{90732a5 V.E...... R....... 0,0-1260,2800 aid=0}[MainActivity] softInputMode=STATE_UNSPECIFIED|ADJUST_RESIZE|IS_FORWARD_NAVIGATION
+07-08 22:19:05.925 28667 28667 V InputMethod: unbindInput(): binding=InputBinding{android.os.BinderProxy@f5e94d8 / uid 10103 / pid 5063} ic=RemoteInputConnection{idHash=#2fbd289}
+07-08 22:19:05.925 28667 28667 V InputMethod: bindInput(): binding=InputBinding{android.os.BinderProxy@65c3ecc / uid 10690 / pid 16436} ic=RemoteInputConnection{idHash=#20b499a}
+07-08 22:19:05.926 28667 28667 V InputMethod: startInput(): editor=android.view.inputmethod.EditorInfo@65772cb
+07-08 22:19:05.926 28667 28667 V InputMethodService: CALL: doFinishInput
+07-08 22:19:05.926 28667 28667 D InlineSuggestionSessionController: notifyOnFinishInput
+07-08 22:19:05.926 28667 28667 V InputMethodService: CALL: onFinishInput
+07-08 22:19:05.926 28667 28667 I GoogleInputMethodService: GoogleInputMethodService.onFinishInput():2276 
+07-08 22:19:05.927 28667 28667 I Module  : DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatusInternal():129 repeatCheckTimes = 0, locked = false
+07-08 22:19:05.927 28667 28667 V InputMethodService: finishStylusHandwriting()
+07-08 22:19:05.927 28667 28667 D InlineSuggestionSessionController: notifyOnStartInput: com.emergent.salahalarm.lxw9zs, 0
+07-08 22:19:05.927 28667 28667 V InputMethodService: CALL: onStartInput
+07-08 22:19:05.927 28667 28667 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1460 onStartInput(EditorInfo{EditorInfo{packageName=com.emergent.salahalarm.lxw9zs, inputType=0, inputTypeString=NULL, enableLearning=false, autoCorrection=false, autoComplete=false, imeOptions=0, privateImeOptions=null, actionName=UNSPECIFIED, actionLabel=null, initialSelStart=-1, initialSelEnd=-1, initialCapsMode=0, label=null, fieldId=0, fieldName=null, extras=null, hintText=null, hintLocales=[]}}, false)
+07-08 22:19:05.927 28667 28667 I LatinIMEBase: LatinIMEBase.updateInputViewCoverNavigation():317 Update input view padding, isNavbarOverInputWindow=true, bottom inset=126
+07-08 22:19:05.927 28667 28667 I Module  : DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatusInternal():129 repeatCheckTimes = 1, locked = false
+07-08 22:19:05.928 16436 16436 I ImeTracker: com.emergent.salahalarm.lxw9zs:3c31219c: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+07-08 22:19:05.978  8905  8905 I cbfe    : onPause
+07-08 22:19:05.979  8905  8905 W drep    : measuring already stopped.
+07-08 22:19:06.174 16436 16512 D InsetsAnimationCtrlImpl: notify control request finished for types: 2
+07-08 22:19:06.174 16436 16512 I ANDR-VIVO-PERF: vivo inside perf_lock_rel of client
+07-08 22:19:06.386  8905  8905 D VRI[GoogleDiscoverWindow,type=4]: visibilityChanged oldVisibility=true newVisibility=false
+07-08 22:19:06.408  8905  9123 I HWUI    : [destroy] CanvasContext will be destroyed.
+07-08 22:19:06.419  8905  8905 D ViewRootImpl: AppSizeAfterRelayout, size: Point(1260, 2800), rotation: ROTATION_0
+07-08 22:19:06.419  8905  8905 D BLASTBufferQueue: [VRI[GoogleDiscoverWindow,type=4]#135](f:0,a:2) destructor()
+07-08 22:19:06.419  8905  8905 D BufferQueueConsumer: [VRI[GoogleDiscoverWindow,type=4]#135(BLAST Consumer)135](id:22c900000087,api:0,p:-1,c:8905) disconnect
+07-08 22:19:06.420  8905  8905 I cbfe    : onStop
+07-08 22:19:06.625 20930 21130 I NullBinder: NullBinder for android.net.action.RECOMMEND_NETWORKS triggering remote TransactionTooLargeException due to Service without Chimera impl, calling uid: 1000, calling pid: 0
+07-08 22:19:06.625 20930 21130 W .gms.persistent: Large reply transaction of 1056768 bytes, interface descriptor , code 1
+07-08 22:19:06.627 22694 22900 D WM-WorkConstraintsTrack: NetworkRequestConstraintController onCapabilitiesChanged callback
+07-08 22:19:06.632 14209 17602 I NearbyMediums: Wifi changed new SSID: "VM7877023"
+07-08 22:19:06.632 14209 17602 I NearbyMediums: WifiLanConnectivityInfo is not changed, skip notify.
+07-08 22:19:06.633 20930  2105 I NearbyMediums: Wifi changed new SSID: "VM7877023"
+07-08 22:19:06.633 20930  2105 I NearbyMediums: WifiLanConnectivityInfo is not changed, skip notify.
+07-08 22:19:07.130 20930  2106 I NearbySharing: Network state changed: NetworkState(isRestricted=false, isOnline=true, isCongested=false, isMetered=false, isWifiConnected=true)
+07-08 22:19:07.130 20930  2105 I NearbySharing: Network state changed: NetworkState(isRestricted=false, isOnline=true, isCongested=false, isMetered=false, isWifiConnected=true)
+07-08 22:19:07.660 20930 21021 I NullBinder: NullBinder for android.net.action.RECOMMEND_NETWORKS triggering remote TransactionTooLargeException due to Service without Chimera impl, calling uid: 1000, calling pid: 0
+07-08 22:19:07.660 20930 21021 W .gms.persistent: Large reply transaction of 1056768 bytes, interface descriptor , code 1
+07-08 22:19:07.668 22694 22900 D WM-WorkConstraintsTrack: NetworkRequestConstraintController onCapabilitiesChanged callback
+07-08 22:19:07.669 20930  2105 I NearbyMediums: Wifi changed new SSID: "VM7877023"
+07-08 22:19:07.669 20930  2105 I NearbyMediums: WifiLanConnectivityInfo is not changed, skip notify.
+07-08 22:19:07.676 14209 17602 I NearbyMediums: Wifi changed new SSID: "VM7877023"
+07-08 22:19:07.676 14209 17602 I NearbyMediums: WifiLanConnectivityInfo is not changed, skip notify.
+07-08 22:19:08.087 16436 16436 W binder:16436_8: type=1400 audit(0.0:4481778): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:19:08.099 16436 16436 W binder:16436_8: type=1400 audit(0.0:4481779): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:19:08.111 16436 16436 W binder:16436_8: type=1400 audit(0.0:4481780): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:19:08.119 16436 16436 W binder:16436_8: type=1400 audit(0.0:4481781): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c178,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-08 22:19:08.166 20930  2105 I NearbySharing: Network state changed: NetworkState(isRestricted=false, isOnline=true, isCongested=false, isMetered=false, isWifiConnected=true)
+07-08 22:19:08.168 20930  2105 I NearbySharing: Network state changed: NetworkState(isRestricted=false, isOnline=true, isCongested=false, isMetered=false, isWifiConnected=true)
+07-08 22:19:08.831 20930  2105 I NearbyMediums: No BLE Fast/GATT advertisements found in the latest cycle.
+07-08 22:19:08.832 20930  2105 I NearbyMediums: Current Tracked Scanning Clients are : {NearbyConnections.EnvironmentMonitor, NearbySharing}
+07-08 22:19:09.069 16436 16524 D BufferPoolAccessor2.0: bufferpool2 0xb4000078b0325ce8 : 5(40960 size) total buffers - 0(0 size) used buffers - 14/19 (recycle/alloc) - 7/36 (fetch/transfer)
+07-08 22:19:09.069 16436 16524 D BufferPoolAccessor2.0: evictor expired: 1, evicted: 1
+07-08 22:19:09.634 20930 20955 I Auth    : [BroadcastManager] [BroadcastManager] Broadcasting account capabilities changed. [CONTEXT service_id=343 ]
+07-08 22:19:09.638 20930 20955 I Auth    : [BroadcastManager] [BroadcastManager] Broadcasting account services changed. [CONTEXT service_id=343 ]
+07-08 22:19:09.653 14283  2737 I Auth    : (REDACTED) [SupervisedAccountIntentOperation] onHandleIntent: %s
+07-08 22:19:09.675 14283  2598 W ChimeraUtils: Module com.google.android.gms.advancedprotection missing resource null(0)
+07-08 22:19:09.686 20930  2371 I NetworkScheduler.Stats: (REDACTED) Task %s/%s started execution. cause:%s exec_start_elapsed_seconds: %s
+07-08 22:19:09.693 20930  2371 I NetworkScheduler.Stats: (REDACTED) Task %s/%s finished executing. cause:%s result: %s elapsed_millis: %s uptime_millis: %s exec_start_elapsed_seconds: %s
+07-08 22:19:09.723 20930 20940 I NullBinder: NullBinder for android.net.action.RECOMMEND_NETWORKS triggering remote TransactionTooLargeException due to Service without Chimera impl, calling uid: 1000, calling pid: 0
+07-08 22:19:09.723 20930 20940 W .gms.persistent: Large reply transaction of 1056768 bytes, interface descriptor , code 1
+07-08 22:19:09.724 22694 22900 D WM-WorkConstraintsTrack: NetworkRequestConstraintController onCapabilitiesChanged callback
+07-08 22:19:09.728 20930 28878 I NearbyMediums: Wifi changed new SSID: "VM7877023"
+07-08 22:19:09.728 20930 28878 I NearbyMediums: WifiLanConnectivityInfo is not changed, skip notify.
+07-08 22:19:09.728 14209 17602 I NearbyMediums: Wifi changed new SSID: "VM7877023"
+07-08 22:19:09.728 14209 17602 I NearbyMediums: WifiLanConnectivityInfo is not changed, skip notify.
+07-08 22:19:10.223 20930 28878 I NearbySharing: Network state changed: NetworkState(isRestricted=false, isOnline=true, isCongested=false, isMetered=false, isWifiConnected=true)
+07-08 22:19:10.225 20930  2105 I NearbySharing: Network state changed: NetworkState(isRestricted=false, isOnline=true, isCongested=false, isMetered=false, isWifiConnected=true)
+07-08 22:19:12.170 20930 20930 D BoundBrokerSvc: onUnbind: Intent { act=com.google.android.gms.findmydevice.spot.service.locationreport.START dat=chimera-action:/... xflg=0x4 cmp=com.google.android.gms/.chimera.PersistentApiService }
+07-08 22:19:12.860 20930 20940 I NullBinder: NullBinder for android.net.action.RECOMMEND_NETWORKS triggering remote TransactionTooLargeException due to Service without Chimera impl, calling uid: 1000, calling pid: 0
+07-08 22:19:12.860 20930 20940 W .gms.persistent: Large reply transaction of 1056768 bytes, interface descriptor , code 1
+07-08 22:19:12.872 22694 22900 D WM-WorkConstraintsTrack: NetworkRequestConstraintController onCapabilitiesChanged callback
+07-08 22:19:12.873 20930  2105 I NearbyMediums: Wifi changed new SSID: "VM7877023"
+07-08 22:19:12.873 20930  2105 I NearbyMediums: WifiLanConnectivityInfo is not changed, skip notify.
+07-08 22:19:12.873 14209 17602 I NearbyMediums: Wifi changed new SSID: "VM7877023"
+07-08 22:19:12.873 14209 17602 I NearbyMediums: WifiLanConnectivityInfo is not changed, skip notify.
