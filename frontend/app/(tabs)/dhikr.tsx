@@ -7,8 +7,10 @@ import * as Haptics from "expo-haptics";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
+  withSequence,
   withTiming,
   Easing,
+  SharedValue,
 } from "react-native-reanimated";
 
 import { useApp } from "@/src/context/AppContext";
@@ -36,6 +38,115 @@ const SCREEN_WIDTH = Dimensions.get("window").width;
 const STRING_HEIGHT = 90;
 const STRING_PADDING = SPACING.xl * 2;
 const AVAILABLE_WIDTH = SCREEN_WIDTH - STRING_PADDING;
+const PATH_SAMPLES = 160;
+const OVERSHOOT = 8; // px equivalent along the path
+
+// ---- Cubic Bézier + arc-length lookup table (manual PathMeasure equivalent) ----
+// React Native has no native Path/PathMeasure like Compose does, so we sample
+// the curve into a distance→point lookup table ourselves. Beads are then
+// positioned by DISTANCE ALONG THE PATH (via this table), never by
+// interpolating raw x/y directly — matching how a real PathMeasure-driven
+// animation works.
+function bezierPoint(t: number, p0: number, p1: number, p2: number, p3: number) {
+  const mt = 1 - t;
+  return mt * mt * mt * p0 + 3 * mt * mt * t * p1 + 3 * mt * t * t * p2 + t * t * t * p3;
+}
+
+function buildPathTable(width: number, height: number) {
+  // Gentle draped-string arch, matching how a held tasbih naturally curves.
+  const P0 = { x: 0, y: height * 0.62 };
+  const P1 = { x: width * 0.25, y: height * 0.02 };
+  const P2 = { x: width * 0.75, y: height * 0.02 };
+  const P3 = { x: width, y: height * 0.62 };
+
+  const samples: { x: number; y: number; dist: number }[] = [];
+  let cumulative = 0;
+  let prev = { x: P0.x, y: P0.y };
+  for (let i = 0; i <= PATH_SAMPLES; i++) {
+    const t = i / PATH_SAMPLES;
+    const x = bezierPoint(t, P0.x, P1.x, P2.x, P3.x);
+    const y = bezierPoint(t, P0.y, P1.y, P2.y, P3.y);
+    if (i > 0) cumulative += Math.hypot(x - prev.x, y - prev.y);
+    samples.push({ x, y, dist: cumulative });
+    prev = { x, y };
+  }
+  return { samples, totalLength: cumulative };
+}
+
+// Worklet-safe: given a distance along the path, find the (x,y) point via
+// the lookup table, linearly interpolating between the two nearest samples.
+function pointAtDistance(samples: { x: number; y: number; dist: number }[], totalLength: number, distance: number) {
+  "worklet";
+  let d = distance % totalLength;
+  if (d < 0) d += totalLength;
+
+  let lo = 0;
+  let hi = samples.length - 1;
+  while (lo < hi - 1) {
+    const mid = (lo + hi) >> 1;
+    if (samples[mid].dist < d) lo = mid;
+    else hi = mid;
+  }
+  const a = samples[lo];
+  const b = samples[hi];
+  const span = b.dist - a.dist || 1;
+  const f = (d - a.dist) / span;
+  return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f };
+}
+
+// A single bead: perfectly circular, no rotation/stretch, subtle metallic
+// sheen via a small specular highlight dot. Position derives purely from
+// the shared `offset` distance value — never animated as raw x/y.
+function TasbihBead({
+  beadIndex,
+  spacing,
+  offset,
+  samples,
+  totalLength,
+  size,
+  colors,
+  ring,
+}: {
+  beadIndex: number;
+  spacing: number;
+  offset: SharedValue<number>;
+  samples: { x: number; y: number; dist: number }[];
+  totalLength: number;
+  size: number;
+  colors: [string, string];
+  ring: string;
+}) {
+  const animatedStyle = useAnimatedStyle(() => {
+    const d = beadIndex * spacing - offset.value;
+    const p = pointAtDistance(samples, totalLength, d);
+    return {
+      transform: [{ translateX: p.x - size / 2 }, { translateY: p.y - size / 2 }],
+    };
+  });
+
+  return (
+    <Animated.View style={[{ position: "absolute", width: size, height: size }, animatedStyle]}>
+      <LinearGradient
+        colors={colors}
+        start={{ x: 0.25, y: 0.2 }}
+        end={{ x: 0.8, y: 1 }}
+        style={{ width: size, height: size, borderRadius: size / 2, borderWidth: 1, borderColor: ring }}
+      />
+      {/* Specular highlight for a subtle metallic look */}
+      <View
+        style={{
+          position: "absolute",
+          top: size * 0.16,
+          left: size * 0.2,
+          width: size * 0.28,
+          height: size * 0.2,
+          borderRadius: size * 0.14,
+          backgroundColor: "rgba(255,255,255,0.55)",
+        }}
+      />
+    </Animated.View>
+  );
+}
 
 export default function DhikrScreen() {
   const { colors } = useApp();
@@ -47,76 +158,75 @@ export default function DhikrScreen() {
   const [beadStyleIdx, setBeadStyleIdx] = useState(1); // default: Pearl
   const [showStylePicker, setShowStylePicker] = useState(false);
   const [showTargetPicker, setShowTargetPicker] = useState(false);
-  // Per-phrase target override. null = use that phrase's own default target.
   const [targetOverride, setTargetOverride] = useState<number | null>(null);
 
   const item = DHIKR_LIST[index];
   const target = targetOverride ?? item.target;
   const beadStyle = BEAD_STYLES[beadStyleIdx];
   const totalBeads = Math.min(target, MAX_VISUAL_BEADS);
-
-  const beadSize = Math.max(16, Math.min(30, Math.floor(AVAILABLE_WIDTH / totalBeads) - 2));
+  const beadSize = Math.max(16, Math.min(28, Math.floor(AVAILABLE_WIDTH / totalBeads) - 2));
 
   const progress = Math.min(count / target, 1);
-  const filledBeads = count === 0 ? 0 : count % totalBeads === 0 ? totalBeads : count % totalBeads;
 
-  // Precise absolute position for each bead, rising left-to-right along a
-  // gentle curve, so we can draw real thread segments connecting their
-  // exact centers (not just an approximate visual arc).
-  const beadCenters = useMemo(() => {
-    const usableWidth = AVAILABLE_WIDTH - beadSize;
-    const usableHeight = STRING_HEIGHT - beadSize;
-    return Array.from({ length: totalBeads }, (_, i) => {
-      const t = totalBeads > 1 ? i / (totalBeads - 1) : 0;
-      const eased = Math.pow(t, 1.15); // slight sag near the start
-      const x = eased * usableWidth + beadSize / 2;
-      const y = STRING_HEIGHT - beadSize / 2 - eased * usableHeight;
-      return { x, y };
-    });
-  }, [totalBeads, beadSize]);
+  const { samples, totalLength } = useMemo(
+    () => buildPathTable(AVAILABLE_WIDTH, STRING_HEIGHT),
+    [],
+  );
+  const spacing = totalLength / totalBeads;
 
+  // Static thread — the string never moves, only the beads slide along it.
   const threadSegments = useMemo(() => {
-    const segs = [];
-    for (let i = 0; i < beadCenters.length - 1; i++) {
-      const a = beadCenters[i];
-      const b = beadCenters[i + 1];
+    const segs: { x: number; y: number; length: number; angle: number }[] = [];
+    const step = Math.max(1, Math.floor(PATH_SAMPLES / 60));
+    for (let i = 0; i < samples.length - step; i += step) {
+      const a = samples[i];
+      const b = samples[i + step] ?? samples[samples.length - 1];
       const dx = b.x - a.x;
       const dy = b.y - a.y;
-      const length = Math.sqrt(dx * dx + dy * dy);
-      const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-      segs.push({ x: a.x, y: a.y, length, angle });
+      segs.push({
+        x: a.x,
+        y: a.y,
+        length: Math.hypot(dx, dy),
+        angle: (Math.atan2(dy, dx) * 180) / Math.PI,
+      });
     }
     return segs;
-  }, [beadCenters]);
+  }, [samples]);
 
-  const shiftX = useSharedValue(0);
-  const animatedStringStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: shiftX.value }],
-  }));
+  // The necklace's overall slide distance. Monotonically increases (never
+  // snapped back to 0 on lap completion) — the lookup table's modulo
+  // wrapping handles the visual cycling automatically, which is also more
+  // physically honest: a real tasbih string doesn't "reset," it just keeps
+  // moving through your fingers.
+  const offset = useSharedValue(0);
 
   const selectItem = (i: number) => {
     setIndex(i);
     setCount(0);
     setHitTarget(false);
     setTargetOverride(null);
+    offset.value = 0;
     Haptics.selectionAsync();
   };
-
-  const SLIDE_RANGE = 46;
 
   const increment = () => {
     const next = count + 1;
     setCount(next);
 
-    const nextFilled = next % totalBeads === 0 ? totalBeads : next % totalBeads;
-    const laneProgress = nextFilled / totalBeads;
-    // Fluid, continuous slide of the whole string toward the left as beads
-    // are counted — rather than a static instant color-fill jump. Wraps
-    // back smoothly at the start of each new lap around the string.
-    shiftX.value = withTiming(-laneProgress * SLIDE_RANGE, {
-      duration: 260,
-      easing: Easing.out(Easing.cubic),
-    });
+    const base = offset.value;
+    const target1 = base + spacing;
+    // Overshoot past the target then settle back — imitates the momentum
+    // of physically pushed prayer beads rather than a mechanical stop.
+    offset.value = withSequence(
+      withTiming(target1 + OVERSHOOT, {
+        duration: 260,
+        easing: Easing.out(Easing.cubic),
+      }),
+      withTiming(target1, {
+        duration: 90,
+        easing: Easing.inOut(Easing.ease),
+      }),
+    );
 
     if (next === target) {
       setHitTarget(true);
@@ -129,6 +239,7 @@ export default function DhikrScreen() {
   const reset = () => {
     setCount(0);
     setHitTarget(false);
+    offset.value = withTiming(0, { duration: 300, easing: Easing.inOut(Easing.ease) });
     Haptics.selectionAsync();
   };
 
@@ -197,6 +308,7 @@ export default function DhikrScreen() {
                       setTargetOverride(t);
                       setCount(0);
                       setHitTarget(false);
+                      offset.value = 0;
                       setShowTargetPicker(false);
                       Haptics.selectionAsync();
                     }}
@@ -213,6 +325,7 @@ export default function DhikrScreen() {
                   setTargetOverride(null);
                   setCount(0);
                   setHitTarget(false);
+                  offset.value = 0;
                   setShowTargetPicker(false);
                   Haptics.selectionAsync();
                 }}
@@ -223,8 +336,8 @@ export default function DhikrScreen() {
             </View>
           ) : null}
 
-          {/* Bead string — thread segments drawn first (behind), beads on top */}
-          <Animated.View style={[styles.beadStringWrap, { width: AVAILABLE_WIDTH, height: STRING_HEIGHT }, animatedStringStyle]} testID="bead-string">
+          {/* Bead string — static thread first, then sliding beads on top */}
+          <View style={[styles.beadStringWrap, { width: AVAILABLE_WIDTH, height: STRING_HEIGHT }]} testID="bead-string">
             {threadSegments.map((seg, i) => (
               <View
                 key={`thread-${i}`}
@@ -240,29 +353,20 @@ export default function DhikrScreen() {
                 ]}
               />
             ))}
-            {beadCenters.map((c, i) => {
-              const filled = i < filledBeads;
-              const st = filled ? beadStyle : { colors: [colors.surfaceTertiary, colors.surfaceTertiary] as [string, string], ring: colors.border };
-              return (
-                <LinearGradient
-                  key={`bead-${i}`}
-                  colors={st.colors}
-                  style={[
-                    styles.bead,
-                    {
-                      width: beadSize,
-                      height: beadSize,
-                      borderRadius: beadSize / 2,
-                      left: c.x - beadSize / 2,
-                      top: c.y - beadSize / 2,
-                      borderColor: st.ring,
-                      opacity: filled ? 1 : 0.55,
-                    },
-                  ]}
-                />
-              );
-            })}
-          </Animated.View>
+            {Array.from({ length: totalBeads }, (_, i) => (
+              <TasbihBead
+                key={`bead-${i}`}
+                beadIndex={i}
+                spacing={spacing}
+                offset={offset}
+                samples={samples}
+                totalLength={totalLength}
+                size={beadSize}
+                colors={beadStyle.colors}
+                ring={beadStyle.ring}
+              />
+            ))}
+          </View>
 
           <View style={[styles.progressTrack, { backgroundColor: colors.surfaceTertiary }]}>
             <View
@@ -361,7 +465,6 @@ const styles = StyleSheet.create({
   targetChipText: { fontFamily: FONTS.semibold, fontSize: 13 },
   beadStringWrap: { position: "relative" },
   thread: { position: "absolute", height: 2, borderRadius: 1 },
-  bead: { position: "absolute", borderWidth: 1 },
   progressTrack: {
     width: "100%",
     height: 8,

@@ -11,15 +11,19 @@ export type WidgetRow = { label: string; time: string };
 export function updateWidget(
   nextLabel: string,
   nextTime: string,
-  countdown: string,
+  nextTimestamp: number,
   rows: WidgetRow[],
   nextIndex: number,
   style: "arc" | "grid",
 ): void {
   if (Platform.OS !== "android") return;
+  const payload = { nextLabel, nextTime, nextTimestamp, rows, nextIndex, style };
+  console.log("WIDGET PUSH:", JSON.stringify(payload));
+  console.log("WidgetModule exists:", !!NativeModules.WidgetModule);
   try {
-    NativeModules.WidgetModule?.updateWidgetData(
-      JSON.stringify({ nextLabel, nextTime, countdown, rows, nextIndex, style }),
-    );
-  } catch {}
+    NativeModules.WidgetModule?.updateWidgetData(JSON.stringify(payload));
+    console.log("WIDGET PUSH: call completed without throwing");
+  } catch (e) {
+    console.log("WIDGET PUSH ERROR:", e);
+  }
 }

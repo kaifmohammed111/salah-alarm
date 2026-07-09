@@ -24,6 +24,7 @@ import {
   formatTime,
   nextPrayerInfo,
   startJamaat,
+  timeToDate,
 } from "@/src/lib/prayer";
 import PrayerCard from "@/src/components/PrayerCard";
 import AlarmSettingsSheet, { AlarmSheetRef } from "@/src/components/AlarmSettingsSheet";
@@ -103,7 +104,7 @@ export default function HomeScreen() {
       updateWidget(
         PRAYER_LABELS[next.key],
         formatTime(next.time, settings.is24h),
-        countdownString(next.date, now),
+        next.date.getTime(),
         rows,
         nextIndex,
         settings.widgetStyle,
@@ -115,10 +116,11 @@ export default function HomeScreen() {
       tomorrow.setDate(tomorrow.getDate() + 1);
       const tomorrowRow = findTodayRow(timetable, tomorrow);
       const fajrTime = tomorrowRow?.fajr?.start;
+      const fajrDate = fajrTime ? timeToDate(fajrTime, tomorrow) : null;
       updateWidget(
         "Fajr",
         fajrTime ? formatTime(fajrTime, settings.is24h) : "--:--",
-        "Tomorrow",
+        fajrDate ? fajrDate.getTime() : 0,
         rows,
         0,
         settings.widgetStyle,
