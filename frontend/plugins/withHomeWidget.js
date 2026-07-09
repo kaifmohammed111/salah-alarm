@@ -11,8 +11,14 @@ const WIDGET_PROVIDER_KT = `package __PACKAGE__
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Path
 import android.widget.RemoteViews
 import org.json.JSONObject
+import kotlin.math.sin
 
 /**
  * Renders today's prayer times on the home screen. Deliberately does NOT
@@ -20,6 +26,10 @@ import org.json.JSONObject
  * already-computed, ready-to-show strings written by the JS side (see
  * WidgetModule.kt) into SharedPreferences whenever the app's timetable,
  * settings, or the current time-of-day's "next prayer" changes.
+ *
+ * The arc above the prayer row is drawn dynamically via Canvas (not a
+ * static image) so the marker can sit above whichever prayer is next —
+ * an original design, not copied from any reference.
  */
 class SalahWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(
@@ -33,17 +43,85 @@ class SalahWidgetProvider : AppWidgetProvider() {
     }
 
     companion object {
+        private fun drawArcBitmap(nextIndex: Int, widthPx: Int, heightPx: Int): Bitmap {
+            val bitmap = Bitmap.createBitmap(widthPx.coerceAtLeast(1), heightPx.coerceAtLeast(1), Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            val cols = 6
+            val marginX = widthPx * 0.05f
+            val usableWidth = widthPx - marginX * 2
+            val baseY = heightPx * 0.92f
+            val peakY = heightPx * 0.12f
+
+            fun yAt(t: Float): Float = baseY - (sin(t * Math.PI).toFloat()) * (baseY - peakY)
+            fun xAt(i: Int): Float = marginX + usableWidth * (i.toFloat() / (cols - 1))
+
+            val fullPath = Path()
+            for (i in 0 until cols) {
+                val t = i.toFloat() / (cols - 1)
+                val x = xAt(i)
+                val y = yAt(t)
+                if (i == 0) fullPath.moveTo(x, y) else fullPath.lineTo(x, y)
+            }
+            val grayPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.STROKE
+                strokeWidth = heightPx * 0.045f
+                color = Color.parseColor("#3E5C56")
+                strokeCap = Paint.Cap.ROUND
+            }
+            canvas.drawPath(fullPath, grayPaint)
+
+            if (nextIndex in 0 until cols) {
+                val goldPath = Path()
+                for (i in 0..nextIndex) {
+                    val t = i.toFloat() / (cols - 1)
+                    val x = xAt(i)
+                    val y = yAt(t)
+                    if (i == 0) goldPath.moveTo(x, y) else goldPath.lineTo(x, y)
+                }
+                val goldPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    style = Paint.Style.STROKE
+                    strokeWidth = heightPx * 0.045f
+                    color = Color.parseColor("#E8B84B")
+                    strokeCap = Paint.Cap.ROUND
+                }
+                canvas.drawPath(goldPath, goldPaint)
+
+                val markerX = xAt(nextIndex)
+                val markerY = yAt(nextIndex.toFloat() / (cols - 1))
+                val markerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    style = Paint.Style.FILL
+                    color = Color.parseColor("#FFFFFF")
+                }
+                canvas.drawCircle(markerX, markerY, heightPx * 0.10f, markerPaint)
+                val markerRing = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    style = Paint.Style.STROKE
+                    strokeWidth = heightPx * 0.03f
+                    color = Color.parseColor("#E8B84B")
+                }
+                canvas.drawCircle(markerX, markerY, heightPx * 0.10f, markerRing)
+            }
+
+            return bitmap
+        }
+
         fun updateWidget(context: Context, appWidgetManager: AppWidgetManager, widgetId: Int) {
             val prefs = context.getSharedPreferences("salah_widget", Context.MODE_PRIVATE)
             val json = prefs.getString("widget_data", null)
 
             val views = RemoteViews(context.packageName, R.layout.widget_salah)
 
+            val options = appWidgetManager.getAppWidgetOptions(widgetId)
+            val minWidthDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 250).coerceAtLeast(200)
+            val density = context.resources.displayMetrics.density
+            val widthPx = (minWidthDp * density).toInt()
+            val arcHeightPx = (46 * density).toInt()
+
             if (json == null) {
                 views.setTextViewText(R.id.next_label, "SalahSync")
                 views.setTextViewText(R.id.next_time, "Open the app")
                 views.setTextViewText(R.id.countdown, "to load today's times")
                 views.removeAllViews(R.id.rows_container)
+                views.setImageViewBitmap(R.id.arc_image, drawArcBitmap(-1, widthPx, arcHeightPx))
                 appWidgetManager.updateAppWidget(widgetId, views)
                 return
             }
@@ -65,9 +143,13 @@ class SalahWidgetProvider : AppWidgetProvider() {
                         views.addView(R.id.rows_container, rowView)
                     }
                 }
+
+                val nextIndex = data.optInt("nextIndex", -1)
+                views.setImageViewBitmap(R.id.arc_image, drawArcBitmap(nextIndex, widthPx, arcHeightPx))
             } catch (e: Exception) {
                 views.setTextViewText(R.id.next_label, "SalahSync")
                 views.setTextViewText(R.id.next_time, "--:--")
+                views.setImageViewBitmap(R.id.arc_image, drawArcBitmap(-1, widthPx, arcHeightPx))
             }
 
             appWidgetManager.updateAppWidget(widgetId, views)
@@ -130,7 +212,7 @@ class WidgetPackage : ReactPackage {
 const WIDGET_INFO_XML = `<?xml version="1.0" encoding="utf-8"?>
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="250dp"
-    android:minHeight="110dp"
+    android:minHeight="140dp"
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/widget_salah"
     android:resizeMode="horizontal|vertical"
@@ -171,7 +253,7 @@ const WIDGET_LAYOUT_XML = `<?xml version="1.0" encoding="utf-8"?>
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:layout_marginTop="2dp"
-        android:layout_marginBottom="8dp">
+        android:layout_marginBottom="2dp">
 
         <TextView
             android:id="@+id/next_time"
@@ -179,7 +261,7 @@ const WIDGET_LAYOUT_XML = `<?xml version="1.0" encoding="utf-8"?>
             android:layout_height="wrap_content"
             android:text="--:--"
             android:textColor="#FFFFFF"
-            android:textSize="28sp"
+            android:textSize="26sp"
             android:textStyle="bold" />
 
         <TextView
@@ -192,6 +274,14 @@ const WIDGET_LAYOUT_XML = `<?xml version="1.0" encoding="utf-8"?>
             android:textColor="#E8B84B"
             android:textSize="13sp" />
     </LinearLayout>
+
+    <ImageView
+        android:id="@+id/arc_image"
+        android:layout_width="match_parent"
+        android:layout_height="46dp"
+        android:scaleType="fitXY"
+        android:layout_marginTop="2dp"
+        android:layout_marginBottom="2dp" />
 
     <LinearLayout
         android:id="@+id/rows_container"
@@ -217,7 +307,8 @@ const WIDGET_ROW_ITEM_XML = `<?xml version="1.0" encoding="utf-8"?>
         android:layout_height="wrap_content"
         android:text=""
         android:textColor="#9CB3AD"
-        android:textSize="10sp" />
+        android:textSize="10sp"
+        android:singleLine="true" />
 
     <TextView
         android:id="@+id/row_time"
@@ -225,8 +316,9 @@ const WIDGET_ROW_ITEM_XML = `<?xml version="1.0" encoding="utf-8"?>
         android:layout_height="wrap_content"
         android:text=""
         android:textColor="#FFFFFF"
-        android:textSize="12sp"
-        android:textStyle="bold" />
+        android:textSize="10sp"
+        android:textStyle="bold"
+        android:singleLine="true" />
 
 </LinearLayout>
 `;

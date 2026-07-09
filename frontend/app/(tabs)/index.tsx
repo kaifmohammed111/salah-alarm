@@ -91,18 +91,37 @@ export default function HomeScreen() {
   // logic is duplicated on the native side.
   useEffect(() => {
     if (!isToday || !viewRow) return;
-    const rows = keys
-      .filter((k) => k !== "sunrise")
-      .map((k) => ({
-        label: PRAYER_LABELS[k],
-        time: formatTime(startJamaat(viewRow, k).start, settings.is24h),
-      }));
-    updateWidget(
-      next ? PRAYER_LABELS[next.key] : "—",
-      next ? formatTime(next.time, settings.is24h) : "--:--",
-      next ? countdownString(next.date, now) : "",
-      rows,
-    );
+    // Always send the full 6-prayer set to the widget, regardless of the
+    // in-app "show sunrise" setting — keeps the widget's layout consistent.
+    const rows = PRAYER_ORDER.map((k) => ({
+      label: PRAYER_LABELS[k],
+      time: k === "sunrise" ? formatTime(viewRow.sunrise, settings.is24h) : formatTime(startJamaat(viewRow, k).start, settings.is24h),
+    }));
+
+    if (next) {
+      const nextIndex = PRAYER_ORDER.indexOf(next.key);
+      updateWidget(
+        PRAYER_LABELS[next.key],
+        formatTime(next.time, settings.is24h),
+        countdownString(next.date, now),
+        rows,
+        nextIndex,
+      );
+    } else {
+      // All of today's prayers have passed — fall back to showing
+      // tomorrow's Fajr rather than a blank placeholder.
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowRow = findTodayRow(timetable, tomorrow);
+      const fajrTime = tomorrowRow?.fajr?.start;
+      updateWidget(
+        "Fajr",
+        fajrTime ? formatTime(fajrTime, settings.is24h) : "--:--",
+        "Tomorrow",
+        rows,
+        0,
+      );
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isToday, viewRow, next?.key, settings.is24h]);
 
