@@ -18,6 +18,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
+import android.os.SystemClock
 import android.widget.RemoteViews
 import org.json.JSONObject
 import kotlin.math.sin
@@ -166,11 +167,25 @@ class SalahWidgetProvider : AppWidgetProvider() {
 
             try {
                 val data = JSONObject(json)
-                views.setTextViewText(R.id.next_label, data.optString("nextLabel", "—"))
+                val nextLabelText = data.optString("nextLabel", "—")
+                views.setTextViewText(R.id.next_label, nextLabelText)
                 views.setTextViewText(R.id.next_time, data.optString("nextTime", "--:--"))
-                views.setTextViewText(R.id.countdown, data.optString("countdown", ""))
-
+                views.setTextViewText(R.id.countdown_label, "Time until $nextLabelText")
                 val rows = data.optJSONArray("rows")
+                val nextTimestamp = data.optLong("nextTimestamp", 0L)
+                if (nextTimestamp > 0) {
+                    // Chronometer ticks on its own once configured — no
+                    // repeated app-triggered updates needed (and Android
+                    // widgets shouldn't be updated at high frequency anyway).
+                    // base must be in SystemClock.elapsedRealtime() terms,
+                    // not wall-clock time, hence the conversion below.
+                    val nowElapsed = SystemClock.elapsedRealtime()
+                    val nowWall = System.currentTimeMillis()
+                    val base = nowElapsed + (nextTimestamp - nowWall)
+                    views.setChronometer(R.id.countdown, base, "%s", true)
+                } else {
+                    views.setTextViewText(R.id.countdown, "--:--:--")
+                }
 
                 if (isGrid) {
                     views.removeAllViews(R.id.grid_col_left)
@@ -334,19 +349,11 @@ const ICON_ISHA_XML = `<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="100"
-    android:viewportHeight="100">
+    android:viewportWidth="960"
+    android:viewportHeight="960">
     <path
-        android:pathData="M50,5 a45,45 0 1,0 0,90 a45,45 0 1,0 0,-90 Z"
-        android:strokeWidth="4"
-        android:strokeColor="#E8B84B"
-        android:fillColor="#00000000" />
-    <path
-        android:pathData="M50,25 a25,25 0 1,0 0,50 a35,35 0 0,1 0,-50 Z
-        M50,50 l-5,-5 a2,2 0 0,0 -2,-2 l-5,5 l5,5 a2,2 0 0,0 2,2 l5,-5 Z
-        M70,50 a2,2 0 0,1 2,2 l20,0 l-2,2 l-18,0 Z
-        M70,60 a2,2 0 0,1 2,2 l20,0 l-2,2 l-18,0 Z"
-        android:fillColor="#E8B84B" />
+        android:fillColor="#E8B84B"
+        android:pathData="M600,320L480,200L600,80L720,200L600,320ZM800,440L720,360L800,280L880,360L800,440ZM483,880Q399,880 325.5,848Q252,816 197.5,761.5Q143,707 111,633.5Q79,560 79,476Q79,330 172,218.5Q265,107 409,80Q391,179 420,273.5Q449,368 520,439Q591,510 685.5,539Q780,568 879,550Q853,694 741,787Q629,880 483,880ZM483,800Q571,800 646,756Q721,712 764,635Q678,627 601,591.5Q524,556 463,495Q402,434 366,357Q330,280 323,194Q246,237 202.5,312.5Q159,388 159,476Q159,611 253.5,705.5Q348,800 483,800Z" />
 </vector>
 `;
 
@@ -374,23 +381,24 @@ const ICON_SUNRISE_XML = `<?xml version="1.0" encoding="utf-8"?>
     android:viewportWidth="100" android:viewportHeight="100">
     <path
         android:fillColor="#E8B84B"
-        android:pathData="M50,25 m-15,0 a15,15 0 1,0 30,0 a15,15 0 1,0 -30,0" />
+        android:pathData="M50,45 m-15,0 a15,15 0 1,0 30,0 a15,15 0 1,0 -30,0" />
     <path android:strokeColor="#E8B84B" android:strokeWidth="4" android:strokeLineCap="round"
-        android:pathData="M50,5 L50,-13" />
+        android:pathData="M50,25 L50,7" />
     <path android:strokeColor="#E8B84B" android:strokeWidth="4" android:strokeLineCap="round"
-        android:pathData="M61,11 L73,-5" />
+        android:pathData="M61,31 L73,15" />
     <path android:strokeColor="#E8B84B" android:strokeWidth="4" android:strokeLineCap="round"
-        android:pathData="M68,25 L88,25" />
+        android:pathData="M68,45 L88,45" />
     <path android:strokeColor="#E8B84B" android:strokeWidth="4" android:strokeLineCap="round"
-        android:pathData="M39,11 L27,-5" />
+        android:pathData="M39,31 L27,15" />
     <path android:strokeColor="#E8B84B" android:strokeWidth="4" android:strokeLineCap="round"
-        android:pathData="M32,25 L12,25" />
+        android:pathData="M32,45 L12,45" />
     <path android:strokeColor="#E8B84B" android:strokeWidth="4" android:strokeLineCap="round"
-        android:pathData="M5,40 L95,40" />
+        android:pathData="M5,60 L95,60" />
     <path android:strokeColor="#E8B84B" android:strokeWidth="4" android:strokeLineCap="round"
-        android:pathData="M15,48 L85,48" />
+        android:pathData="M15,68 L85,68" />
     <path android:strokeColor="#E8B84B" android:strokeWidth="4" android:strokeLineCap="round"
-        android:pathData="M25,56 L75,56" />
+        android:pathData="M25,76 L75,76" />
+
 </vector>
 `;
 
@@ -439,15 +447,29 @@ const WIDGET_LAYOUT_XML = `<?xml version="1.0" encoding="utf-8"?>
             android:textSize="26sp"
             android:textStyle="bold" />
 
-        <TextView
-            android:id="@+id/countdown"
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:gravity="end"
-            android:text=""
-            android:textColor="#E8B84B"
-            android:textSize="13sp" />
+            android:orientation="vertical"
+            android:gravity="end">
+
+            <TextView
+                android:id="@+id/countdown_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Time until next prayer"
+                android:textColor="#9CB3AD"
+                android:textSize="9sp" />
+
+            <Chronometer
+                android:id="@+id/countdown"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#E8B84B"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+        </LinearLayout>
     </LinearLayout>
 
     <ImageView
@@ -535,15 +557,29 @@ const WIDGET_GRID_LAYOUT_XML = `<?xml version="1.0" encoding="utf-8"?>
             android:textSize="30sp"
             android:textStyle="bold" />
 
-        <TextView
-            android:id="@+id/countdown"
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:gravity="end"
-            android:text=""
-            android:textColor="#E8B84B"
-            android:textSize="13sp" />
+            android:orientation="vertical"
+            android:gravity="end">
+
+            <TextView
+                android:id="@+id/countdown_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Time until next prayer"
+                android:textColor="#9CB3AD"
+                android:textSize="9sp" />
+
+            <Chronometer
+                android:id="@+id/countdown"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#E8B84B"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+        </LinearLayout>
     </LinearLayout>
 
     <LinearLayout
