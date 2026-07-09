@@ -460,7 +460,7 @@ export default function UploadScreen() {
         </ScrollView>
 
         {row ? (
-          <View style={[styles.footer, { paddingBottom: insets.bottom + SPACING.md, backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, SPACING.lg), backgroundColor: colors.surface, borderTopColor: colors.border }]}>
             <Pressable
               testID="confirm-save-btn"
               onPress={onSave}
@@ -646,18 +646,31 @@ export default function UploadScreen() {
             ) : null}
 
             <ScrollView style={{ maxHeight: 340 }} showsVerticalScrollIndicator={false}>
-              {CALC_METHODS.map((m) => (
-                <Pressable
-                  key={m.key}
-                  testID={`calc-method-${m.key}`}
-                  onPress={() => calculateByLocation(m.key)}
-                  style={[styles.modalOpt, { borderBottomColor: colors.divider }]}
-                >
-                  <Ionicons name="navigate-outline" size={16} color={colors.brand} />
-                  <Text style={[styles.modalOptText, { color: colors.onSurface }]}>{m.label}</Text>
-                  <Ionicons name="chevron-forward" size={14} color={colors.muted} />
-                </Pressable>
-              ))}
+              {CALC_METHODS.map((m) => {
+                const active =
+                  lastCalcRef.current?.methodKey === m.key ||
+                  (!lastCalcRef.current && (draft as any)?.calcMethodLabel === m.label);
+                return (
+                  <Pressable
+                    key={m.key}
+                    testID={`calc-method-${m.key}`}
+                    onPress={() => calculateByLocation(m.key)}
+                    style={[styles.modalOpt, { borderBottomColor: colors.divider }]}
+                  >
+                    <Ionicons
+                      name={active ? "checkmark-circle" : "navigate-outline"}
+                      size={16}
+                      color={active ? colors.success : colors.brand}
+                    />
+                    <Text style={[styles.modalOptText, { color: colors.onSurface }]}>{m.label}</Text>
+                    {active ? (
+                      <Text style={[styles.activeMethodTag, { color: colors.success }]}>Active</Text>
+                    ) : (
+                      <Ionicons name="chevron-forward" size={14} color={colors.muted} />
+                    )}
+                  </Pressable>
+                );
+              })}
             </ScrollView>
           </Pressable>
         </Pressable>
@@ -879,6 +892,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   modalOptText: { fontFamily: FONTS.medium, fontSize: 15, flex: 1 },
+  activeMethodTag: { fontFamily: FONTS.bold, fontSize: 11 },
   stepRow: { flexDirection: "row", gap: SPACING.md, marginBottom: SPACING.lg },
   stepBadge: {
     width: 26,
