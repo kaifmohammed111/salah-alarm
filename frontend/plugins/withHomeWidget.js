@@ -8,9 +8,11 @@ const path = require("path");
 
 const WIDGET_PROVIDER_KT = `package __PACKAGE__
 
+import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -125,6 +127,19 @@ class SalahWidgetProvider : AppWidgetProvider() {
                 context.packageName,
                 if (isGrid) R.layout.widget_salah_grid else R.layout.widget_salah,
             )
+
+            // Tapping anywhere on the widget opens the app.
+            val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+            if (launchIntent != null) {
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                val pendingIntent = PendingIntent.getActivity(
+                    context,
+                    0,
+                    launchIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                )
+                views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
+            }
 
             val options = appWidgetManager.getAppWidgetOptions(widgetId)
             val minWidthDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 250).coerceAtLeast(200)
@@ -274,7 +289,8 @@ const ICON_MOON_XML = `<?xml version="1.0" encoding="utf-8"?>
     android:viewportWidth="24" android:viewportHeight="24">
     <path
         android:fillColor="#E8B84B"
-        android:pathData="M12,4 A8,8 0 1,0 12,20 A6,6 0 1,1 12,4 Z" />
+        android:fillType="evenOdd"
+        android:pathData="M12,12 m-7,0 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0 M15.5,12 m-6,0 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0" />
 </vector>
 `;
 
@@ -323,6 +339,7 @@ const WIDGET_BG_XML = `<?xml version="1.0" encoding="utf-8"?>
 
 const WIDGET_LAYOUT_XML = `<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -418,6 +435,7 @@ const WIDGET_ROW_ITEM_XML = `<?xml version="1.0" encoding="utf-8"?>
 // with SalahSync's own colors/spacing/typography, not a copied asset.
 const WIDGET_GRID_LAYOUT_XML = `<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -470,6 +488,7 @@ const WIDGET_GRID_LAYOUT_XML = `<?xml version="1.0" encoding="utf-8"?>
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:paddingEnd="10dp"
             android:orientation="vertical" />
 
         <LinearLayout
@@ -477,6 +496,7 @@ const WIDGET_GRID_LAYOUT_XML = `<?xml version="1.0" encoding="utf-8"?>
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:paddingStart="10dp"
             android:orientation="vertical" />
 
     </LinearLayout>
