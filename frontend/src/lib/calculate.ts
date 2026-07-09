@@ -1,4 +1,5 @@
 import { CalculationMethod, CalculationParameters, Coordinates, Madhab, PrayerTimes } from "adhan";
+import tzlookup from "tz-lookup";
 import { DayRow, Timetable } from "./prayer";
 import { formatHijri } from "./hijri";
 
@@ -163,8 +164,21 @@ function getParams(methodKey: CalcMethodKey, asrMethod: "hanafi" | "shafi") {
   return params;
 }
 
-function hhmm(d: Date): string {
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+// Formats a Date's clock time in a SPECIFIC timezone, not the device's own.
+// Using raw .getHours()/.getMinutes() always reads in the device's local
+// timezone — fine when calculating for your own physical location (GPS
+// mode), but wrong whenever the target coordinates are in a different
+// timezone than the device (manual coordinate entry for another region).
+function hhmm(d: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone,
+  }).formatToParts(d);
+  const hh = parts.find((p) => p.type === "hour")?.value ?? "00";
+  const mm = parts.find((p) => p.type === "minute")?.value ?? "00";
+  return `${hh}:${mm}`;
 }
 
 /**
@@ -174,6 +188,35 @@ function hhmm(d: Date): string {
  * are inherently mosque-specific and can't be derived astronomically, so
  * they're left blank — the app already renders those as "N/A".
  */
+/**
+ * Compares the device's system clock against a trusted network time source
+ * (the standard HTTP `Date` response header, present on virtually any HTTPS
+ * response — no dependency on a specific time API that could go down).
+ * Prayer time calculation needs to know the correct current date to know
+ * which day/month to calculate for; if the device's clock is significantly
+ * wrong, the underlying astronomical math will still be correct, just for
+ * the wrong day. Returns ok:true (and doesn't block anything) if there's no
+ * internet connection or the check fails — this is a best-effort sanity
+ * check, not a hard requirement.
+ */
+export async function checkDeviceClockDrift(): Promise<{
+  ok: boolean;
+  driftMinutes?: number;
+}> {
+  try {
+    const res = await fetch("https://www.google.com", { method: "HEAD" });
+    const serverDateHeader = res.headers.get("date");
+    if (!serverDateHeader) return { ok: true };
+    const serverTime = new Date(serverDateHeader).getTime();
+    const deviceTime = Date.now();
+    if (isNaN(serverTime)) return { ok: true };
+    const driftMinutes = Math.round(Math.abs(serverTime - deviceTime) / 60000);
+    return { ok: driftMinutes <= 5, driftMinutes };
+  } catch {
+    return { ok: true };
+  }
+}
+
 export function generateTimetableForMonth(
   lat: number,
   lon: number,
@@ -185,31 +228,47 @@ export function generateTimetableForMonth(
   const coordinates = new Coordinates(lat, lon);
   const params = getParams(methodKey, asrMethod);
 
-  const daysInMonth = new Date(year, monthIndex0 + 1, 0).getDate();
+  // Resolve the ACTUAL timezone at the target coordinates, rather than
+  // assuming the device's own timezone applies — critical for manually
+  // entered coordinates far from the device's real location.
+  const timeZone = tzlookup(lat, lon);
+
+  const daysInMonth = new Date(Date.UTC(year, monthIndex0 + 1, 0)).getUTCDate();
   const rows: DayRow[] = [];
 
   for (let day = 1; day <= daysInMonth; day++) {
-    const date = new Date(year, monthIndex0, day, 12, 0, 0); // noon avoids DST edge cases
+    // Use UTC noon as the reference instant for this calendar day — avoids
+    // any dependency on the device's own timezone when constructing the
+    // input date; the day-granular Julian calculation inside adhan doesn't
+    // need exact local noon, just an instant that falls on the right day.
+    const date = new Date(Date.UTC(year, monthIndex0, day, 12, 0, 0));
     const pt = new PrayerTimes(coordinates, date, params);
-    const dayDate = new Date(year, monthIndex0, day);
+
+    const weekday = new Intl.DateTimeFormat("en-GB", { weekday: "short", timeZone }).format(date);
 
     rows.push({
-      day: dayDate.toLocaleDateString(undefined, { weekday: "short" }),
+      day: weekday,
       date: String(day),
-      hijri: formatHijri(dayDate),
-      fajr: { start: hhmm(pt.fajr), jamaat: "" },
-      sunrise: hhmm(pt.sunrise),
-      zuhr: { start: hhmm(pt.dhuhr), jamaat: "" },
-      asr: { start: hhmm(pt.asr), jamaat: "" },
-      maghrib: { start: hhmm(pt.maghrib), jamaat: "" },
-      isha: { start: hhmm(pt.isha), jamaat: "" },
+      hijri: formatHijri(date),
+      fajr: { start: hhmm(pt.fajr, timeZone), jamaat: "" },
+      sunrise: hhmm(pt.sunrise, timeZone),
+      zuhr: { start: hhmm(pt.dhuhr, timeZone), jamaat: "" },
+      asr: { start: hhmm(pt.asr, timeZone), jamaat: "" },
+      maghrib: { start: hhmm(pt.maghrib, timeZone), jamaat: "" },
+      isha: { start: hhmm(pt.isha, timeZone), jamaat: "" },
     });
   }
 
   return {
     rows,
     isRamadan: false,
-    month: new Date(year, monthIndex0, 1).toLocaleDateString(undefined, { month: "long" }),
+    month: new Intl.DateTimeFormat("en-GB", { month: "long", timeZone }).format(
+      new Date(Date.UTC(year, monthIndex0, 1, 12)),
+    ),
     year: String(year),
+    // Metadata so the app can show which method/convention produced this
+    // timetable — purely informational, not used in any calculation.
+    calcMethodLabel: CALC_METHODS.find((m) => m.key === methodKey)?.label ?? methodKey,
+    calcAsrLabel: asrMethod === "hanafi" ? "Hanafi Asr" : "Shafi/Maliki/Hanbali Asr",
   };
 }

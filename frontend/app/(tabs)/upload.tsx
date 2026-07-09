@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Linking,
@@ -27,7 +27,7 @@ import { parseTimetableCsv } from "@/src/lib/csv";
 import { readFileText } from "@/src/lib/files";
 import { storage } from "@/src/utils/storage";
 import TimeField from "@/src/components/TimeField";
-import { CALC_METHODS, CalcMethodKey, generateTimetableForMonth } from "@/src/lib/calculate";
+import { CALC_METHODS, CalcMethodKey, checkDeviceClockDrift, generateTimetableForMonth } from "@/src/lib/calculate";
 
 const EDIT_KEYS: (keyof DayRow)[] = ["fajr", "sunrise", "zuhr", "asr", "maghrib", "isha"];
 const K_SEEN_INSTRUCTIONS = "upload.seenInstructions";
@@ -147,20 +147,34 @@ export default function UploadScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     await saveTimetable(draft);
     setSaved(true);
-    setTimeout(() => router.push("/"), 600);
+    // Deliberately stays on this screen after saving — previously this
+    // auto-navigated to the home tab, which was jarring if the user wanted
+    // to keep reviewing/editing the timetable they just saved. The "Saved!"
+    // label reverts after a couple seconds so the button is usable again if
+    // they make further edits.
+    setTimeout(() => setSaved(false), 2000);
   };
 
   const openConverter = () => {
     Linking.openURL("https://tools.nanonets.com/image-to-csv");
   };
 
-  const calculateByLocation = async (methodKey: CalcMethodKey) => {
+  const lastCalcRef = useRef<{ latitude: number; longitude: number; methodKey: CalcMethodKey } | null>(null);
+
+  const calculateByLocation = async (methodKey: CalcMethodKey, asrOverride?: "hanafi" | "shafi") => {
     setLocationError(null);
+    const effectiveAsr = asrOverride ?? asrMethod;
 
     let latitude: number;
     let longitude: number;
 
-    if (locationMode === "manual") {
+    // If we already have coordinates from a previous calculation (e.g. the
+    // user is just switching Hanafi/Shafi), reuse them instantly instead of
+    // re-fetching GPS or requiring the picker to be reopened.
+    if (lastCalcRef.current && lastCalcRef.current.methodKey === methodKey) {
+      latitude = lastCalcRef.current.latitude;
+      longitude = lastCalcRef.current.longitude;
+    } else if (locationMode === "manual") {
       const lat = parseFloat(manualLat);
       const lon = parseFloat(manualLon);
       if (isNaN(lat) || lat < -90 || lat > 90) {
@@ -199,16 +213,27 @@ export default function UploadScreen() {
     setError(null);
     setSaved(false);
     setCalculating(true);
-    setLoadingLabel("Calculating prayer times…");
+    setLoadingLabel("Checking device clock…");
     setLoading(true);
     try {
+      const drift = await checkDeviceClockDrift();
+      if (!drift.ok) {
+        setError(
+          `Your device's clock appears to be about ${drift.driftMinutes} minutes off from network time. ` +
+            `The calculated dates below may be for the wrong day — please check your device's date & time settings, ` +
+            `then try again.`,
+        );
+      }
+
+      setLoadingLabel("Calculating prayer times…");
+      lastCalcRef.current = { latitude, longitude, methodKey };
       const tt = generateTimetableForMonth(
         latitude,
         longitude,
         now.getFullYear(),
         now.getMonth(),
         methodKey,
-        asrMethod,
+        effectiveAsr,
       );
       setFileName(null);
       setCsvText(null);
@@ -377,6 +402,14 @@ export default function UploadScreen() {
           {/* Edit form */}
           {row ? (
             <View style={styles.form}>
+              {(draft as any)?.calcMethodLabel ? (
+                <View style={[styles.methodBadge, { backgroundColor: colors.brandTertiary }]} testID="calc-method-badge">
+                  <Ionicons name="navigate-outline" size={13} color={colors.brand} />
+                  <Text style={[styles.methodBadgeText, { color: colors.brand }]}>
+                    Calculated using {(draft as any).calcMethodLabel} · {(draft as any).calcAsrLabel}
+                  </Text>
+                </View>
+              ) : null}
               <Text style={[styles.formTitle, { color: colors.onSurface }]}>
                 Review times {row.date ? `· Day ${row.date}` : ""} {row.hijri ? `· ${row.hijri}` : ""}
               </Text>
@@ -427,7 +460,7 @@ export default function UploadScreen() {
         </ScrollView>
 
         {row ? (
-          <View style={[styles.footer, { paddingBottom: SPACING.lg, backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+          <View style={[styles.footer, { paddingBottom: insets.bottom + SPACING.md, backgroundColor: colors.surface, borderTopColor: colors.border }]}>
             <Pressable
               testID="confirm-save-btn"
               onPress={onSave}
@@ -516,7 +549,10 @@ export default function UploadScreen() {
             <View style={{ flexDirection: "row", gap: SPACING.sm, marginBottom: SPACING.md }}>
               <Pressable
                 testID="asr-method-hanafi"
-                onPress={() => setAsrMethod("hanafi")}
+                onPress={() => {
+                  setAsrMethod("hanafi");
+                  if (lastCalcRef.current) calculateByLocation(lastCalcRef.current.methodKey, "hanafi");
+                }}
                 style={[
                   styles.preChip,
                   { backgroundColor: asrMethod === "hanafi" ? colors.brand : colors.surfaceSecondary },
@@ -528,7 +564,10 @@ export default function UploadScreen() {
               </Pressable>
               <Pressable
                 testID="asr-method-shafi"
-                onPress={() => setAsrMethod("shafi")}
+                onPress={() => {
+                  setAsrMethod("shafi");
+                  if (lastCalcRef.current) calculateByLocation(lastCalcRef.current.methodKey, "shafi");
+                }}
                 style={[
                   styles.preChip,
                   { backgroundColor: asrMethod === "shafi" ? colors.brand : colors.surfaceSecondary },
@@ -786,6 +825,17 @@ const styles = StyleSheet.create({
   mappingCol: { fontFamily: FONTS.medium, fontSize: 13 },
   form: { marginTop: SPACING.xl },
   formTitle: { fontFamily: FONTS.bold, fontSize: 16, marginBottom: SPACING.md },
+  methodBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+    alignSelf: "flex-start",
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderRadius: RADIUS.pill,
+    marginBottom: SPACING.md,
+  },
+  methodBadgeText: { fontFamily: FONTS.semibold, fontSize: 11 },
   fieldRow: { flexDirection: "row", alignItems: "center", marginBottom: SPACING.md },
   fieldLabel: { fontFamily: FONTS.semibold, fontSize: 15, flex: 1 },
   fieldInputs: { flexDirection: "row", gap: SPACING.sm },
