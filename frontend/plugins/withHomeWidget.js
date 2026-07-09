@@ -107,9 +107,11 @@ class SalahWidgetProvider : AppWidgetProvider() {
         }
 
         private fun iconForLabel(label: String): Int = when (label) {
-            "Fajr", "Isha" -> R.drawable.ic_prayer_moon
-            "Sunrise", "Maghrib" -> R.drawable.ic_prayer_sunrise
-            else -> R.drawable.ic_prayer_sun // Dhuhr, Asr
+            "Fajr" -> R.drawable.ic_prayer_fajr
+            "Maghrib" -> R.drawable.ic_prayer_maghrib
+            "Isha" -> R.drawable.ic_prayer_isha
+            "Sunrise" -> R.drawable.ic_prayer_sunrise
+            else -> R.drawable.ic_prayer_sun // Zuhr (Dhuhr), Asr
         }
 
         fun updateWidget(context: Context, appWidgetManager: AppWidgetManager, widgetId: Int) {
@@ -180,9 +182,6 @@ class SalahWidgetProvider : AppWidgetProvider() {
                             val label = row.optString("label", "")
                             val rowView = RemoteViews(context.packageName, R.layout.widget_grid_row_item)
                             rowView.setImageViewResource(R.id.grid_row_icon, iconForLabel(label))
-                            if (label == "Maghrib") {
-                                rowView.setFloat(R.id.grid_row_icon, "setScaleY", -1f)
-                            }
                             rowView.setTextViewText(R.id.grid_row_label, label)
                             rowView.setTextViewText(R.id.grid_row_time, row.optString("time", ""))
                             views.addView(if (i < half) R.id.grid_col_left else R.id.grid_col_right, rowView)
@@ -278,24 +277,76 @@ const WIDGET_INFO_XML = `<?xml version="1.0" encoding="utf-8"?>
 </appwidget-provider>
 `;
 
-// Three original, simple icons (circles + straight lines only — no curved
-// arcs, to keep the hand-authored path data verifiable and low-risk).
-// Sunrise is reused flipped vertically for Maghrib (sunset), avoiding a
-// fourth near-duplicate asset. Not copied from any reference — plain
-// geometric constructions in SalahSync's own gold accent color.
-const ICON_MOON_XML = `<?xml version="1.0" encoding="utf-8"?>
+// Fajr, Isha, and Sunrise/Maghrib icons are the user's own designs
+// (converted from their SVGs to Android vector format). Dhuhr/Asr keep a
+// simple original 8-ray sun since no custom design was provided for that
+// slot. Maghrib reuses the sunrise icon flipped vertically rather than a
+// separate asset.
+const ICON_MAGHRIB_XML = `<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp" android:height="24dp"
-    android:viewportWidth="24" android:viewportHeight="24">
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
     <path
-        android:fillColor="#E8B84B"
-        android:pathData="M11,13 m-6,0 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0" />
+        android:pathData="M50,75 a25,25 0 1,0 0,-50 a25,25 0 1,0 0,50 Z
+        M20,75 h60
+        M25,85 h50
+        M30,95 h40"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeColor="#E8B84B"
+        android:fillColor="#E8B84B" />
     <path
-        android:fillColor="#E8B84B"
-        android:pathData="M18,6 m-1.1,0 a1.1,1.1 0 1,0 2.2,0 a1.1,1.1 0 1,0 -2.2,0" />
+        android:pathData="M50,20 v30 l-10,-10 M50,50 l10,-10"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:strokeColor="#FFFFFF"
+        android:fillColor="#00000000" />
+</vector>
+`;
+
+const ICON_FAJR_XML = `<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
     <path
-        android:fillColor="#E8B84B"
-        android:pathData="M20.5,10.5 m-0.7,0 a0.7,0.7 0 1,0 1.4,0 a0.7,0.7 0 1,0 -1.4,0" />
+        android:pathData="M50,75 a25,25 0 1,0 0,-50 a25,25 0 1,0 0,50 Z
+        M20,75 h60
+        M25,85 h50
+        M30,95 h40"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:strokeColor="#E8B84B"
+        android:fillColor="#E8B84B" />
+    <path
+        android:pathData="M50,50 v-30 l-10,10 M50,20 l10,10"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:strokeColor="#FFFFFF"
+        android:fillColor="#00000000" />
+</vector>
+`;
+
+const ICON_ISHA_XML = `<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <path
+        android:pathData="M50,5 a45,45 0 1,0 0,90 a45,45 0 1,0 0,-90 Z"
+        android:strokeWidth="4"
+        android:strokeColor="#E8B84B"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M50,25 a25,25 0 1,0 0,50 a35,35 0 0,1 0,-50 Z
+        M50,50 l-5,-5 a2,2 0 0,0 -2,-2 l-5,5 l5,5 a2,2 0 0,0 2,2 l5,-5 Z
+        M70,50 a2,2 0 0,1 2,2 l20,0 l-2,2 l-18,0 Z
+        M70,60 a2,2 0 0,1 2,2 l20,0 l-2,2 l-18,0 Z"
+        android:fillColor="#E8B84B" />
 </vector>
 `;
 
@@ -320,14 +371,26 @@ const ICON_SUN_XML = `<?xml version="1.0" encoding="utf-8"?>
 const ICON_SUNRISE_XML = `<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp" android:height="24dp"
-    android:viewportWidth="24" android:viewportHeight="24">
+    android:viewportWidth="100" android:viewportHeight="100">
     <path
         android:fillColor="#E8B84B"
-        android:pathData="M12,15 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0" />
-    <path android:strokeColor="#E8B84B" android:strokeWidth="1.6" android:pathData="M3,15 L21,15" />
-    <path android:strokeColor="#E8B84B" android:strokeWidth="1.6" android:pathData="M12,10 L12,8" />
-    <path android:strokeColor="#E8B84B" android:strokeWidth="1.6" android:pathData="M8.5,11.5 L7,10" />
-    <path android:strokeColor="#E8B84B" android:strokeWidth="1.6" android:pathData="M15.5,11.5 L17,10" />
+        android:pathData="M50,25 m-15,0 a15,15 0 1,0 30,0 a15,15 0 1,0 -30,0" />
+    <path android:strokeColor="#E8B84B" android:strokeWidth="4" android:strokeLineCap="round"
+        android:pathData="M50,5 L50,-13" />
+    <path android:strokeColor="#E8B84B" android:strokeWidth="4" android:strokeLineCap="round"
+        android:pathData="M61,11 L73,-5" />
+    <path android:strokeColor="#E8B84B" android:strokeWidth="4" android:strokeLineCap="round"
+        android:pathData="M68,25 L88,25" />
+    <path android:strokeColor="#E8B84B" android:strokeWidth="4" android:strokeLineCap="round"
+        android:pathData="M39,11 L27,-5" />
+    <path android:strokeColor="#E8B84B" android:strokeWidth="4" android:strokeLineCap="round"
+        android:pathData="M32,25 L12,25" />
+    <path android:strokeColor="#E8B84B" android:strokeWidth="4" android:strokeLineCap="round"
+        android:pathData="M5,40 L95,40" />
+    <path android:strokeColor="#E8B84B" android:strokeWidth="4" android:strokeLineCap="round"
+        android:pathData="M15,48 L85,48" />
+    <path android:strokeColor="#E8B84B" android:strokeWidth="4" android:strokeLineCap="round"
+        android:pathData="M25,56 L75,56" />
 </vector>
 `;
 
@@ -568,7 +631,9 @@ function withHomeWidgetFiles(config) {
       const drawableDir = path.join(projectRoot, "app/src/main/res/drawable");
       fs.mkdirSync(drawableDir, { recursive: true });
       fs.writeFileSync(path.join(drawableDir, "widget_bg_default.xml"), WIDGET_BG_XML);
-      fs.writeFileSync(path.join(drawableDir, "ic_prayer_moon.xml"), ICON_MOON_XML);
+      fs.writeFileSync(path.join(drawableDir, "ic_prayer_fajr.xml"), ICON_FAJR_XML);
+      fs.writeFileSync(path.join(drawableDir, "ic_prayer_maghrib.xml"), ICON_MAGHRIB_XML);
+      fs.writeFileSync(path.join(drawableDir, "ic_prayer_isha.xml"), ICON_ISHA_XML);
       fs.writeFileSync(path.join(drawableDir, "ic_prayer_sun.xml"), ICON_SUN_XML);
       fs.writeFileSync(path.join(drawableDir, "ic_prayer_sunrise.xml"), ICON_SUNRISE_XML);
 
