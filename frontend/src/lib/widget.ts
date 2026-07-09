@@ -14,11 +14,12 @@ export function updateWidget(
   countdown: string,
   rows: WidgetRow[],
   nextIndex: number,
+  style: "arc" | "grid",
 ): void {
   if (Platform.OS !== "android") return;
   try {
     NativeModules.WidgetModule?.updateWidgetData(
-      JSON.stringify({ nextLabel, nextTime, countdown, rows, nextIndex }),
+      JSON.stringify({ nextLabel, nextTime, countdown, rows, nextIndex, style }),
     );
   } catch {}
 }

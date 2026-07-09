@@ -190,13 +190,20 @@ export function nextPrayerInfo(
   row: DayRow | null,
   showSunrise: boolean,
   now: Date = new Date(),
+  countdownAnchor: "start" | "jamaat" = "jamaat",
 ): { key: PrayerKey; time: string; date: Date } | null {
   if (!row) return null;
   const keys = PRAYER_ORDER.filter((k) => (k === "sunrise" ? showSunrise : true));
   for (const k of keys) {
-    const t = timeToDate(prayerTime(row, k), now);
+    // Countdown display anchor is user-configurable (Settings), separate
+    // from the fixed per-prayer ALARM_SOURCE convention used for actual
+    // alarm scheduling in prayerTime() — this only affects what the "next
+    // prayer" countdown shows, not when alarms ring.
+    const pair = startJamaat(row, k);
+    const timeStr = k === "sunrise" ? pair.start : (countdownAnchor === "jamaat" ? pair.jamaat : pair.start) || pair.start;
+    const t = timeToDate(timeStr || "", now);
     if (t && t.getTime() > now.getTime()) {
-      return { key: k, time: prayerTime(row, k), date: t };
+      return { key: k, time: timeStr || "", date: t };
     }
   }
   return null;

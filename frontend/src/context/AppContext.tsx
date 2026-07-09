@@ -31,6 +31,7 @@ import { QUOTES } from "@/src/lib/quotes";
 type ThemeMode = "light" | "dark" | "system";
 
 export type AlarmBackgroundStyle = "default" | "nightsky" | "playful" | "kids";
+export type WidgetStyle = "arc" | "grid";
 
 export type Settings = {
   is24h: boolean;
@@ -39,6 +40,12 @@ export type Settings = {
   showSunrise: boolean;
   preAlarmAnchor: "start" | "jamaat";
   alarmBackground: AlarmBackgroundStyle;
+  // Controls what "next prayer" countdown (home screen + widget) counts
+  // down to. Deliberately separate from the alarm-scheduling logic, which
+  // has its own fixed per-prayer start/jamaat convention and is untouched
+  // by this setting.
+  countdownAnchor: "start" | "jamaat";
+  widgetStyle: WidgetStyle;
 };
 
 const DEFAULT_SETTINGS: Settings = {
@@ -48,6 +55,8 @@ const DEFAULT_SETTINGS: Settings = {
   showSunrise: true,
   preAlarmAnchor: "jamaat",
   alarmBackground: "default",
+  countdownAnchor: "jamaat",
+  widgetStyle: "arc",
 };
 
 function defaultConfigs(): Record<PrayerKey, AlarmConfig> {

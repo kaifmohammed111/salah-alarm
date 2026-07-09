@@ -80,7 +80,7 @@ export default function HomeScreen() {
       if (statuses[k] === "current") statuses[k] = "upcoming";
     });
   }
-  const next = isToday ? nextPrayerInfo(viewRow, settings.showSunrise, now) : null;
+  const next = isToday ? nextPrayerInfo(viewRow, settings.showSunrise, now, settings.countdownAnchor) : null;
   const { time, period } = clockText(now, settings.is24h);
 
   const keys = PRAYER_ORDER.filter((k) => (k === "sunrise" ? settings.showSunrise : true));
@@ -106,6 +106,7 @@ export default function HomeScreen() {
         countdownString(next.date, now),
         rows,
         nextIndex,
+        settings.widgetStyle,
       );
     } else {
       // All of today's prayers have passed — fall back to showing
@@ -120,10 +121,11 @@ export default function HomeScreen() {
         "Tomorrow",
         rows,
         0,
+        settings.widgetStyle,
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isToday, viewRow, next?.key, settings.is24h]);
+  }, [isToday, viewRow, next?.key, settings.is24h, settings.widgetStyle]);
 
   const dateStr = viewDate.toLocaleDateString(undefined, {
     weekday: "long",

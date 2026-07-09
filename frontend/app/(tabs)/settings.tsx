@@ -244,6 +244,29 @@ export default function SettingsScreen() {
           />
         </View>
 
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, marginTop: SPACING.md }]}>
+          <View style={[styles.row, { borderBottomWidth: 0 }]}>
+            <View style={styles.rowLeft}>
+              {iconTile("time-outline", colors.brandTertiary, colors.brand)}
+              <View>
+                <Text style={[styles.rowLabel, { color: colors.onSurface }]}>Countdown counts down to</Text>
+                <Text style={[styles.rowSub, { color: colors.onSurfaceTertiary }]}>
+                  Used on the home screen and widget
+                </Text>
+              </View>
+            </View>
+          </View>
+          <Segmented
+            testID="setting-countdown-anchor"
+            value={draft.countdownAnchor}
+            onChange={(v) => setDraft((d) => ({ ...d, countdownAnchor: v as any }))}
+            options={[
+              { id: "start", label: "Start time" },
+              { id: "jamaat", label: "Jamaat time" },
+            ]}
+          />
+        </View>
+
         {/* Appearance */}
         <Text style={[styles.section, { color: colors.onSurfaceTertiary }]}>APPEARANCE</Text>
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -303,6 +326,42 @@ export default function SettingsScreen() {
                     ) : null}
                   </LinearGradient>
                   <Text style={[styles.alarmBgLabel, { color: colors.onSurface }]}>{opt.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Widget */}
+        <Text style={[styles.section, { color: colors.onSurfaceTertiary }]}>HOME SCREEN WIDGET</Text>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.rowSub, { color: colors.onSurfaceTertiary, marginBottom: SPACING.md }]}>
+            Layout used by the SalahSync home screen widget
+          </Text>
+          <View style={{ flexDirection: "row", gap: SPACING.md }}>
+            {[
+              { id: "arc", label: "Arc" },
+              { id: "grid", label: "Grid" },
+            ].map((opt) => {
+              const active = draft.widgetStyle === opt.id;
+              return (
+                <Pressable
+                  key={opt.id}
+                  testID={`widget-style-${opt.id}`}
+                  onPress={() => setDraft((d) => ({ ...d, widgetStyle: opt.id as any }))}
+                  style={[
+                    styles.widgetStyleChip,
+                    { backgroundColor: active ? colors.brand : colors.surfaceSecondary, borderColor: colors.border },
+                  ]}
+                >
+                  <Ionicons
+                    name={opt.id === "arc" ? "pulse-outline" : "grid-outline"}
+                    size={18}
+                    color={active ? "#fff" : colors.brand}
+                  />
+                  <Text style={[styles.widgetStyleLabel, { color: active ? "#fff" : colors.onSurface }]}>
+                    {opt.label}
+                  </Text>
                 </Pressable>
               );
             })}
@@ -458,6 +517,17 @@ const styles = StyleSheet.create({
   },
   alarmBgCheck: { alignItems: "center", justifyContent: "center" },
   alarmBgLabel: { fontFamily: FONTS.medium, fontSize: 11, marginTop: SPACING.xs, textAlign: "center" },
+  widgetStyleChip: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: SPACING.sm,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.md,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  widgetStyleLabel: { fontFamily: FONTS.semibold, fontSize: 14 },
   saveBar: {
     flexDirection: "row",
     alignItems: "center",

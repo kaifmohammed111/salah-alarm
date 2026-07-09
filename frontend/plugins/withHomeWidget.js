@@ -104,11 +104,27 @@ class SalahWidgetProvider : AppWidgetProvider() {
             return bitmap
         }
 
+        private fun iconForLabel(label: String): Int = when (label) {
+            "Fajr", "Isha" -> R.drawable.ic_prayer_moon
+            "Sunrise", "Maghrib" -> R.drawable.ic_prayer_sunrise
+            else -> R.drawable.ic_prayer_sun // Dhuhr, Asr
+        }
+
         fun updateWidget(context: Context, appWidgetManager: AppWidgetManager, widgetId: Int) {
             val prefs = context.getSharedPreferences("salah_widget", Context.MODE_PRIVATE)
             val json = prefs.getString("widget_data", null)
 
-            val views = RemoteViews(context.packageName, R.layout.widget_salah)
+            val style = try {
+                if (json != null) JSONObject(json).optString("style", "arc") else "arc"
+            } catch (e: Exception) {
+                "arc"
+            }
+            val isGrid = style == "grid"
+
+            val views = RemoteViews(
+                context.packageName,
+                if (isGrid) R.layout.widget_salah_grid else R.layout.widget_salah,
+            )
 
             val options = appWidgetManager.getAppWidgetOptions(widgetId)
             val minWidthDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 250).coerceAtLeast(200)
@@ -120,8 +136,13 @@ class SalahWidgetProvider : AppWidgetProvider() {
                 views.setTextViewText(R.id.next_label, "SalahSync")
                 views.setTextViewText(R.id.next_time, "Open the app")
                 views.setTextViewText(R.id.countdown, "to load today's times")
-                views.removeAllViews(R.id.rows_container)
-                views.setImageViewBitmap(R.id.arc_image, drawArcBitmap(-1, widthPx, arcHeightPx))
+                if (isGrid) {
+                    views.removeAllViews(R.id.grid_col_left)
+                    views.removeAllViews(R.id.grid_col_right)
+                } else {
+                    views.removeAllViews(R.id.rows_container)
+                    views.setImageViewBitmap(R.id.arc_image, drawArcBitmap(-1, widthPx, arcHeightPx))
+                }
                 appWidgetManager.updateAppWidget(widgetId, views)
                 return
             }
@@ -132,24 +153,46 @@ class SalahWidgetProvider : AppWidgetProvider() {
                 views.setTextViewText(R.id.next_time, data.optString("nextTime", "--:--"))
                 views.setTextViewText(R.id.countdown, data.optString("countdown", ""))
 
-                views.removeAllViews(R.id.rows_container)
                 val rows = data.optJSONArray("rows")
-                if (rows != null) {
-                    for (i in 0 until rows.length()) {
-                        val row = rows.getJSONObject(i)
-                        val rowView = RemoteViews(context.packageName, R.layout.widget_row_item)
-                        rowView.setTextViewText(R.id.row_label, row.optString("label", ""))
-                        rowView.setTextViewText(R.id.row_time, row.optString("time", ""))
-                        views.addView(R.id.rows_container, rowView)
-                    }
-                }
 
-                val nextIndex = data.optInt("nextIndex", -1)
-                views.setImageViewBitmap(R.id.arc_image, drawArcBitmap(nextIndex, widthPx, arcHeightPx))
+                if (isGrid) {
+                    views.removeAllViews(R.id.grid_col_left)
+                    views.removeAllViews(R.id.grid_col_right)
+                    if (rows != null) {
+                        val half = (rows.length() + 1) / 2
+                        for (i in 0 until rows.length()) {
+                            val row = rows.getJSONObject(i)
+                            val label = row.optString("label", "")
+                            val rowView = RemoteViews(context.packageName, R.layout.widget_grid_row_item)
+                            rowView.setImageViewResource(R.id.grid_row_icon, iconForLabel(label))
+                            if (label == "Maghrib") {
+                                rowView.setFloat(R.id.grid_row_icon, "setScaleY", -1f)
+                            }
+                            rowView.setTextViewText(R.id.grid_row_label, label)
+                            rowView.setTextViewText(R.id.grid_row_time, row.optString("time", ""))
+                            views.addView(if (i < half) R.id.grid_col_left else R.id.grid_col_right, rowView)
+                        }
+                    }
+                } else {
+                    views.removeAllViews(R.id.rows_container)
+                    if (rows != null) {
+                        for (i in 0 until rows.length()) {
+                            val row = rows.getJSONObject(i)
+                            val rowView = RemoteViews(context.packageName, R.layout.widget_row_item)
+                            rowView.setTextViewText(R.id.row_label, row.optString("label", ""))
+                            rowView.setTextViewText(R.id.row_time, row.optString("time", ""))
+                            views.addView(R.id.rows_container, rowView)
+                        }
+                    }
+                    val nextIndex = data.optInt("nextIndex", -1)
+                    views.setImageViewBitmap(R.id.arc_image, drawArcBitmap(nextIndex, widthPx, arcHeightPx))
+                }
             } catch (e: Exception) {
                 views.setTextViewText(R.id.next_label, "SalahSync")
                 views.setTextViewText(R.id.next_time, "--:--")
-                views.setImageViewBitmap(R.id.arc_image, drawArcBitmap(-1, widthPx, arcHeightPx))
+                if (!isGrid) {
+                    views.setImageViewBitmap(R.id.arc_image, drawArcBitmap(-1, widthPx, arcHeightPx))
+                }
             }
 
             appWidgetManager.updateAppWidget(widgetId, views)
@@ -218,6 +261,53 @@ const WIDGET_INFO_XML = `<?xml version="1.0" encoding="utf-8"?>
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen">
 </appwidget-provider>
+`;
+
+// Three original, simple icons (circles + straight lines only — no curved
+// arcs, to keep the hand-authored path data verifiable and low-risk).
+// Sunrise is reused flipped vertically for Maghrib (sunset), avoiding a
+// fourth near-duplicate asset. Not copied from any reference — plain
+// geometric constructions in SalahSync's own gold accent color.
+const ICON_MOON_XML = `<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path
+        android:fillColor="#E8B84B"
+        android:pathData="M12,4 A8,8 0 1,0 12,20 A6,6 0 1,1 12,4 Z" />
+</vector>
+`;
+
+const ICON_SUN_XML = `<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path
+        android:fillColor="#E8B84B"
+        android:pathData="M12,12 m-3.5,0 a3.5,3.5 0 1,0 7,0 a3.5,3.5 0 1,0 -7,0" />
+    <path android:strokeColor="#E8B84B" android:strokeWidth="1.6" android:pathData="M12,5 L12,3" />
+    <path android:strokeColor="#E8B84B" android:strokeWidth="1.6" android:pathData="M12,19 L12,21" />
+    <path android:strokeColor="#E8B84B" android:strokeWidth="1.6" android:pathData="M5,12 L3,12" />
+    <path android:strokeColor="#E8B84B" android:strokeWidth="1.6" android:pathData="M19,12 L21,12" />
+    <path android:strokeColor="#E8B84B" android:strokeWidth="1.6" android:pathData="M7.5,7.5 L6,6" />
+    <path android:strokeColor="#E8B84B" android:strokeWidth="1.6" android:pathData="M16.5,7.5 L18,6" />
+    <path android:strokeColor="#E8B84B" android:strokeWidth="1.6" android:pathData="M7.5,16.5 L6,18" />
+    <path android:strokeColor="#E8B84B" android:strokeWidth="1.6" android:pathData="M16.5,16.5 L18,18" />
+</vector>
+`;
+
+const ICON_SUNRISE_XML = `<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path
+        android:fillColor="#E8B84B"
+        android:pathData="M12,15 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0" />
+    <path android:strokeColor="#E8B84B" android:strokeWidth="1.6" android:pathData="M3,15 L21,15" />
+    <path android:strokeColor="#E8B84B" android:strokeWidth="1.6" android:pathData="M12,10 L12,8" />
+    <path android:strokeColor="#E8B84B" android:strokeWidth="1.6" android:pathData="M8.5,11.5 L7,10" />
+    <path android:strokeColor="#E8B84B" android:strokeWidth="1.6" android:pathData="M15.5,11.5 L17,10" />
+</vector>
 `;
 
 const WIDGET_BG_XML = `<?xml version="1.0" encoding="utf-8"?>
@@ -323,6 +413,116 @@ const WIDGET_ROW_ITEM_XML = `<?xml version="1.0" encoding="utf-8"?>
 </LinearLayout>
 `;
 
+// Second, original design — two-column grid with a small glyph per prayer.
+// Inspired by the general "grid with icons" concept, built independently
+// with SalahSync's own colors/spacing/typography, not a copied asset.
+const WIDGET_GRID_LAYOUT_XML = `<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_bg_default"
+    android:padding="14dp">
+
+    <TextView
+        android:id="@+id/next_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Next Prayer"
+        android:textColor="#B8C4C0"
+        android:textSize="12sp" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginTop="2dp"
+        android:layout_marginBottom="8dp">
+
+        <TextView
+            android:id="@+id/next_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="--:--"
+            android:textColor="#FFFFFF"
+            android:textSize="30sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/countdown"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="end"
+            android:text=""
+            android:textColor="#E8B84B"
+            android:textSize="13sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:id="@+id/grid_col_left"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical" />
+
+        <LinearLayout
+            android:id="@+id/grid_col_right"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical" />
+
+    </LinearLayout>
+
+</LinearLayout>
+`;
+
+const WIDGET_GRID_ROW_ITEM_XML = `<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingTop="3dp"
+    android:paddingBottom="3dp">
+
+    <ImageView
+        android:id="@+id/grid_row_icon"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_marginEnd="6dp"
+        android:scaleType="fitCenter" />
+
+    <TextView
+        android:id="@+id/grid_row_label"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text=""
+        android:textColor="#B8C4C0"
+        android:textSize="11sp"
+        android:singleLine="true" />
+
+    <TextView
+        android:id="@+id/grid_row_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textColor="#FFFFFF"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:singleLine="true" />
+
+</LinearLayout>
+`;
+
 function withHomeWidgetFiles(config) {
   return withDangerousMod(config, [
     "android",
@@ -343,11 +543,16 @@ function withHomeWidgetFiles(config) {
       const drawableDir = path.join(projectRoot, "app/src/main/res/drawable");
       fs.mkdirSync(drawableDir, { recursive: true });
       fs.writeFileSync(path.join(drawableDir, "widget_bg_default.xml"), WIDGET_BG_XML);
+      fs.writeFileSync(path.join(drawableDir, "ic_prayer_moon.xml"), ICON_MOON_XML);
+      fs.writeFileSync(path.join(drawableDir, "ic_prayer_sun.xml"), ICON_SUN_XML);
+      fs.writeFileSync(path.join(drawableDir, "ic_prayer_sunrise.xml"), ICON_SUNRISE_XML);
 
       const layoutDir = path.join(projectRoot, "app/src/main/res/layout");
       fs.mkdirSync(layoutDir, { recursive: true });
       fs.writeFileSync(path.join(layoutDir, "widget_salah.xml"), WIDGET_LAYOUT_XML);
       fs.writeFileSync(path.join(layoutDir, "widget_row_item.xml"), WIDGET_ROW_ITEM_XML);
+      fs.writeFileSync(path.join(layoutDir, "widget_salah_grid.xml"), WIDGET_GRID_LAYOUT_XML);
+      fs.writeFileSync(path.join(layoutDir, "widget_grid_row_item.xml"), WIDGET_GRID_ROW_ITEM_XML);
 
       return config;
     },
