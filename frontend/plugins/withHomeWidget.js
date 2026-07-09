@@ -289,8 +289,13 @@ const ICON_MOON_XML = `<?xml version="1.0" encoding="utf-8"?>
     android:viewportWidth="24" android:viewportHeight="24">
     <path
         android:fillColor="#E8B84B"
-        android:fillType="evenOdd"
-        android:pathData="M12,12 m-7,0 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0 M15.5,12 m-6,0 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0" />
+        android:pathData="M11,13 m-6,0 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0" />
+    <path
+        android:fillColor="#E8B84B"
+        android:pathData="M18,6 m-1.1,0 a1.1,1.1 0 1,0 2.2,0 a1.1,1.1 0 1,0 -2.2,0" />
+    <path
+        android:fillColor="#E8B84B"
+        android:pathData="M20.5,10.5 m-0.7,0 a0.7,0.7 0 1,0 1.4,0 a0.7,0.7 0 1,0 -1.4,0" />
 </vector>
 `;
 
