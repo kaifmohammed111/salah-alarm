@@ -1,0 +1,638 @@
+--------- beginning of main
+07-09 19:27:30.034 31852 22150 I Auth    : (REDACTED) [SupervisedAccountIntentOperation] onHandleIntent: %s
+07-09 19:27:30.060 31852 22117 W ChimeraUtils: Module com.google.android.gms.advancedprotection missing resource null(0)
+07-09 19:27:30.963 22158 22158 I lahalarm.lxw9zs: Using generational CollectorTypeCC GC.
+07-09 19:27:30.967 22158 22158 D nativeloader: Load libframework-connectivity-tiramisu-jni.so using APEX ns com_android_tethering for caller /apex/com.android.tethering/javalib/framework-connectivity-t.jar: ok
+07-09 19:27:30.969 22158 22158 E lahalarm.lxw9zs: BBinder_init Processname  com.emergent.salahalarm.lxw9zs  
+07-09 19:27:30.969 22158 22158 E lahalarm.lxw9zs: BBinder_init hasGetProcessName  com.emergent.salahalarm.lxw9zs
+07-09 19:27:31.018 22158 22158 D nativeloader: Configuring clns-9 for other apk /data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk. target_sdk_version=36, uses_libraries=, library_path=/data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/lib/arm64:/data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!/lib/arm64-v8a, permitted_path=/data:/mnt/expand:/data/user/0/com.emergent.salahalarm.lxw9zs
+07-09 19:27:31.020 22158 22158 I lahalarm.lxw9zs: AssetManager2(0xb4000077a0288758) locale list changing from [] to [en-GB]
+07-09 19:27:31.023 22158 22158 W VSPA    : Unable to open /proc/vivo_rsc/frame_set_priority: Permission denied
+07-09 19:27:31.024 22158 22158 W VSPA    : Unable to open /proc/vivo_rsc/frame_set_priority: Permission denied
+07-09 19:27:31.026 22158 22158 V GraphicsEnvironment: Currently set values for:
+07-09 19:27:31.026 22158 22158 V GraphicsEnvironment:   angle_gl_driver_selection_pkgs=[com.android.angle, com.linecorp.b612.android, com.campmobile.snow, com.google.android.apps.tachyon]
+07-09 19:27:31.026 22158 22158 V GraphicsEnvironment:   angle_gl_driver_selection_values=[angle, native, native, native]
+07-09 19:27:31.026 22158 22158 V GraphicsEnvironment: com.emergent.salahalarm.lxw9zs is not listed in per-application setting
+07-09 19:27:31.026 22158 22158 V GraphicsEnvironment: ANGLE allowlist from config: 
+07-09 19:27:31.026 22158 22158 V GraphicsEnvironment: com.emergent.salahalarm.lxw9zs is not listed in ANGLE allowlist or settings, returning default
+07-09 19:27:31.026 22158 22158 V GraphicsEnvironment: Neither updatable production driver nor prerelease driver is supported.
+07-09 19:27:31.035 22158 22158 W FirebaseApp: Default FirebaseApp failed to initialize because no default options were found. This usually means that com.google.gms:google-services was not applied to your gradle project.
+07-09 19:27:31.035 22158 22158 I FirebaseInitProvider: FirebaseApp initialization unsuccessful
+07-09 19:27:31.038 22158 22158 D WM-WrkMgrInitializer: Initializing WorkManager with default configuration.
+07-09 19:27:31.040 22158 22158 D NOTIFEE : (context): received application context
+07-09 19:27:31.041 22158 22158 W SoLoader: Initializing SoLoader: 0
+07-09 19:27:31.041 22158 22158 W SoLoader: Recording new base apk path: /data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk
+07-09 19:27:31.041 22158 22158 W SoLoader: Previously recorded 0 base apk paths.
+07-09 19:27:31.041 22158 22158 I SoLoader: Preparing SO source: DirectorySoSource[root = /vendor/lib64 flags = 2]
+07-09 19:27:31.041 22158 22158 I SoLoader: Preparing SO source: DirectorySoSource[root = /system/lib64 flags = 2]
+07-09 19:27:31.042 22158 22158 I SoLoader: Preparing SO source: DirectApkSoSource[root = [/data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!/lib/arm64-v8a]]
+07-09 19:27:31.043 22158 22158 I SoLoader: Preparing SO source: ApplicationSoSource[DirectorySoSource[root = /data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/lib/arm64 flags = 0]]
+07-09 19:27:31.043 22158 22158 I SoLoader: init finish: 4 SO sources prepared
+07-09 19:27:31.043 22158 22158 W SoLoader: SoLoader initialized: 8
+07-09 19:27:31.048 22158 22158 D nativeloader: Load /data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!/lib/arm64-v8a/libc++_shared.so using class loader ns clns-9 (caller=/data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!classes2.dex): ok
+07-09 19:27:31.050 22158 22158 D nativeloader: Load /data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!/lib/arm64-v8a/libjsi.so using class loader ns clns-9 (caller=/data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!classes2.dex): ok
+07-09 19:27:31.053 22158 22158 D nativeloader: Load /data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!/lib/arm64-v8a/libfbjni.so using class loader ns clns-9 (caller=/data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!classes2.dex): ok
+07-09 19:27:31.055 22158 22158 D nativeloader: Load /data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!/lib/arm64-v8a/libreactnative.so using class loader ns clns-9 (caller=/data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!classes2.dex): ok
+07-09 19:27:31.055 22158 22158 D jni_lib_merge: Entering merged library JNI_OnLoad.
+07-09 19:27:31.055 22158 22158 D jni_lib_merge: Preparing 12 pre-merged libs (including stub)
+07-09 19:27:31.055 22158 22158 D jni_lib_merge: Preparing to register libfabricjni_so.  onload_func: 0x7644ee0edc
+07-09 19:27:31.055 22158 22158 D jni_lib_merge: Preparing to register libreact_devsupportjni_so.  onload_func: 0x7644fb1f40
+07-09 19:27:31.055 22158 22158 D jni_lib_merge: Preparing to register libreact_featureflagsjni_so.  onload_func: 0x7644fc49f8
+07-09 19:27:31.055 22158 22158 D jni_lib_merge: Preparing to register libreact_newarchdefaults_so.  onload_func: 0x7644fe9e30
+07-09 19:27:31.055 22158 22158 D jni_lib_merge: Preparing to register libreactnativeblob_so.  onload_func: 0x764507c5b0
+07-09 19:27:31.055 22158 22158 D jni_lib_merge: Preparing to register libreactnativejni_so.  onload_func: 0x7645096b24
+07-09 19:27:31.055 22158 22158 D jni_lib_merge: Preparing to register libreactnativejni_common_so.  onload_func: 0x764509d458
+07-09 19:27:31.055 22158 22158 D jni_lib_merge: Preparing to register librninstance_so.  onload_func: 0x76450b9070
+07-09 19:27:31.055 22158 22158 D jni_lib_merge: Preparing to register libturbomodulejsijni_so.  onload_func: 0x76451511a4
+07-09 19:27:31.055 22158 22158 D jni_lib_merge: Preparing to register libuimanagerjni_so.  onload_func: 0x76451587e0
+07-09 19:27:31.055 22158 22158 D jni_lib_merge: Preparing to register libyoga_so.  onload_func: 0x764515fda4
+07-09 19:27:31.055 22158 22158 D jni_lib_merge: About to register 11 actual methods.
+07-09 19:27:31.060 22158 22158 D nativeloader: Load /data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!/lib/arm64-v8a/libreact_codegen_rnscreens.so using class loader ns clns-9 (caller=/data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!classes2.dex): ok
+07-09 19:27:31.060 22158 22158 D jni_lib_merge: Entering merged library JNI_OnLoad.
+07-09 19:27:31.060 22158 22158 D jni_lib_merge: Preparing 12 pre-merged libs (including stub)
+07-09 19:27:31.060 22158 22158 D jni_lib_merge: Preparing to register libfabricjni_so.  onload_func: 0x7644ee0edc
+07-09 19:27:31.060 22158 22158 D jni_lib_merge: Preparing to register libreact_devsupportjni_so.  onload_func: 0x7644fb1f40
+07-09 19:27:31.060 22158 22158 D jni_lib_merge: Preparing to register libreact_featureflagsjni_so.  onload_func: 0x7644fc49f8
+07-09 19:27:31.060 22158 22158 D jni_lib_merge: Preparing to register libreact_newarchdefaults_so.  onload_func: 0x7644fe9e30
+07-09 19:27:31.060 22158 22158 D jni_lib_merge: Preparing to register libreactnativeblob_so.  onload_func: 0x764507c5b0
+07-09 19:27:31.060 22158 22158 D jni_lib_merge: Preparing to register libreactnativejni_so.  onload_func: 0x7645096b24
+07-09 19:27:31.060 22158 22158 D jni_lib_merge: Preparing to register libreactnativejni_common_so.  onload_func: 0x764509d458
+07-09 19:27:31.060 22158 22158 D jni_lib_merge: Preparing to register librninstance_so.  onload_func: 0x76450b9070
+07-09 19:27:31.060 22158 22158 D jni_lib_merge: Preparing to register libturbomodulejsijni_so.  onload_func: 0x76451511a4
+07-09 19:27:31.060 22158 22158 D jni_lib_merge: Preparing to register libuimanagerjni_so.  onload_func: 0x76451587e0
+07-09 19:27:31.060 22158 22158 D jni_lib_merge: Preparing to register libyoga_so.  onload_func: 0x764515fda4
+07-09 19:27:31.060 22158 22158 D jni_lib_merge: About to register 11 actual methods.
+07-09 19:27:31.062 22158 22158 D nativeloader: Load /data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!/lib/arm64-v8a/libreact_codegen_RNCSlider.so using class loader ns clns-9 (caller=/data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!classes2.dex): ok
+07-09 19:27:31.064 22158 22158 D nativeloader: Load /data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!/lib/arm64-v8a/libreact_codegen_safeareacontext.so using class loader ns clns-9 (caller=/data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!classes2.dex): ok
+07-09 19:27:31.065 22158 22158 D nativeloader: Load /data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!/lib/arm64-v8a/libappmodules.so using class loader ns clns-9 (caller=/data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!classes2.dex): ok
+--------- beginning of system
+07-09 19:27:31.073 22158 22179 I DisplayManager: Choreographer implicitly registered for the refresh rate.
+07-09 19:27:31.074 22158 22158 I lahalarm.lxw9zs: AssetManager2(0xb4000077a0288438) locale list changing from [] to [en-GB]
+07-09 19:27:31.074 22158 22179 I GameManager: __progname=com.emergent.salahalarm.lxw9zs
+07-09 19:27:31.076 22158 22158 D AppCompatDelegate: Checking for metadata for AppLocalesMetadataHolderService : Service not found
+07-09 19:27:31.076 22158 22158 I lahalarm.lxw9zs: AssetManager2(0xb4000077a028dbb8) locale list changing from [] to [en-GB]
+07-09 19:27:31.085 22158 22158 W VSPA    : Unable to open /proc/vivo_rsc/frame_set_priority: Permission denied
+07-09 19:27:31.086 22158 22158 W VSPA    : Unable to open /proc/vivo_rsc/frame_set_priority: Permission denied
+07-09 19:27:31.087 22158 22158 D CompatChangeReporter: Compat change id reported: 377864165; UID 10711; state: ENABLED
+07-09 19:27:31.088 22158 22158 D DesktopModeFlags: Toggle override initialized to: OVERRIDE_UNSET
+07-09 19:27:31.096 22158 22158 W VSPA    : Unable to open /proc/vivo_rsc/frame_set_priority: Permission denied
+07-09 19:27:31.096 22158 22158 W VSPA    : Unable to open /proc/vivo_rsc/frame_set_priority: Permission denied
+07-09 19:27:31.097 22158 22158 W unknown:BridgelessReact: ReactHost{0}.startSurface(surfaceId = 0): Schedule
+07-09 19:27:31.097 22158 22158 W unknown:BridgelessReact: ReactHost{0}.attachSurface(surfaceId = 0)
+07-09 19:27:31.097 22158 22197 W unknown:BridgelessReact: ReactHost{0}.getOrCreateReactInstanceTask()
+07-09 19:27:31.097 22158 22197 W unknown:BridgelessReact: ReactHost{0}.getOrCreateReactInstanceTask(): Start
+07-09 19:27:31.097 22158 22197 W unknown:BridgelessReact: ReactHost{0}.getJSBundleLoader()
+07-09 19:27:31.097 22158 22197 W unknown:BridgelessReact: ReactHost{0}.getOrCreateReactContext(): Creating BridgelessReactContext
+07-09 19:27:31.097 22158 22197 W unknown:BridgelessReact: ReactHost{0}.getOrCreateReactInstanceTask(): Creating ReactInstance
+07-09 19:27:31.099 22158 22158 W WindowOnBackDispatcher: OnBackInvokedCallback is not enabled for the application.
+07-09 19:27:31.099 22158 22158 W WindowOnBackDispatcher: Set 'android:enableOnBackInvokedCallback="true"' in the application manifest.
+07-09 19:27:31.101 22158 22158 W unknown:BridgelessReact: ReactHost{0}.onHostResume(activity)
+07-09 19:27:31.101 22158 22158 W unknown:BridgelessReact: ReactContext.onHostResume()
+07-09 19:27:31.105 22158 22197 D nativeloader: Load /data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!/lib/arm64-v8a/libhermes.so using class loader ns clns-9 (caller=/data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!classes2.dex): ok
+07-09 19:27:31.106 22158 22158 W libc    : Access denied finding property "persist.vivo.ltw.enabled"
+07-09 19:27:31.107 22158 22197 D nativeloader: Load /data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!/lib/arm64-v8a/libhermestooling.so using class loader ns clns-9 (caller=/data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!classes2.dex): ok
+07-09 19:27:31.107 22158 22197 D jni_lib_merge: Entering merged library JNI_OnLoad.
+07-09 19:27:31.107 22158 22197 D jni_lib_merge: Preparing 4 pre-merged libs (including stub)
+07-09 19:27:31.107 22158 22197 D jni_lib_merge: Preparing to register libhermes_executor_so.  onload_func: 0x76c60d94b0
+07-09 19:27:31.107 22158 22197 D jni_lib_merge: Preparing to register libhermesinstancejni_so.  onload_func: 0x76c60e0900
+07-09 19:27:31.107 22158 22197 D jni_lib_merge: Preparing to register libjsijniprofiler_so.  onload_func: 0x76c60e10ec
+07-09 19:27:31.107 22158 22197 D jni_lib_merge: About to register 3 actual methods.
+07-09 19:27:31.108 22158 22203 W ServiceManagerCppClient: Failed to get isDeclared for mapper/mediatek: Status(-1, EX_SECURITY): 'SELinux denied for service.'
+07-09 19:27:31.108 22158 22203 E Gralloc5: Failed to load mapper.mediatek.so
+07-09 19:27:31.119 22158 22158 D ViewRootImpl: AppSizeAfterRelayout, size: Point(1260, 2800), rotation: ROTATION_0
+07-09 19:27:31.120 22158 22158 E lahalarm.lxw9zs: [perfctl] 22158 22158 FPSGO ver:7
+07-09 19:27:31.120 22158 22158 E lahalarm.lxw9zs: [perfctl] 1 1 1 0
+07-09 19:27:31.120 22158 22158 D BufferQueueConsumer: [](id:568e00000000,api:0,p:-1,c:22158) connect: controlledByApp=false
+07-09 19:27:31.121 22158 22158 D BLASTBufferQueue: [VRI[MainActivity,type=1]#0](f:0,a:0) constructor()
+07-09 19:27:31.121 22158 22158 D BLASTBufferQueue: [VRI[MainActivity,type=1]#0](f:0,a:0) update width=1260 height=2800 format=-1 mTransformHint=0
+07-09 19:27:31.122 22158 22179 W BLASTBufferQueue: Unable to open /proc/vivo_rsc/frame_set_priority: Permission denied
+07-09 19:27:31.123 22158 22179 I BLASTBufferQueue: QoSAllocBuff Successful. Ret 0 
+07-09 19:27:31.123 22158 22158 W VSPA    : Unable to open /proc/vivo_rsc/frame_set_priority: Permission denied
+07-09 19:27:31.125 22158 22158 W VSPA    : Unable to open /proc/vivo_rsc/frame_set_priority: Permission denied
+07-09 19:27:31.125 22158 22158 W VSPA    : Unable to open /proc/vivo_rsc/frame_set_priority: Permission denied
+07-09 19:27:31.125 22158 22158 W VSPA    : Unable to open /proc/vivo_rsc/frame_set_priority: Permission denied
+07-09 19:27:31.136 22158 22197 I ExpoModulesCore: ✅ AppContext was initialized
+07-09 19:27:31.147 22158 22197 W unknown:BridgelessReact: ReactHost{0}.getOrCreateReactInstanceTask(): Loading JS Bundle
+07-09 19:27:31.147 22158 22197 W unknown:BridgelessReact: ReactHost{0}.getOrCreateReactInstanceTask(): Calling DevSupportManagerBase.onNewReactContextCreated(reactContext)
+07-09 19:27:31.147 22158 22197 W unknown:BridgelessReact: ReactHost{0}.startSurface(surfaceId = 0): Execute
+07-09 19:27:31.154 22158 22158 W unknown:BridgelessReact: ReactContext.onHostResume()
+07-09 19:27:31.154 22158 22158 W unknown:BridgelessReact: ReactHost{0}.getOrCreateReactInstanceTask(): Executing ReactInstanceEventListeners
+07-09 19:27:31.159 22158 22198 D nativeloader: Load /data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!/lib/arm64-v8a/libexpo-modules-core.so using class loader ns clns-9 (caller=/data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!classes2.dex): ok
+07-09 19:27:31.166 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.th3rdwave.safeareacontext.SafeAreaProviderManager
+07-09 19:27:31.167 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.facebook.react.uimanager.LayoutShadowNode
+07-09 19:27:31.168 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.swmansion.rnscreens.SearchBarManager
+07-09 19:27:31.168 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.swmansion.rnscreens.ScreenFooterManager
+07-09 19:27:31.168 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.swmansion.rnscreens.gamma.tabs.TabScreenViewManager
+07-09 19:27:31.169 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class expo.modules.kotlin.views.GroupViewManagerWrapper
+07-09 19:27:31.169 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.swmansion.rnscreens.ScreenContainerViewManager
+07-09 19:27:31.169 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.reactnativecommunity.slider.ReactSliderManager
+07-09 19:27:31.170 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.swmansion.rnscreens.gamma.tabs.TabsHostViewManager
+07-09 19:27:31.170 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.reactnativecommunity.webview.RNCWebViewManager
+07-09 19:27:31.171 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.swmansion.rnscreens.ModalScreenViewManager
+07-09 19:27:31.172 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.swmansion.rnscreens.ScreenStackHeaderConfigViewManager
+07-09 19:27:31.172 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.swmansion.rnscreens.ScreenContentWrapperManager
+07-09 19:27:31.172 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.th3rdwave.safeareacontext.SafeAreaViewManager
+07-09 19:27:31.172 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.th3rdwave.safeareacontext.SafeAreaViewShadowNode
+07-09 19:27:31.173 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.swmansion.rnscreens.ScreenViewManager
+07-09 19:27:31.173 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class expo.modules.kotlin.views.SimpleViewManagerWrapper
+07-09 19:27:31.173 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.swmansion.rnscreens.ScreenStackHeaderSubviewManager
+07-09 19:27:31.174 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.swmansion.rnscreens.ScreenStackViewManager
+07-09 19:27:31.186 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.swmansion.gesturehandler.react.RNGestureHandlerButtonViewManager
+07-09 19:27:31.188 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.facebook.react.views.safeareaview.ReactSafeAreaViewManager
+07-09 19:27:31.188 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.facebook.react.views.safeareaview.ReactSafeAreaViewShadowNode
+07-09 19:27:31.188 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.facebook.react.views.modal.ReactModalHostManager
+07-09 19:27:31.189 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.facebook.react.views.text.frescosupport.FrescoBasedReactTextInlineImageViewManager
+07-09 19:27:31.189 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.facebook.react.views.text.frescosupport.FrescoBasedReactTextInlineImageShadowNode
+07-09 19:27:31.191 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.facebook.react.views.progressbar.ReactProgressBarViewManager
+07-09 19:27:31.191 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.facebook.react.views.progressbar.ProgressBarShadowNode
+07-09 19:27:31.191 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.facebook.react.views.scroll.ReactHorizontalScrollViewManager
+07-09 19:27:31.193 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.facebook.react.views.image.ReactImageManager
+07-09 19:27:31.194 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.facebook.react.views.text.ReactTextViewManager
+07-09 19:27:31.194 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.facebook.react.views.text.ReactTextShadowNode
+07-09 19:27:31.195 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.facebook.react.views.scroll.ReactHorizontalScrollContainerViewManager
+07-09 19:27:31.196 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.facebook.react.views.unimplementedview.ReactUnimplementedViewManager
+07-09 19:27:31.197 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.facebook.react.views.scroll.ReactScrollViewManager
+07-09 19:27:31.198 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.facebook.react.views.view.ReactViewManager
+07-09 19:27:31.199 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.facebook.react.views.drawer.ReactDrawerLayoutManager
+07-09 19:27:31.200 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.facebook.react.views.switchview.ReactSwitchManager
+07-09 19:27:31.200 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.facebook.react.views.switchview.ReactSwitchShadowNode
+07-09 19:27:31.201 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.facebook.react.views.text.ReactVirtualTextViewManager
+07-09 19:27:31.201 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.facebook.react.views.text.ReactVirtualTextShadowNode
+07-09 19:27:31.201 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.facebook.react.views.swiperefresh.SwipeRefreshLayoutManager
+07-09 19:27:31.202 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.facebook.react.views.text.ReactRawTextManager
+07-09 19:27:31.202 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.facebook.react.views.text.ReactRawTextShadowNode
+07-09 19:27:31.202 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.facebook.react.views.textinput.ReactTextInputManager
+07-09 19:27:31.203 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.facebook.react.views.textinput.ReactTextInputShadowNode
+07-09 19:27:31.204 22158 22198 W unknown:ViewManagerPropertyUpdater: Could not find generated setter for class com.swmansion.gesturehandler.react.RNGestureHandlerRootViewManager
+07-09 19:27:31.207 22158 22198 W BridgelessReactContext: [WARNING] Bridgeless doesn't support CatalystInstance. Accessing an API that's not part of the new architecture is not encouraged usage.
+07-09 19:27:31.210 22158 22198 I ExpoModulesCore: ✅ JSI interop was installed
+07-09 19:27:31.215 22158 22198 I ExpoModulesCore: ✅ Constants were exported
+07-09 19:27:31.242 22158 22198 D nativeloader: Load /data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!/lib/arm64-v8a/librnscreens.so using class loader ns clns-9 (caller=/data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!classes3.dex): ok
+07-09 19:27:31.246 22158 22198 I ReactNativeJS: Running "main"
+07-09 19:27:31.262 22158 22198 D nativeloader: Load /data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!/lib/arm64-v8a/libworklets.so using class loader ns clns-9 (caller=/data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!classes2.dex): ok
+07-09 19:27:31.280 22158 22198 D nativeloader: Load /data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!/lib/arm64-v8a/libreanimated.so using class loader ns clns-9 (caller=/data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!classes2.dex): ok
+07-09 19:27:31.345 22158 22158 W Choreographer: Frame time is 0.21076 ms in the future!  Check that graphics HAL is generating vsync timestamps using the correct timebase.
+07-09 19:27:31.345 10829 10829 W Choreographer: Frame time is 0.178376 ms in the future!  Check that graphics HAL is generating vsync timestamps using the correct timebase.
+07-09 19:27:31.364 22158 22158 I ReactNative: [GESTURE HANDLER] Initialize gesture handler for root view com.facebook.react.runtime.ReactSurfaceView{e337701 V.E...... ......ID 0,0-1260,2800 #1}
+07-09 19:27:31.364 22158 22198 D nativeloader: Load /data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!/lib/arm64-v8a/libgesturehandler.so using class loader ns clns-9 (caller=/data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!classes2.dex): ok
+07-09 19:27:31.364 22158 22198 D jni_lib_merge: Entering merged library JNI_OnLoad.
+07-09 19:27:31.364 22158 22198 D jni_lib_merge: Preparing 12 pre-merged libs (including stub)
+07-09 19:27:31.364 22158 22198 D jni_lib_merge: Preparing to register libfabricjni_so.  onload_func: 0x7644ee0edc
+07-09 19:27:31.364 22158 22198 D jni_lib_merge: Preparing to register libreact_devsupportjni_so.  onload_func: 0x7644fb1f40
+07-09 19:27:31.364 22158 22198 D jni_lib_merge: Preparing to register libreact_featureflagsjni_so.  onload_func: 0x7644fc49f8
+07-09 19:27:31.364 22158 22198 D jni_lib_merge: Preparing to register libreact_newarchdefaults_so.  onload_func: 0x7644fe9e30
+07-09 19:27:31.364 22158 22198 D jni_lib_merge: Preparing to register libreactnativeblob_so.  onload_func: 0x764507c5b0
+07-09 19:27:31.364 22158 22198 D jni_lib_merge: Preparing to register libreactnativejni_so.  onload_func: 0x7645096b24
+07-09 19:27:31.364 22158 22198 D jni_lib_merge: Preparing to register libreactnativejni_common_so.  onload_func: 0x764509d458
+07-09 19:27:31.364 22158 22198 D jni_lib_merge: Preparing to register librninstance_so.  onload_func: 0x76450b9070
+07-09 19:27:31.364 22158 22198 D jni_lib_merge: Preparing to register libturbomodulejsijni_so.  onload_func: 0x76451511a4
+07-09 19:27:31.364 22158 22198 D jni_lib_merge: Preparing to register libuimanagerjni_so.  onload_func: 0x76451587e0
+07-09 19:27:31.364 22158 22198 D jni_lib_merge: Preparing to register libyoga_so.  onload_func: 0x764515fda4
+07-09 19:27:31.364 22158 22198 D jni_lib_merge: About to register 11 actual methods.
+07-09 19:27:31.370 22158 22217 D nativeloader: Load /data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!/lib/arm64-v8a/libimagepipeline.so using class loader ns clns-9 (caller=/data/app/~~g1IIx9B_kDhdZcjYg37zgg==/com.emergent.salahalarm.lxw9zs-Qwa6FxGqukcpNe_JeSXqEw==/base.apk!classes2.dex): ok
+07-09 19:27:31.411 22158 22218 W HWUI    : Image decoding logging dropped!
+07-09 19:27:31.436 22158 22158 I ExoPlayerImpl: Init ed4e129 [AndroidXMedia3/1.8.0] [V2309, V2309, vivo, 36]
+07-09 19:27:31.437 22158 22158 W VSPA    : Unable to open /proc/vivo_rsc/frame_set_priority: Permission denied
+07-09 19:27:31.437 22158 22158 W VSPA    : Unable to open /proc/vivo_rsc/frame_set_priority: Permission denied
+07-09 19:27:31.440 22158 22158 W VSPA    : Unable to open /proc/vivo_rsc/frame_set_priority: Permission denied
+07-09 19:27:31.440 22158 22158 W VSPA    : Unable to open /proc/vivo_rsc/frame_set_priority: Permission denied
+07-09 19:27:31.442 22158 22221 D AudioSystem: onNewServiceWithAdapter: media.audio_flinger service obtained 0xb4000078c02dfa40
+07-09 19:27:31.443 22158 22221 D AudioSystem: getService: checking for service media.audio_flinger: 0xb40000780030bb90
+07-09 19:27:31.461 22158 22221 D AudioSystem: onNewService: media.audio_policy service obtained 0xb400007800356820
+07-09 19:27:31.462 22158 22221 D AudioSystem: getService: checking for service media.audio_policy: 0xb400007800356820
+07-09 19:27:31.466 22158 22158 W [RNScreens]: backTitleVisible prop is not available on Android
+07-09 19:27:31.466 22158 22158 W [RNScreens]: backTitleFontFamily prop is not available on Android
+07-09 19:27:31.466 22158 22158 W [RNScreens]: disableBackButtonMenu prop is not available on Android
+07-09 19:27:31.466 22158 22158 W [RNScreens]: largeTitleFontFamily prop is not available on Android
+07-09 19:27:31.466 22158 22158 W [RNScreens]: largeTitleFontWeight prop is not available on Android
+07-09 19:27:31.466 22158 22158 W [RNScreens]: largeTitleHideShadow prop is not available on Android
+07-09 19:27:31.469 22158 22221 W MediaCodec-JNI: pid:22158,client name:com.emergent.salahalarm.lxw9zs
+07-09 19:27:31.469 22158 22221 W AudioCapabilities: Unsupported mediaType audio/x-ms-wma
+07-09 19:27:31.470 22158 22221 W AudioCapabilities: Unsupported mediaType audio/mpeg-L1
+07-09 19:27:31.470 22158 22221 W AudioCapabilities: Unsupported mediaType audio/mpeg-L2
+07-09 19:27:31.470 22158 22221 W AudioCapabilities: Unsupported mediaType audio/ra
+07-09 19:27:31.470 22158 22221 W AudioCapabilities: Unsupported mediaType audio/alac
+07-09 19:27:31.471 22158 22221 W AudioCapabilities: Unsupported mediaType audio/ape
+07-09 19:27:31.471 22158 22221 W AudioCapabilities: Unsupported mediaType audio/x-ape
+07-09 19:27:31.471 22158 22221 W AudioCapabilities: Unsupported mediaType audio/adpcm
+07-09 19:27:31.471 22158 22221 W AudioCapabilities: Unsupported mediaType audio/x-ms-adpcm
+07-09 19:27:31.471 22158 22221 W AudioCapabilities: Unsupported mediaType audio/pcm
+07-09 19:27:31.471 22158 22221 W AudioCapabilities: Unsupported mediaType audio/dsd
+07-09 19:27:31.471 22158 22221 W VideoCapabilities: Unsupported mime video/rv
+07-09 19:27:31.471 22158 22221 W VideoCapabilities: Unsupported mime video/x-ms-wmv
+07-09 19:27:31.472 22158 22221 W VideoCapabilities: Unsupported mime video/x-ms-wmv2
+07-09 19:27:31.472 22158 22221 W VideoCapabilities: Unsupported mime video/divx3
+07-09 19:27:31.472 22158 22221 W VideoCapabilities: Unsupported mime video/flv1
+07-09 19:27:31.472 22158 22221 W VideoCapabilities: Unsupported mime video/x-flv
+07-09 19:27:31.472 22158 22221 W VideoCapabilities: Unsupported mime video/mjpeg
+07-09 19:27:31.472 22158 22221 W VideoCapabilities: Unsupported mime video/x-motion-jpeg
+07-09 19:27:31.473 22158 22221 W AudioCapabilities: Unsupported mediaType audio/x-adpcm-dvi-ima
+07-09 19:27:31.473 22158 22221 W AudioCapabilities: Unsupported mediaType audio/x-adpcm-ms
+07-09 19:27:31.473 22158 22221 W AudioCapabilities: Unsupported mediaType audio/alac
+07-09 19:27:31.477 22158 22221 W VideoCapabilities: Unsupported mime image/vnd.android.heic
+07-09 19:27:31.477 22158 22221 W VideoCapabilities: Unsupported mime image/vnd.android.heic
+07-09 19:27:31.480 22158 22199 W unknown:ReactNative: StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+07-09 19:27:31.480 22158 22199 W unknown:ReactNative: StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+07-09 19:27:31.483 22158 22198 W ReactNativeJS: `setPositionAsync` is not supported with edge-to-edge enabled.
+07-09 19:27:31.483 22158 22198 W ReactNativeJS: `setBehaviorAsync` is not supported with edge-to-edge enabled.
+07-09 19:27:31.484 22158 22158 D InsetsController: Setting requestedVisibleTypes to -5131 (was -5129)
+07-09 19:27:31.484 22158 22158 W VSPA    : Unable to open /proc/vivo_rsc/frame_set_priority: Permission denied
+07-09 19:27:31.484 22158 22221 W AudioCapabilities: Unsupported mediaType audio/x-ms-wma
+07-09 19:27:31.484 22158 22198 W ReactNativeJS: `setBackgroundColorAsync` is not supported with edge-to-edge enabled.
+07-09 19:27:31.484 22158 22158 W VSPA    : Unable to open /proc/vivo_rsc/frame_set_priority: Permission denied
+07-09 19:27:31.485 22158 22221 W AudioCapabilities: Unsupported mediaType audio/mpeg-L1
+07-09 19:27:31.485 22158 22221 W AudioCapabilities: Unsupported mediaType audio/mpeg-L2
+07-09 19:27:31.485 22158 22221 W AudioCapabilities: Unsupported mediaType audio/ra
+07-09 19:27:31.485 22158 22221 W AudioCapabilities: Unsupported mediaType audio/alac
+07-09 19:27:31.486 22158 22221 W AudioCapabilities: Unsupported mediaType audio/ape
+07-09 19:27:31.486 22158 22221 W AudioCapabilities: Unsupported mediaType audio/x-ape
+07-09 19:27:31.486 22158 22221 W AudioCapabilities: Unsupported mediaType audio/adpcm
+07-09 19:27:31.486 22158 22221 W AudioCapabilities: Unsupported mediaType audio/x-ms-adpcm
+07-09 19:27:31.486 22158 22221 W AudioCapabilities: Unsupported mediaType audio/pcm
+07-09 19:27:31.487 22158 22221 W AudioCapabilities: Unsupported mediaType audio/dsd
+07-09 19:27:31.488 22158 22221 W VideoCapabilities: Unsupported mime video/rv
+07-09 19:27:31.488 22158 22221 W VideoCapabilities: Unsupported mime video/x-ms-wmv
+07-09 19:27:31.488 22158 22221 W VideoCapabilities: Unsupported mime video/x-ms-wmv2
+07-09 19:27:31.489 22158 22221 W VideoCapabilities: Unsupported mime video/divx3
+07-09 19:27:31.490 22158 22221 W VideoCapabilities: Unsupported mime video/flv1
+07-09 19:27:31.490 22158 22221 W VideoCapabilities: Unsupported mime video/x-flv
+07-09 19:27:31.491 22158 22221 W VideoCapabilities: Unsupported mime video/mjpeg
+07-09 19:27:31.492 22158 22221 W VideoCapabilities: Unsupported mime video/x-motion-jpeg
+07-09 19:27:31.492 22158 22221 W AudioCapabilities: Unsupported mediaType audio/x-adpcm-dvi-ima
+07-09 19:27:31.493 22158 22221 W AudioCapabilities: Unsupported mediaType audio/x-adpcm-ms
+07-09 19:27:31.493 22158 22221 W AudioCapabilities: Unsupported mediaType audio/alac
+07-09 19:27:31.498 22158 22221 W VideoCapabilities: Unsupported mime image/vnd.android.heic
+07-09 19:27:31.499 22158 22221 W VideoCapabilities: Unsupported mime image/vnd.android.heic
+07-09 19:27:31.501 22158 22158 W VSPA    : Unable to open /proc/vivo_rsc/frame_set_priority: Permission denied
+07-09 19:27:31.501 22158 22158 W VSPA    : Unable to open /proc/vivo_rsc/frame_set_priority: Permission denied
+07-09 19:27:31.510 22158 22221 W AudioCapabilities: Unsupported mime audio/x-ms-wma
+07-09 19:27:31.510 22158 22221 W AudioCapabilities: Unsupported mime audio/mpeg-L1
+07-09 19:27:31.510 22158 22221 W AudioCapabilities: Unsupported mime audio/mpeg-L2
+07-09 19:27:31.510 22158 22221 W AudioCapabilities: Unsupported mime audio/ra
+07-09 19:27:31.511 22158 22221 W AudioCapabilities: Unsupported mime audio/alac
+07-09 19:27:31.511 22158 22221 W AudioCapabilities: Unsupported mime audio/ape
+07-09 19:27:31.511 22158 22221 W AudioCapabilities: Unsupported mime audio/x-ape
+07-09 19:27:31.511 22158 22221 W AudioCapabilities: Unsupported mime audio/adpcm
+07-09 19:27:31.511 22158 22221 W AudioCapabilities: Unsupported mime audio/x-ms-adpcm
+07-09 19:27:31.511 22158 22221 W AudioCapabilities: Unsupported mime audio/pcm
+07-09 19:27:31.511 22158 22221 W AudioCapabilities: Unsupported mime audio/dsd
+07-09 19:27:31.511 22158 22221 W VideoCapabilities: Unsupported mime video/rv
+07-09 19:27:31.511 22158 22221 W VideoCapabilities: Unsupported mime video/x-ms-wmv
+07-09 19:27:31.511 22158 22221 W VideoCapabilities: Unsupported mime video/x-ms-wmv2
+07-09 19:27:31.511 22158 22221 W VideoCapabilities: Unsupported mime video/divx3
+07-09 19:27:31.511 22158 22221 W VideoCapabilities: Unsupported mime video/flv1
+07-09 19:27:31.511 22158 22221 W VideoCapabilities: Unsupported mime video/x-flv
+07-09 19:27:31.511 22158 22221 W VideoCapabilities: Unsupported mime video/mjpeg
+07-09 19:27:31.511 22158 22221 W VideoCapabilities: Unsupported mime video/x-motion-jpeg
+07-09 19:27:31.511 22158 22221 W AudioCapabilities: Unsupported mime audio/x-adpcm-dvi-ima
+07-09 19:27:31.511 22158 22221 W AudioCapabilities: Unsupported mime audio/x-adpcm-ms
+07-09 19:27:31.511 22158 22221 W AudioCapabilities: Unsupported mime audio/alac
+07-09 19:27:31.512 22158 22198 I ReactNativeJS: 'NOTIFEE SETTINGS:', '{\n  "authorizationStatus": 1,\n  "android": {\n    "alarm": 1\n  },\n  "ios": {\n    "alert": 1,\n    "badge": 1,\n    "criticalAlert": 1,\n    "showPreviews": 1,\n    "sound": 1,\n    "carPlay": 1,\n    "lockScreen": 1,\n    "announcement": 1,\n    "notificationCenter": 1,\n    "inAppNotificationSettings": 1,\n    "authorizationStatus": 1\n  },\n  "web": {}\n}'
+07-09 19:27:31.520 22158 22221 W VideoCapabilities: Unsupported mime image/vnd.android.heic
+07-09 19:27:31.520 22158 22221 W VideoCapabilities: Unsupported mime image/vnd.android.heic
+07-09 19:27:31.522 22158 22221 W AudioCapabilities: Unsupported mime audio/x-ms-wma
+07-09 19:27:31.522 22158 22221 W AudioCapabilities: Unsupported mime audio/mpeg-L1
+07-09 19:27:31.522 22158 22221 W AudioCapabilities: Unsupported mime audio/mpeg-L1
+07-09 19:27:31.522 22158 22221 W AudioCapabilities: Unsupported mime audio/ra
+07-09 19:27:31.522 22158 22221 W AudioCapabilities: Unsupported mime audio/alac
+07-09 19:27:31.522 22158 22221 W AudioCapabilities: Unsupported mime audio/ape
+07-09 19:27:31.522 22158 22221 W AudioCapabilities: Unsupported mime audio/ape
+07-09 19:27:31.522 22158 22221 W AudioCapabilities: Unsupported mime audio/pcm
+07-09 19:27:31.522 22158 22221 W AudioCapabilities: Unsupported mime audio/dsd
+07-09 19:27:31.523 22158 22221 W VideoCapabilities: Unsupported mime video/rv
+07-09 19:27:31.523 22158 22221 W VideoCapabilities: Unsupported mime video/x-ms-wmv
+07-09 19:27:31.523 22158 22221 W VideoCapabilities: Unsupported mime video/x-ms-wmv
+07-09 19:27:31.523 22158 22221 W VideoCapabilities: Unsupported mime video/divx3
+07-09 19:27:31.523 22158 22221 W VideoCapabilities: Unsupported mime video/flv1
+07-09 19:27:31.523 22158 22221 W VideoCapabilities: Unsupported mime video/flv1
+07-09 19:27:31.523 22158 22221 W VideoCapabilities: Unsupported mime video/mjpeg
+07-09 19:27:31.523 22158 22221 W VideoCapabilities: Unsupported mime video/mjpeg
+07-09 19:27:31.524 22158 22221 W AudioCapabilities: Unsupported mime audio/x-adpcm-dvi-ima
+07-09 19:27:31.524 22158 22221 W AudioCapabilities: Unsupported mime audio/x-adpcm-ms
+07-09 19:27:31.524 22158 22221 W AudioCapabilities: Unsupported mime audio/alac
+07-09 19:27:31.525 22158 22179 I GrallocExtra: gralloc_extra_query:is_SW3D 0
+07-09 19:27:31.525 22158 22179 E MEMCWrapper: MEMC_POST_PROCESSING_ENABLE_PROPERTY false.
+07-09 19:27:31.525 22158 22179 D BLASTBufferQueue: [VRI[MainActivity,type=1]#0](f:0,a:1) acquireNextBufferLocked size=1260x2800 mFrameNumber=1 applyTransaction=true mTimestamp=203055140991716(auto) mPendingTransactions.size=0 graphicBufferId=95167885344772 transform=0
+07-09 19:27:31.525 22158 22221 W VideoCapabilities: Unsupported mime image/vnd.android.heic
+07-09 19:27:31.525 22158 22221 W VideoCapabilities: Unsupported mime image/vnd.android.heic
+07-09 19:27:31.532 22158 22221 D VivoSpatializer: checkGoogleApiEnabled, mGoogleApiEnabled: false, originalArdVersion: 34, deniedPkg: false, clientPkg: com.emergent.salahalarm.lxw9zs
+07-09 19:27:31.533 22158 22221 D VivoSpatializer: registerAudioFeatureCallback succeeded for tag: NOTIFY_V_SPAT_STATE_CHANGED
+07-09 19:27:31.535  2171  2244 I ActivityTaskManager: Displayed com.emergent.salahalarm.lxw9zs/.MainActivity for user 0: +607ms
+07-09 19:27:31.537 22158 22221 I DMCodecAdapterFactory: Creating an asynchronous MediaCodec adapter for track type audio
+07-09 19:27:31.538 22158 22221 D MediaCodec: CreateByComponentName: name c2.android.mp3.decoder
+07-09 19:27:31.538 22158 22221 W libc    : Access denied finding property "vendor.debug.stagefright.mediacodec.trace"
+07-09 19:27:31.538 22158 22221 W libc    : Access denied finding property "vendor.media.c2.frameworks.debug.log"
+07-09 19:27:31.540 22158 22221 W libc    : Access denied finding property "vendor.debug.stagefright.BufferCount"
+07-09 19:27:31.540 22158 22221 W libc    : Access denied finding property "vendor.media.c2.frameworks.debug.log"
+07-09 19:27:31.540 22158 22221 W libc    : Access denied finding property "vendor.media.c2.frameworks.buffercount.trace"
+07-09 19:27:31.540 22158 22221 D CCodecBufferChannel: mBufferCountTrace=0 mIsUserLoad=1
+07-09 19:27:31.540 22158 22221 I CCodecBufferChannel: Constructor 0xb4000078403227b0
+07-09 19:27:31.540 22158 22221 I CCodecBufferChannel: mIsVivoLogEnable = 0
+07-09 19:27:31.540 22158 22221 I CCodecBufferChannel: CCodecBufferChannel[0xb4000078403227b0], mNumOutputsSlotAdd: 0
+07-09 19:27:31.540 22158 22221 W libc    : Access denied finding property "vendor.media.c2.frameworks.debug.log"
+07-09 19:27:31.540 22158 22221 D MediaCodec: [0xb4000077b0355d00] init: CCodec 0xb4000078b02fdc30, CCodecBufferChannel 0xb4000078403227b0
+07-09 19:27:31.541 22158 22236 D MediaCodec: [0xb4000077b0355d00] setState: 1
+07-09 19:27:31.541 22158 22236 D CCodec  : allocate(c2.android.mp3.decoder)
+07-09 19:27:31.542 22158 22236 I ApexCodecsLazy: Failed to load libcom.android.media.swcodec.apexcodecs.so: dlopen failed: library "libcom.android.media.swcodec.apexcodecs.so" not found
+07-09 19:27:31.542 22158 22236 I Codec2Client: Available Codec2 services: "default" "software" "vivocodec"
+07-09 19:27:31.545 22158 22236 I CCodec  : setting up 'default' as default (vendor) store
+07-09 19:27:31.550 22158 22236 I CCodec  : Created component [c2.android.mp3.decoder] for [c2.android.mp3.decoder]
+07-09 19:27:31.550 22158 22236 D CCodecBufferChannel: [0xb4000078403227b0] setComponent: mName c2.android.mp3.decoder#757, mPipelineWatcher 0xb400007840322ca0
+07-09 19:27:31.550 22158 22236 D CCodecBufferChannel: PipelineWatcher debug info [c2.android.mp3.decoder#757] enable=0
+07-09 19:27:31.550 22158 22236 D CCodecConfig: read media type: audio/mpeg
+07-09 19:27:31.554 22158 22158 W VSPA    : Unable to open /proc/vivo_rsc/frame_set_priority: Permission denied
+07-09 19:27:31.554 22158 22158 W VSPA    : Unable to open /proc/vivo_rsc/frame_set_priority: Permission denied
+07-09 19:27:31.555 22158 22236 D ReflectedParamUpdater: extent() != 1 for single value type: algo.buffers.max-count.values
+07-09 19:27:31.555 22158 22236 D ReflectedParamUpdater: extent() != 1 for single value type: output.subscribed-indices.values
+07-09 19:27:31.555 22158 22236 D ReflectedParamUpdater: extent() != 1 for single value type: input.buffers.allocator-ids.values
+07-09 19:27:31.555 22158 22236 D ReflectedParamUpdater: extent() != 1 for single value type: output.buffers.allocator-ids.values
+07-09 19:27:31.555 22158 22198 I ReactNativeJS: 'GET LAUNCH ALARM RESULT (mount):', 'null'
+07-09 19:27:31.556 22158 22198 W ReactNativeJS: `setPositionAsync` is not supported with edge-to-edge enabled.
+07-09 19:27:31.556 22158 22198 W ReactNativeJS: `setBehaviorAsync` is not supported with edge-to-edge enabled.
+07-09 19:27:31.557 22158 22198 W ReactNativeJS: `setBackgroundColorAsync` is not supported with edge-to-edge enabled.
+07-09 19:27:31.558 22158 22236 D ReflectedParamUpdater: extent() != 1 for single value type: algo.buffers.allocator-ids.values
+07-09 19:27:31.558 22158 22236 D ReflectedParamUpdater: extent() != 1 for single value type: output.buffers.pool-ids.values
+07-09 19:27:31.558 22158 22236 D ReflectedParamUpdater: extent() != 1 for single value type: algo.buffers.pool-ids.values
+07-09 19:27:31.559 22158 22236 I CCodecConfig: query failed after returning 8 values (BAD_INDEX)
+07-09 19:27:31.559 22158 22236 D CCodecConfig: c2 config diff is Dict {
+07-09 19:27:31.559 22158 22236 D CCodecConfig:   c2::u32 coded.bitrate.value = 64000
+07-09 19:27:31.559 22158 22236 D CCodecConfig:   c2::u32 input.buffers.max-size.value = 8192
+07-09 19:27:31.559 22158 22236 D CCodecConfig:   c2::u32 input.delay.value = 0
+07-09 19:27:31.559 22158 22236 D CCodecConfig:   string input.media-type.value = "audio/mpeg"
+07-09 19:27:31.559 22158 22236 D CCodecConfig:   c2::u32 output.large-frame.max-size = 0
+07-09 19:27:31.559 22158 22236 D CCodecConfig:   c2::u32 output.large-frame.threshold-size = 0
+07-09 19:27:31.559 22158 22236 D CCodecConfig:   string output.media-type.value = "audio/raw"
+07-09 19:27:31.559 22158 22236 D CCodecConfig:   c2::u32 raw.channel-count.value = 2
+07-09 19:27:31.559 22158 22236 D CCodecConfig:   c2::u32 raw.sample-rate.value = 44100
+07-09 19:27:31.559 22158 22236 D CCodecConfig: }
+07-09 19:27:31.559 22158 22236 D MediaCodec: [0xb4000077b0355d00] setState: 2
+07-09 19:27:31.560 22158 22221 D MediaCodec: mInitName[c2.android.mp3.decoder], mMediacodec[0xb4000077b0355d00], mCodec[0xb4000078b02fdc30], mBufferChannel[0xb4000078403227b0]
+07-09 19:27:31.560 22158 22221 D MediaCodec: createbyComponent:pid:-1 22158 tid=22221
+07-09 19:27:31.560 22158 22236 I MediaCodec: MediaCodec will operate in async mode
+07-09 19:27:31.560 22158 22221 D MediaCodec: [0xb4000077b0355d00] [c2.android.mp3.decoder] configure
+07-09 19:27:31.561 22158 22221 D VivoCodecProcessSdk: get client pid:22158
+07-09 19:27:31.561 22158 22221 E MediaCodec: Media Quality Service not found.
+07-09 19:27:31.561 22158 22236 D MediaCodec: [0xb4000077b0355d00] setState: 3
+07-09 19:27:31.561 22158 22236 D CCodec  : [c2.android.mp3.decoder] buffers are bound to CCodec for this session
+07-09 19:27:31.561 22158 22236 D CCodecConfig: no c2 equivalents for log-session-id
+07-09 19:27:31.561 22158 22236 D CCodecConfig: no c2 equivalents for importance
+07-09 19:27:31.561 22158 22236 D CCodecConfig: no c2 equivalents for flags
+07-09 19:27:31.561 22158 22236 D CCodecConfig: config failed => CORRUPTED
+07-09 19:27:31.562 22158 22236 D CCodecConfig: c2 config diff is   c2::u32 raw.sample-rate.value = 24000
+07-09 19:27:31.562 22158 22236 W Codec2Client: query -- param skipped: index = 1107298332.
+07-09 19:27:31.562 22158 22236 D CCodec  : client requested max input size 4096, which is smaller than what component recommended (8192); overriding with component recommendation.
+07-09 19:27:31.562 22158 22236 W CCodec  : This behavior is subject to change. It is recommended that app developers double check whether the requested max input size is in reasonable range.
+07-09 19:27:31.562 22158 22236 D CCodec  : encoding statistics level = 0
+07-09 19:27:31.562 22158 22236 D CCodec  : setup formats input: AMessage(what = 0x00000000) = {
+07-09 19:27:31.562 22158 22236 D CCodec  :   int32_t bitrate = 64000
+07-09 19:27:31.562 22158 22236 D CCodec  :   int32_t channel-count = 2
+07-09 19:27:31.562 22158 22236 D CCodec  :   int32_t max-input-size = 8192
+07-09 19:27:31.562 22158 22236 D CCodec  :   string mime = "audio/mpeg"
+07-09 19:27:31.562 22158 22236 D CCodec  :   int32_t sample-rate = 24000
+07-09 19:27:31.562 22158 22236 D CCodec  : }
+07-09 19:27:31.562 22158 22236 D CCodec  : setup formats output: AMessage(what = 0x00000000) = {
+07-09 19:27:31.562 22158 22236 D CCodec  :   int32_t bitrate = 64000
+07-09 19:27:31.562 22158 22236 D CCodec  :   int32_t buffer-batch-max-output-size = 0
+07-09 19:27:31.562 22158 22236 D CCodec  :   int32_t buffer-batch-threshold-output-size = 0
+07-09 19:27:31.562 22158 22236 D CCodec  :   int32_t channel-count = 2
+07-09 19:27:31.562 22158 22236 D CCodec  :   string mime = "audio/raw"
+07-09 19:27:31.562 22158 22236 D CCodec  :   int32_t sample-rate = 24000
+07-09 19:27:31.562 22158 22236 D CCodec  :   int32_t android._config-pcm-encoding = 2
+07-09 19:27:31.562 22158 22236 D CCodec  : }
+07-09 19:27:31.562 22158 22236 I CCodecConfig: query failed after returning 8 values (BAD_INDEX)
+07-09 19:27:31.562 22158 22236 E lahalarm.lxw9zs: Failed to query component interface for required system resources: 6
+07-09 19:27:31.562 22158 22236 D MediaCodec: [0xb4000077b0355d00] setState: 4
+07-09 19:27:31.563 22158 22221 D MediaCodec: keep callback message for reclaim
+07-09 19:27:31.563 22158 22236 D MediaCodec: [0xb4000077b0355d00] setState: 5
+07-09 19:27:31.564 22158 22236 W Codec2Client: query -- param skipped: index = 1342179345.
+07-09 19:27:31.564 22158 22236 W Codec2Client: query -- param skipped: index = 2415921170.
+07-09 19:27:31.564 22158 22236 I CCodecBufferChannel: mIsVivoLogEnable = 0
+07-09 19:27:31.564 22158 22236 D C2Store : Using DMABUF Heaps
+07-09 19:27:31.564 22158 22236 D CCodecBufferChannel: [c2.android.mp3.decoder#757] Created input block pool with allocatorID 16 => poolID 17 - OK (0)
+07-09 19:27:31.565 22158 22236 I CCodecBufferChannel: [c2.android.mp3.decoder#757] Created output block pool with allocatorID 16 => poolID 6899 - OK
+07-09 19:27:31.565 22158 22236 D CCodecBufferChannel: [c2.android.mp3.decoder#757] Configured output block pool ids 6899 => OK
+07-09 19:27:31.565 22158 22236 D CCodecBufferChannel: [0xb4000078403227b0] [c2.android.mp3.decoder#757] start: output->outputDelay 0, output->numSlots 4
+07-09 19:27:31.566 22158 22236 I CCodecBufferChannel: [0xb4000078403227b0][c2.android.mp3.decoder#757],using arrayMode ouputBuffers for linear outputstream.
+07-09 19:27:31.566 22158 22236 D CCodecBuffers: [c2.android.mp3.decoder#757:1D-Output.Impl[N]] converted 0 buffers to array mode of 4
+07-09 19:27:31.566 22158 22236 I DMABUFHEAPS: Using DMA-BUF heap named: mtk_mm
+07-09 19:27:31.568 22158 22236 D MediaCodec: [0xb4000077b0355d00] setState: 6
+07-09 19:27:31.568 22158 22221 W LoudnessCodecController: MediaCodec mime type not supported for loudness annotation
+07-09 19:27:31.568 22158 22221 V LoudnessCodecController: Could not extract codec loudness information
+07-09 19:27:31.569 22158 22158 V ImeFocusController: onWindowFocus: com.android.internal.policy.DecorView{84cdcb1 V.E...... R....... 0,0-1260,2800}[MainActivity] softInputMode=STATE_UNSPECIFIED|ADJUST_RESIZE|IS_FORWARD_NAVIGATION
+07-09 19:27:31.571  3605  3605 V InputMethod: unbindInput(): binding=InputBinding{android.os.BinderProxy@ca5718a / uid 10103 / pid 5063} ic=RemoteInputConnection{idHash=#dfc1621}
+07-09 19:27:31.573 22158 22236 D PipelineWatcher: [0xb400007840322ca0] pipelineFull: too many frames in pipeline (4)
+07-09 19:27:31.573  3605  3605 V InputMethod: bindInput(): binding=InputBinding{android.os.BinderProxy@eb624d2 / uid 10711 / pid 22158} ic=RemoteInputConnection{idHash=#f31d9a3}
+07-09 19:27:31.574  3605  3605 V InputMethod: startInput(): editor=android.view.inputmethod.EditorInfo@f9b84a0
+07-09 19:27:31.574  3605  3605 V InputMethodService: CALL: doFinishInput
+07-09 19:27:31.574  3605  3605 D InlineSuggestionSessionController: notifyOnFinishInput
+07-09 19:27:31.574  3605  3605 V InputMethodService: CALL: onFinishInput
+07-09 19:27:31.574  3605  3605 I GoogleInputMethodService: GoogleInputMethodService.onFinishInput():2276 
+07-09 19:27:31.574 22158 22236 I MediaCodec: [c2.android.mp3.decoder] output format changed to: AMessage(what = 0x00000000) = {
+07-09 19:27:31.574 22158 22236 I MediaCodec:       int32_t bitrate = 64000
+07-09 19:27:31.574 22158 22236 I MediaCodec:       int32_t buffer-batch-max-output-size = 0
+07-09 19:27:31.574 22158 22236 I MediaCodec:       int32_t buffer-batch-threshold-output-size = 0
+07-09 19:27:31.574 22158 22236 I MediaCodec:       int32_t channel-count = 2
+07-09 19:27:31.574 22158 22236 I MediaCodec:       string mime = "audio/raw"
+07-09 19:27:31.574 22158 22236 I MediaCodec:       int32_t sample-rate = 24000
+07-09 19:27:31.574 22158 22236 I MediaCodec:       int32_t android._config-pcm-encoding = 2
+07-09 19:27:31.574 22158 22236 I MediaCodec:     }
+07-09 19:27:31.574 22158 22236 D MediaCodec: get mPcmBytesMs = 96.000000
+07-09 19:27:31.575  3605  3605 I Module  : DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatusInternal():129 repeatCheckTimes = 0, locked = false
+07-09 19:27:31.575  3605  3605 V InputMethodService: finishStylusHandwriting()
+07-09 19:27:31.575  3605  3605 D InlineSuggestionSessionController: notifyOnStartInput: com.emergent.salahalarm.lxw9zs, 0
+07-09 19:27:31.575  3605  3605 V InputMethodService: CALL: onStartInput
+07-09 19:27:31.575 22158 22158 I ImeTracker: com.emergent.salahalarm.lxw9zs:11752db: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+07-09 19:27:31.575  3605  3605 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1460 onStartInput(EditorInfo{EditorInfo{packageName=com.emergent.salahalarm.lxw9zs, inputType=0, inputTypeString=NULL, enableLearning=false, autoCorrection=false, autoComplete=false, imeOptions=0, privateImeOptions=null, actionName=UNSPECIFIED, actionLabel=null, initialSelStart=-1, initialSelEnd=-1, initialCapsMode=0, label=null, fieldId=0, fieldName=null, extras=null, hintText=null, hintLocales=[]}}, false)
+07-09 19:27:31.575  3605  3605 I LatinIMEBase: LatinIMEBase.updateInputViewCoverNavigation():317 Update input view padding, isNavbarOverInputWindow=true, bottom inset=126
+07-09 19:27:31.575  3605  3605 I Module  : DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatusInternal():129 repeatCheckTimes = 1, locked = false
+07-09 19:27:31.577 22158 22198 I ReactNativeJS: 'GET LAUNCH ALARM RESULT (resume):', 'null'
+07-09 19:27:31.634 22158 22158 W unknown:BridgelessReact: ReactHost{0}.onUserLeaveHint(activity)
+07-09 19:27:31.635 22158 22158 W unknown:BridgelessReact: ReactHost{0}.onHostPause(activity)
+07-09 19:27:31.635 22158 22158 W unknown:BridgelessReact: ReactContext.onHostPause()
+07-09 19:27:31.665 19567 19567 D ViewRootImpl: AppSizeAfterRelayout, size: Point(1389, 193), rotation: ROTATION_0
+07-09 19:27:31.669 19567 19567 D BufferQueueConsumer: [](id:4c6f00000002,api:0,p:-1,c:19567) connect: controlledByApp=false
+07-09 19:27:31.669 19567 19567 D BLASTBufferQueue: [VRI[GrantPermissionsActivity,type=1]#2](f:0,a:0) constructor()
+07-09 19:27:31.669 19567 19567 D BLASTBufferQueue: [VRI[GrantPermissionsActivity,type=1]#2](f:0,a:0) update width=1389 height=193 format=-2 mTransformHint=0
+07-09 19:27:31.670 19567 20770 W BLASTBufferQueue: Unable to open /proc/vivo_rsc/frame_set_priority: Permission denied
+07-09 19:27:31.670 19567 20770 I BLASTBufferQueue: QoSAllocBuff Successful. Ret 0 
+07-09 19:27:31.680  2171  2244 I ActivityTaskManager: Displayed com.google.android.permissioncontroller/com.android.permissioncontroller.permission.ui.GrantPermissionsActivity for user 0: +61ms
+07-09 19:27:31.699 22158 22158 W unknown:BridgelessReact: ReactHost{0}.onHostResume(activity)
+07-09 19:27:31.699 22158 22158 W unknown:BridgelessReact: ReactContext.onHostResume()
+07-09 19:27:31.700 22158 22198 W ReactNativeJS: `setPositionAsync` is not supported with edge-to-edge enabled.
+07-09 19:27:31.700 22158 22198 W ReactNativeJS: `setBehaviorAsync` is not supported with edge-to-edge enabled.
+07-09 19:27:31.701 22158 22198 W ReactNativeJS: `setBackgroundColorAsync` is not supported with edge-to-edge enabled.
+07-09 19:27:31.703 22158 22198 I ReactNativeJS: BATTERY EXEMPTION: already prompted, skipping
+07-09 19:27:31.708 19567 19567 V ImeFocusController: onWindowFocus: com.android.internal.policy.DecorView{514259b V.E...... R.....ID 0,0-1197,0}[GrantPermissionsActivity] softInputMode=STATE_ALWAYS_HIDDEN|ADJUST_NOTHING|IS_FORWARD_NAVIGATION
+07-09 19:27:31.708 19567 19567 I ImeTracker: com.google.android.permissioncontroller:5618e895: onRequestHide at ORIGIN_CLIENT reason HIDE_WINDOW_LOST_FOCUS fromUser false
+07-09 19:27:31.708 19567 19567 I ImeTracker: com.google.android.permissioncontroller:5618e895: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+07-09 19:27:31.708 22158 22158 V ImeFocusController: onWindowFocus: com.android.internal.policy.DecorView{84cdcb1 V.E...... R....... 0,0-1260,2800 aid=0}[MainActivity] softInputMode=STATE_UNSPECIFIED|ADJUST_RESIZE
+07-09 19:27:31.710 19567 19567 D VRI[GrantPermissionsActivity,type=1]: visibilityChanged oldVisibility=true newVisibility=false
+07-09 19:27:31.711 19567 20770 I HWUI    : [destroy] CanvasContext will be destroyed.
+07-09 19:27:31.712  3605  3605 V InputMethod: startInput(): editor=android.view.inputmethod.EditorInfo@2444acc
+07-09 19:27:31.712  3605  3605 V InputMethodService: CALL: doFinishInput
+07-09 19:27:31.712  3605  3605 D InlineSuggestionSessionController: notifyOnFinishInput
+07-09 19:27:31.712  3605  3605 V InputMethodService: CALL: onFinishInput
+07-09 19:27:31.712  3605  3605 I GoogleInputMethodService: GoogleInputMethodService.onFinishInput():2276 
+07-09 19:27:31.713  3605  3605 I Module  : DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatusInternal():129 repeatCheckTimes = 0, locked = false
+07-09 19:27:31.713 22158 22158 I ImeTracker: com.emergent.salahalarm.lxw9zs:ad33f6d7: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+07-09 19:27:31.713  3605  3605 V InputMethodService: finishStylusHandwriting()
+07-09 19:27:31.713  3605  3605 D InlineSuggestionSessionController: notifyOnStartInput: com.emergent.salahalarm.lxw9zs, 0
+07-09 19:27:31.713  3605  3605 V InputMethodService: CALL: onStartInput
+07-09 19:27:31.713  3605  3605 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1460 onStartInput(EditorInfo{EditorInfo{packageName=com.emergent.salahalarm.lxw9zs, inputType=0, inputTypeString=NULL, enableLearning=false, autoCorrection=false, autoComplete=false, imeOptions=0, privateImeOptions=null, actionName=UNSPECIFIED, actionLabel=null, initialSelStart=-1, initialSelEnd=-1, initialCapsMode=0, label=null, fieldId=0, fieldName=null, extras=null, hintText=null, hintLocales=[]}}, false)
+07-09 19:27:31.713  3605  3605 I LatinIMEBase: LatinIMEBase.updateInputViewCoverNavigation():317 Update input view padding, isNavbarOverInputWindow=true, bottom inset=126
+07-09 19:27:31.713  3605  3605 I Module  : DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatusInternal():129 repeatCheckTimes = 1, locked = false
+07-09 19:27:31.717 19567 19567 D ViewRootImpl: AppSizeAfterRelayout, size: Point(1389, 193), rotation: ROTATION_0
+07-09 19:27:31.718 19567 19567 D BLASTBufferQueue: [VRI[GrantPermissionsActivity,type=1]#2](f:0,a:0) destructor()
+07-09 19:27:31.718 19567 19567 D BufferQueueConsumer: [VRI[GrantPermissionsActivity,type=1]#2(BLAST Consumer)2](id:4c6f00000002,api:0,p:-1,c:19567) disconnect
+07-09 19:27:31.731 22158 22198 I ReactNativeJS: 'GET LAUNCH ALARM RESULT (resume):', 'null'
+07-09 19:27:31.734 19567 20770 I HWUI    : [setStopped] CanvasContext will be destroyed.
+07-09 19:27:31.736 19567 19567 W WindowOnBackDispatcher: sendCancelIfRunning: isInProgress=false callback=android.view.ViewRootImpl$$ExternalSyntheticLambda13@41fed5a
+07-09 19:27:31.739 19567 20770 I HWUI    : [destroy] CanvasContext will be destroyed.
+07-09 19:27:31.741 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-maghrib-0-1783629120000
+07-09 19:27:31.741 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-maghrib-0-1783629120000
+07-09 19:27:31.742 19567 19567 D ViewRootImpl: Skipping stats log for color mode
+07-09 19:27:31.744 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-isha-0-1783634400000
+07-09 19:27:31.744 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-isha-0-1783634400000
+07-09 19:27:31.744 22158 22226 D InsetsAnimationCtrlImpl: notify control request finished for types: 2
+07-09 19:27:31.744 22158 22226 I ANDR-VIVO-PERF: vivo inside perf_lock_rel of client
+07-09 19:27:31.745 22158 22226 W InteractionJankMonitor: Initializing without READ_DEVICE_CONFIG permission. enabled=false, interval=1, missedFrameThreshold=3, frameTimeThreshold=64, package=com.emergent.salahalarm.lxw9zs
+07-09 19:27:31.746 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-fajr-0-1783653300000
+07-09 19:27:31.746 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-fajr-0-1783653300000
+07-09 19:27:31.747 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-zuhr-0-1783688400000
+07-09 19:27:31.747 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-zuhr-0-1783688400000
+07-09 19:27:31.747 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-asr-0-1783707300000
+07-09 19:27:31.747 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-asr-0-1783707300000
+07-09 19:27:31.748 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-maghrib-0-1783715460000
+07-09 19:27:31.748 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-maghrib-0-1783715460000
+07-09 19:27:31.750 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-isha-0-1783720800000
+07-09 19:27:31.750 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-isha-0-1783720800000
+07-09 19:27:31.751 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-fajr-0-1783739700000
+07-09 19:27:31.751 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-fajr-0-1783739700000
+07-09 19:27:31.751 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-zuhr-0-1783774800000
+07-09 19:27:31.751 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-zuhr-0-1783774800000
+07-09 19:27:31.752 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-asr-0-1783793700000
+07-09 19:27:31.752 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-asr-0-1783793700000
+07-09 19:27:31.753 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-maghrib-0-1783801800000
+07-09 19:27:31.753 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-maghrib-0-1783801800000
+07-09 19:27:31.753 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-isha-0-1783807200000
+07-09 19:27:31.753 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-isha-0-1783807200000
+07-09 19:27:31.753 19567 20770 I HWUI    : [trimMemory] TrimMemory will destroy render context, mode: 40.
+07-09 19:27:31.754 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-fajr-0-1783826100000
+07-09 19:27:31.754 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-fajr-0-1783826100000
+07-09 19:27:31.755 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-zuhr-0-1783861200000
+07-09 19:27:31.755 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-zuhr-0-1783861200000
+07-09 19:27:31.755 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-asr-0-1783880100000
+07-09 19:27:31.755 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-asr-0-1783880100000
+07-09 19:27:31.756 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-maghrib-0-1783888140000
+07-09 19:27:31.756 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-maghrib-0-1783888140000
+07-09 19:27:31.756 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-isha-0-1783893600000
+07-09 19:27:31.756 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-isha-0-1783893600000
+07-09 19:27:31.757 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-fajr-0-1783912500000
+07-09 19:27:31.757 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-fajr-0-1783912500000
+07-09 19:27:31.757 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-zuhr-0-1783947600000
+07-09 19:27:31.757 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-zuhr-0-1783947600000
+07-09 19:27:31.758 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-asr-0-1783966500000
+07-09 19:27:31.758 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-asr-0-1783966500000
+07-09 19:27:31.759 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-maghrib-0-1783974480000
+07-09 19:27:31.759 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-maghrib-0-1783974480000
+07-09 19:27:31.759 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-isha-0-1783980000000
+07-09 19:27:31.759 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-isha-0-1783980000000
+07-09 19:27:31.760 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-fajr-0-1783998900000
+07-09 19:27:31.760 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-fajr-0-1783998900000
+07-09 19:27:31.760 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-zuhr-0-1784034000000
+07-09 19:27:31.760 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-zuhr-0-1784034000000
+07-09 19:27:31.761 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-asr-0-1784052900000
+07-09 19:27:31.761 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-asr-0-1784052900000
+07-09 19:27:31.761 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-maghrib-0-1784060880000
+07-09 19:27:31.761 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-maghrib-0-1784060880000
+07-09 19:27:31.762 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-isha-0-1784066400000
+07-09 19:27:31.762 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-isha-0-1784066400000
+07-09 19:27:31.763 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-fajr-0-1784085300000
+07-09 19:27:31.763 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-fajr-0-1784085300000
+07-09 19:27:31.763 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-zuhr-0-1784120400000
+07-09 19:27:31.763 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-zuhr-0-1784120400000
+07-09 19:27:31.764 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-asr-0-1784139300000
+07-09 19:27:31.764 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-asr-0-1784139300000
+07-09 19:27:31.764 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-maghrib-0-1784147160000
+07-09 19:27:31.764 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-maghrib-0-1784147160000
+07-09 19:27:31.765 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-isha-0-1784152800000
+07-09 19:27:31.765 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-isha-0-1784152800000
+07-09 19:27:31.766 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-fajr-0-1784171700000
+07-09 19:27:31.766 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-fajr-0-1784171700000
+07-09 19:27:31.766 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-zuhr-0-1784206800000
+07-09 19:27:31.766 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-zuhr-0-1784206800000
+07-09 19:27:31.767 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-asr-0-1784225700000
+07-09 19:27:31.767 22158 22263 I NOTIFEE : (NotificationManager): Removing notification with id alarm-asr-0-1784225700000
+07-09 19:27:31.768 19567 20770 I HWUI    : [destroy] CanvasContext will be destroyed.
+07-09 19:27:31.771 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Maghrib time","data":{"customUri":"","label":"Maghrib","type":"alarm","pre":"0","sound":"beep","prayer":"maghrib"},"id":"alarm-maghrib-0-1783629120000","body":"It\'s time for Maghrib prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.774 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Isha time","data":{"customUri":"","label":"Isha","type":"alarm","pre":"0","sound":"beep","prayer":"isha"},"id":"alarm-isha-0-1783634400000","body":"It\'s time for Isha prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.775 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Fajr time","data":{"customUri":"","label":"Fajr","type":"alarm","pre":"0","sound":"beep","prayer":"fajr"},"id":"alarm-fajr-0-1783653300000","body":"It\'s time for Fajr prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.777 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Zuhr time","data":{"customUri":"","label":"Zuhr","type":"alarm","pre":"0","sound":"beep","prayer":"zuhr"},"id":"alarm-zuhr-0-1783688400000","body":"It\'s time for Zuhr prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.779 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Asr time","data":{"customUri":"","label":"Asr","type":"alarm","pre":"0","sound":"beep","prayer":"asr"},"id":"alarm-asr-0-1783707300000","body":"It\'s time for Asr prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.780 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Maghrib time","data":{"customUri":"","label":"Maghrib","type":"alarm","pre":"0","sound":"beep","prayer":"maghrib"},"id":"alarm-maghrib-0-1783715460000","body":"It\'s time for Maghrib prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.783 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Isha time","data":{"customUri":"","label":"Isha","type":"alarm","pre":"0","sound":"beep","prayer":"isha"},"id":"alarm-isha-0-1783720800000","body":"It\'s time for Isha prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.784 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Fajr time","data":{"customUri":"","label":"Fajr","type":"alarm","pre":"0","sound":"beep","prayer":"fajr"},"id":"alarm-fajr-0-1783739700000","body":"It\'s time for Fajr prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.786 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Zuhr time","data":{"customUri":"","label":"Zuhr","type":"alarm","pre":"0","sound":"beep","prayer":"zuhr"},"id":"alarm-zuhr-0-1783774800000","body":"It\'s time for Zuhr prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.787 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Asr time","data":{"customUri":"","label":"Asr","type":"alarm","pre":"0","sound":"beep","prayer":"asr"},"id":"alarm-asr-0-1783793700000","body":"It\'s time for Asr prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.794 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Maghrib time","data":{"customUri":"","label":"Maghrib","type":"alarm","pre":"0","sound":"beep","prayer":"maghrib"},"id":"alarm-maghrib-0-1783801800000","body":"It\'s time for Maghrib prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.796 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Isha time","data":{"customUri":"","label":"Isha","type":"alarm","pre":"0","sound":"beep","prayer":"isha"},"id":"alarm-isha-0-1783807200000","body":"It\'s time for Isha prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.797 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Fajr time","data":{"customUri":"","label":"Fajr","type":"alarm","pre":"0","sound":"beep","prayer":"fajr"},"id":"alarm-fajr-0-1783826100000","body":"It\'s time for Fajr prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.799 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Zuhr time","data":{"customUri":"","label":"Zuhr","type":"alarm","pre":"0","sound":"beep","prayer":"zuhr"},"id":"alarm-zuhr-0-1783861200000","body":"It\'s time for Zuhr prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.801 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Asr time","data":{"customUri":"","label":"Asr","type":"alarm","pre":"0","sound":"beep","prayer":"asr"},"id":"alarm-asr-0-1783880100000","body":"It\'s time for Asr prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.804 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Maghrib time","data":{"customUri":"","label":"Maghrib","type":"alarm","pre":"0","sound":"beep","prayer":"maghrib"},"id":"alarm-maghrib-0-1783888140000","body":"It\'s time for Maghrib prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.804 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Isha time","data":{"customUri":"","label":"Isha","type":"alarm","pre":"0","sound":"beep","prayer":"isha"},"id":"alarm-isha-0-1783893600000","body":"It\'s time for Isha prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.806 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Fajr time","data":{"customUri":"","label":"Fajr","type":"alarm","pre":"0","sound":"beep","prayer":"fajr"},"id":"alarm-fajr-0-1783912500000","body":"It\'s time for Fajr prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.808 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Zuhr time","data":{"customUri":"","label":"Zuhr","type":"alarm","pre":"0","sound":"beep","prayer":"zuhr"},"id":"alarm-zuhr-0-1783947600000","body":"It\'s time for Zuhr prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.810 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Asr time","data":{"customUri":"","label":"Asr","type":"alarm","pre":"0","sound":"beep","prayer":"asr"},"id":"alarm-asr-0-1783966500000","body":"It\'s time for Asr prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.812 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Maghrib time","data":{"customUri":"","label":"Maghrib","type":"alarm","pre":"0","sound":"beep","prayer":"maghrib"},"id":"alarm-maghrib-0-1783974480000","body":"It\'s time for Maghrib prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.813 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Isha time","data":{"customUri":"","label":"Isha","type":"alarm","pre":"0","sound":"beep","prayer":"isha"},"id":"alarm-isha-0-1783980000000","body":"It\'s time for Isha prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.815 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Fajr time","data":{"customUri":"","label":"Fajr","type":"alarm","pre":"0","sound":"beep","prayer":"fajr"},"id":"alarm-fajr-0-1783998900000","body":"It\'s time for Fajr prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.809 22158 22158 W binder:22158_4: type=1400 audit(0.0:6322975): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c199,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-09 19:27:31.816 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Zuhr time","data":{"customUri":"","label":"Zuhr","type":"alarm","pre":"0","sound":"beep","prayer":"zuhr"},"id":"alarm-zuhr-0-1784034000000","body":"It\'s time for Zuhr prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.817 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Asr time","data":{"customUri":"","label":"Asr","type":"alarm","pre":"0","sound":"beep","prayer":"asr"},"id":"alarm-asr-0-1784052900000","body":"It\'s time for Asr prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.819 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Maghrib time","data":{"customUri":"","label":"Maghrib","type":"alarm","pre":"0","sound":"beep","prayer":"maghrib"},"id":"alarm-maghrib-0-1784060880000","body":"It\'s time for Maghrib prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.821 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Isha time","data":{"customUri":"","label":"Isha","type":"alarm","pre":"0","sound":"beep","prayer":"isha"},"id":"alarm-isha-0-1784066400000","body":"It\'s time for Isha prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.817 22158 22158 W binder:22158_1: type=1400 audit(0.0:6322976): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c199,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-09 19:27:31.823 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Fajr time","data":{"customUri":"","label":"Fajr","type":"alarm","pre":"0","sound":"beep","prayer":"fajr"},"id":"alarm-fajr-0-1784085300000","body":"It\'s time for Fajr prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.825 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Zuhr time","data":{"customUri":"","label":"Zuhr","type":"alarm","pre":"0","sound":"beep","prayer":"zuhr"},"id":"alarm-zuhr-0-1784120400000","body":"It\'s time for Zuhr prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.826 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Asr time","data":{"customUri":"","label":"Asr","type":"alarm","pre":"0","sound":"beep","prayer":"asr"},"id":"alarm-asr-0-1784139300000","body":"It\'s time for Asr prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.829 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Maghrib time","data":{"customUri":"","label":"Maghrib","type":"alarm","pre":"0","sound":"beep","prayer":"maghrib"},"id":"alarm-maghrib-0-1784147160000","body":"It\'s time for Maghrib prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.829 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Isha time","data":{"customUri":"","label":"Isha","type":"alarm","pre":"0","sound":"beep","prayer":"isha"},"id":"alarm-isha-0-1784152800000","body":"It\'s time for Isha prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.825 22158 22158 W binder:22158_1: type=1400 audit(0.0:6322977): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c199,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-09 19:27:31.832 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Fajr time","data":{"customUri":"","label":"Fajr","type":"alarm","pre":"0","sound":"beep","prayer":"fajr"},"id":"alarm-fajr-0-1784171700000","body":"It\'s time for Fajr prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.833 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Zuhr time","data":{"customUri":"","label":"Zuhr","type":"alarm","pre":"0","sound":"beep","prayer":"zuhr"},"id":"alarm-zuhr-0-1784206800000","body":"It\'s time for Zuhr prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.834 22158 22198 I ReactNativeJS: 'FOREGROUND EVENT RAW:', '{"type":7,"detail":{"notification":{"title":"Asr time","data":{"customUri":"","label":"Asr","type":"alarm","pre":"0","sound":"beep","prayer":"asr"},"id":"alarm-asr-0-1784225700000","body":"It\'s time for Asr prayer.","android":{"importance":4,"groupSummary":false,"pressAction":{"launchActivity":"default","id":"default"},"fullScreenAction":{"launchActivity":"default","id":"default"},"lightUpScreen":false,"loopSound":false,"channelId":"prayer-alarm-beep","colorized":false,"vibrationPattern":[300,500,300,500],"visibility":1,"groupAlertBehavior":0,"circularLargeIcon":false,"asForegroundService":false,"ongoing":false,"smallIcon":"ic_launcher","showTimestamp":false,"badgeIconType":2,"onlyAlertOnce":false,"showChronometer":false,"autoCancel":false,"localOnly":false,"defaults":[-1],"chronometerDirection":"up","category":"alarm"}}}}'
+07-09 19:27:31.833 22158 22158 W binder:22158_1: type=1400 audit(0.0:6322978): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c199,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-09 19:27:32.539 22158 22221 D AudioTrack: INSP: type=audio,case=1,set=0xb400007840378950,stream_type=-1,sample_rate=24000,format=0x1,channel_mask=0x3,frame_count=6000,flags=0x0,notification_frames=0,session_id=36505,transfer_type=3,uid=10711,pid=22158,packageName=com.emergent.salahalarm.lxw9zs
+07-09 19:27:32.539 22158 22221 D AudioTrack: INSP: type=audio,case=1,attributes=1,content_type=0,usage=1,source=-1,flags=0xa00
+07-09 19:27:32.540 22158 22221 V VivoAudioPolicyProxyNative: VivoAudioPolicyProxy getInstanceInter: binding to vivoaudiopolicy service success!
+07-09 19:27:32.540 22158 22221 I AudioTrack: set(): streamType -1, sampleRate 24000, format 0x1, channelMask 0x3, frameCount 6000, flags 0, notificationFrames 0, sessionId 36505, transferType 3, uid 10711, pid 22158
+07-09 19:27:32.540 22158 22221 D AudioSystem: +setParameters(): PlaybackCaptureProtectSupport=com.emergent.salahalarm.lxw9zs 
+07-09 19:27:32.540 22158 22221 D AudioTrack: get APPSharePck NULL
+07-09 19:27:32.544 22158 22221 D AudioTrack: createTrack_l(4849): 0xb400007840378950, mCblk = 0x7986914000, mLatency = 378, mAfLatency = 128, frameCount = 6000, mSampleRate = 24000, mFlags = 0x8, mReqFrameCount = 6000, mNotificationFramesAct = 2000
+07-09 19:27:32.546 22158 22221 D AudioTrack: setVolume(4849): 0xb400007840378950, left = 1.000000, right = 1.000000, sessionId:36505, calling package is:com.emergent.salahalarm.lxw9zs
+07-09 19:27:32.547 22158 22221 D AudioSystem: +setParameters(): AudioTrack-Process=22158;AudioTrack-AudioThread=22221 
+07-09 19:27:32.821 22158 22158 W binder:22158_4: type=1400 audit(0.0:6323074): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c199,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-09 19:27:32.829 22158 22158 W binder:22158_4: type=1400 audit(0.0:6323075): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c199,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-09 19:27:32.841 22158 22158 W binder:22158_4: type=1400 audit(0.0:6323076): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c199,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-09 19:27:32.853 22158 22158 W binder:22158_4: type=1400 audit(0.0:6323077): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c199,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-09 19:27:33.562 22158 22199 W unknown:ReactNative: StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+07-09 19:27:33.562 22158 22199 W unknown:ReactNative: StatusBarModule: Ignored status bar change, current activity is edge-to-edge.
+07-09 19:27:33.829 22158 22158 W binder:22158_4: type=1400 audit(0.0:6323140): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c199,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-09 19:27:33.849 22158 22158 W binder:22158_4: type=1400 audit(0.0:6323141): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c199,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-09 19:27:33.865 22158 22158 W binder:22158_4: type=1400 audit(0.0:6323142): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c199,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-09 19:27:33.881 22158 22158 W binder:22158_4: type=1400 audit(0.0:6323144): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c199,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-09 19:27:34.845 22158 22158 W binder:22158_4: type=1400 audit(0.0:6323204): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c199,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-09 19:27:34.861 22158 22158 W binder:22158_4: type=1400 audit(0.0:6323205): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c199,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-09 19:27:34.877 22158 22158 W binder:22158_4: type=1400 audit(0.0:6323206): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c199,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-09 19:27:34.897 22158 22158 W binder:22158_4: type=1400 audit(0.0:6323208): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c199,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-09 19:27:34.928 25105 25843 I bt_shim_scanner: [le_scanning_manager.cc(919)] handle_remote_properties: handle_remote_properties update device_type=0x2 addr_type=0x1
+07-09 19:27:35.857 22158 22158 W binder:22158_4: type=1400 audit(0.0:6323268): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c199,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-09 19:27:35.873 22158 22158 W binder:22158_4: type=1400 audit(0.0:6323269): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c199,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-09 19:27:35.893 22158 22158 W binder:22158_4: type=1400 audit(0.0:6323270): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c199,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-09 19:27:35.909 22158 22158 W binder:22158_4: type=1400 audit(0.0:6323272): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c199,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-09 19:27:36.400 22158 22288 D ProfileInstaller: Skipping profile installation for com.emergent.salahalarm.lxw9zs
+07-09 19:27:36.873 22158 22158 W binder:22158_4: type=1400 audit(0.0:6323332): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c199,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-09 19:27:36.889 22158 22158 W binder:22158_4: type=1400 audit(0.0:6323333): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c199,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-09 19:27:36.905 22158 22158 W binder:22158_4: type=1400 audit(0.0:6323334): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c199,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
+07-09 19:27:36.921 22158 22158 W binder:22158_4: type=1400 audit(0.0:6323335): avc:  denied  { ioctl } for  path="/proc/fas/render" dev="proc" ino=4026533325 ioctlcmd=0x6609 scontext=u:r:untrusted_app:s0:c199,c258,c512,c768 tcontext=u:object_r:proc_fas:s0 tclass=file permissive=0 app=com.emergent.salahalarm.lxw9zs
