@@ -43,3 +43,7 @@ alarm_test.txt
 perms_dump.txt
 perms_dump.txt
 *_test.txt
+*.apk
+*.txt
+*.apk
+*.txt
