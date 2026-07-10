@@ -167,14 +167,53 @@ class SalahWidgetProvider : AppWidgetProvider() {
 
             try {
                 val data = JSONObject(json)
-                val nextLabelText = data.optString("nextLabel", "—")
-                views.setTextViewText(R.id.next_label, nextLabelText)
-                views.setTextViewText(R.id.next_time, data.optString("nextTime", "--:--"))
-                views.setTextViewText(R.id.countdown_label, "Time until $nextLabelText")
                 val rows = data.optJSONArray("rows")
-                val nextTimestamp = data.optLong("nextTimestamp", 0L)
-                android.util.Log.d("SalahWidget", "raw json: $json")
-                android.util.Log.d("SalahWidget", "parsed nextTimestamp: $nextTimestamp")
+                val nowWall = System.currentTimeMillis()
+
+                // Recompute "next prayer" FRESH from the stored rows' own
+                // timestamps every time this runs — including Android's
+                // periodic onUpdate() calls (every ~30 min, the platform's
+                // guaranteed minimum), not just when the app happens to be
+                // open. Previously this trusted the JS-computed nextLabel/
+                // nextTimestamp directly, which went stale the moment that
+                // prayer's time passed and the app wasn't reopened.
+                var chosenLabel = data.optString("nextLabel", "—")
+                var chosenTimestamp = data.optLong("nextTimestamp", 0L)
+                if (rows != null) {
+                    for (i in 0 until rows.length()) {
+                        val row = rows.getJSONObject(i)
+                        val ts = row.optLong("timestamp", 0L)
+                        if (ts > nowWall) {
+                            chosenLabel = row.optString("label", chosenLabel)
+                            chosenTimestamp = ts
+                            break
+                        }
+                    }
+                    // All of today's listed prayers have passed — fall back
+                    // to tomorrow's Fajr if the app provided it.
+                    val allPassed = (0 until rows.length()).all {
+                        rows.getJSONObject(it).optLong("timestamp", 0L) <= nowWall
+                    }
+                    if (allPassed) {
+                        val tmrFajrTs = data.optLong("tomorrowFajrTimestamp", 0L)
+                        if (tmrFajrTs > 0) {
+                            chosenLabel = "Fajr"
+                            chosenTimestamp = tmrFajrTs
+                        }
+                    }
+                }
+
+                views.setTextViewText(R.id.next_label, chosenLabel)
+                views.setTextViewText(R.id.countdown_label, "Time until $chosenLabel")
+                if (rows != null) {
+                    for (i in 0 until rows.length()) {
+                        val row = rows.getJSONObject(i)
+                        if (row.optString("label", "") == chosenLabel) {
+                            views.setTextViewText(R.id.next_time, row.optString("time", "--:--"))
+                        }
+                    }
+                }
+                val nextTimestamp = chosenTimestamp
                 if (nextTimestamp > 0) {
                     // Chronometer ticks on its own once configured — no
                     // repeated app-triggered updates needed (and Android
@@ -190,7 +229,6 @@ class SalahWidgetProvider : AppWidgetProvider() {
                     // discrepancies between when JS computed "now" and when
                     // this code actually executes.
                     val nowElapsed = SystemClock.elapsedRealtime()
-                    val nowWall = System.currentTimeMillis()
                     var base = nowElapsed + (nextTimestamp - nowWall)
                     if (base <= nowElapsed) {
                         base = nowElapsed + 1000L
@@ -232,8 +270,16 @@ class SalahWidgetProvider : AppWidgetProvider() {
                             views.addView(R.id.rows_container, rowView)
                         }
                     }
-                    val nextIndex = data.optInt("nextIndex", -1)
-                    views.setImageViewBitmap(R.id.arc_image, drawArcBitmap(nextIndex, widthPx, arcHeightPx))
+                    var recomputedIndex = -1
+                    if (rows != null) {
+                        for (i in 0 until rows.length()) {
+                            if (rows.getJSONObject(i).optString("label", "") == chosenLabel) {
+                                recomputedIndex = i
+                                break
+                            }
+                        }
+                    }
+                    views.setImageViewBitmap(R.id.arc_image, drawArcBitmap(recomputedIndex, widthPx, arcHeightPx))
                 }
             } catch (e: Exception) {
                 views.setTextViewText(R.id.next_label, "SalahSync")

@@ -305,12 +305,25 @@ export default function DhikrScreen() {
     Haptics.selectionAsync();
   };
 
-  // Swipe-up gesture, in addition to tap, also advances one bead.
+  // PanResponder's callbacks are created once (via useRef) and would
+  // otherwise always see stale state — using a ref that's kept current via
+  // effect lets the swipe gesture correctly check "is any overlay open
+  // right now" without recreating the responder every render.
+  const overlayOpenRef = useRef(false);
+  useEffect(() => {
+    overlayOpenRef.current = showTotals || showStylePicker || showTargetPicker;
+  }, [showTotals, showStylePicker, showTargetPicker]);
+
+  // Swipe-up gesture, in addition to tap, also advances one bead. Disabled
+  // while any modal/picker is open — otherwise it can compete with (and
+  // sometimes win over) a slow scroll drag inside those overlays, making
+  // the scroll feel unresponsive to anything but fast flicks.
   const panResponder = useRef(
     PanResponder.create({
-      onMoveShouldSetPanResponder: (_evt, gesture) => Math.abs(gesture.dy) > 12 && gesture.dy < 0,
+      onMoveShouldSetPanResponder: (_evt, gesture) =>
+        !overlayOpenRef.current && Math.abs(gesture.dy) > 12 && gesture.dy < 0,
       onPanResponderRelease: (_evt, gesture) => {
-        if (gesture.dy < -12) advanceOneBead();
+        if (!overlayOpenRef.current && gesture.dy < -12) advanceOneBead();
       },
     }),
   ).current;
@@ -526,9 +539,10 @@ export default function DhikrScreen() {
         onRequestClose={() => setShowTotals(false)}
       >
         <Pressable style={styles.modalBackdrop} onPress={() => setShowTotals(false)}>
-          <Pressable
+          <View
             style={[styles.modalSheet, { backgroundColor: colors.surface, paddingBottom: insets.bottom + SPACING.lg }]}
-            onPress={() => {}}
+            onStartShouldSetResponder={() => true}
+            onResponderTerminationRequest={() => false}
           >
             <View style={styles.modalHandle} />
             <Text style={[styles.modalTitle, { color: colors.onSurface }]}>Lifetime Totals</Text>
@@ -548,7 +562,7 @@ export default function DhikrScreen() {
                 </View>
               ))}
             </ScrollView>
-          </Pressable>
+          </View>
         </Pressable>
       </Modal>
     </View>

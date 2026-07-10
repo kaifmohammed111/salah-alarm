@@ -94,10 +94,28 @@ export default function HomeScreen() {
     if (!isToday || !viewRow) return;
     // Always send the full 6-prayer set to the widget, regardless of the
     // in-app "show sunrise" setting — keeps the widget's layout consistent.
-    const rows = PRAYER_ORDER.map((k) => ({
-      label: PRAYER_LABELS[k],
-      time: k === "sunrise" ? formatTime(viewRow.sunrise, settings.is24h) : formatTime(startJamaat(viewRow, k).start, settings.is24h),
-    }));
+    // Each row carries its own timestamp so the native widget can work out
+    // "next prayer" on its own between app opens, rather than relying
+    // solely on whatever was true at the moment this effect last ran.
+    const rows = PRAYER_ORDER.map((k) => {
+      const timeStr = k === "sunrise" ? viewRow.sunrise : startJamaat(viewRow, k).start;
+      const rowDate = timeToDate(timeStr || "", now);
+      return {
+        label: PRAYER_LABELS[k],
+        time: formatTime(timeStr || "", settings.is24h),
+        timestamp: rowDate ? rowDate.getTime() : 0,
+      };
+    });
+
+    // Computed regardless of branch below — needed either way now that
+    // it's always part of the payload, so the widget has it on hand for
+    // when today's prayers eventually run out between app opens.
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowRow = findTodayRow(timetable, tomorrow);
+    const tomorrowFajrTime = tomorrowRow?.fajr?.start;
+    const tomorrowFajrDate = tomorrowFajrTime ? timeToDate(tomorrowFajrTime, tomorrow) : null;
+    const tomorrowFajrTimestamp = tomorrowFajrDate ? tomorrowFajrDate.getTime() : 0;
 
     if (next) {
       const nextIndex = PRAYER_ORDER.indexOf(next.key);
@@ -108,22 +126,19 @@ export default function HomeScreen() {
         rows,
         nextIndex,
         settings.widgetStyle,
+        tomorrowFajrTimestamp,
       );
     } else {
       // All of today's prayers have passed — fall back to showing
       // tomorrow's Fajr rather than a blank placeholder.
-      const tomorrow = new Date(now);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const tomorrowRow = findTodayRow(timetable, tomorrow);
-      const fajrTime = tomorrowRow?.fajr?.start;
-      const fajrDate = fajrTime ? timeToDate(fajrTime, tomorrow) : null;
       updateWidget(
         "Fajr",
-        fajrTime ? formatTime(fajrTime, settings.is24h) : "--:--",
-        fajrDate ? fajrDate.getTime() : 0,
+        tomorrowFajrTime ? formatTime(tomorrowFajrTime, settings.is24h) : "--:--",
+        tomorrowFajrTimestamp,
         rows,
         0,
         settings.widgetStyle,
+        tomorrowFajrTimestamp,
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
