@@ -173,16 +173,35 @@ class SalahWidgetProvider : AppWidgetProvider() {
                 views.setTextViewText(R.id.countdown_label, "Time until $nextLabelText")
                 val rows = data.optJSONArray("rows")
                 val nextTimestamp = data.optLong("nextTimestamp", 0L)
+                android.util.Log.d("SalahWidget", "raw json: $json")
+                android.util.Log.d("SalahWidget", "parsed nextTimestamp: $nextTimestamp")
                 if (nextTimestamp > 0) {
                     // Chronometer ticks on its own once configured — no
                     // repeated app-triggered updates needed (and Android
                     // widgets shouldn't be updated at high frequency anyway).
                     // base must be in SystemClock.elapsedRealtime() terms,
                     // not wall-clock time, hence the conversion below.
+                    //
+                    // Chronometer prepends a "-" only when the computed
+                    // remaining duration is genuinely negative (base already
+                    // in the past by the time it renders). Clamping here
+                    // guarantees base is always comfortably in the future,
+                    // eliminating that edge case regardless of small timing
+                    // discrepancies between when JS computed "now" and when
+                    // this code actually executes.
                     val nowElapsed = SystemClock.elapsedRealtime()
                     val nowWall = System.currentTimeMillis()
-                    val base = nowElapsed + (nextTimestamp - nowWall)
+                    var base = nowElapsed + (nextTimestamp - nowWall)
+                    if (base <= nowElapsed) {
+                        base = nowElapsed + 1000L
+                    }
                     views.setChronometer(R.id.countdown, base, "%s", true)
+                    // The combined 4-arg setChronometer() above doesn't
+                    // always reliably apply the count-down direction on all
+                    // devices — some show a stray leading "-" despite
+                    // isCountDown=true. Calling the dedicated method too is
+                    // a known, documented workaround for this.
+                    views.setChronometerCountDown(R.id.countdown, true)
                 } else {
                     views.setTextViewText(R.id.countdown, "--:--:--")
                 }

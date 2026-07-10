@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from "react";
-import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Dimensions, Modal, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -16,69 +16,75 @@ import Animated, {
 import { useApp } from "@/src/context/AppContext";
 import { FONTS, RADIUS, SPACING } from "@/src/theme";
 import { DHIKR_LIST } from "@/src/lib/dhikr";
+import { storage } from "@/src/utils/storage";
+
+const K_DHIKR_TOTALS = "dhikr.totals";
 
 type BeadStyle = {
   id: string;
   name: string;
-  colors: [string, string];
+  colors: [string, string, string];
   ring: string;
 };
 
+// Three-stop gradients (light → mid → dark) for a richer glossy 3D look.
 const BEAD_STYLES: BeadStyle[] = [
-  { id: "wood", name: "Wood", colors: ["#8B5E3C", "#4E3320"], ring: "#3A2416" },
-  { id: "pearl", name: "Pearl", colors: ["#E8E8EC", "#8B8D93"], ring: "#6B6D73" },
-  { id: "onyx", name: "Onyx", colors: ["#4A4A4E", "#0E0E10"], ring: "#000000" },
-  { id: "emerald", name: "Emerald", colors: ["#3FBF8F", "#0B5C41"], ring: "#083D2B" },
-  { id: "sapphire", name: "Sapphire", colors: ["#5B8DEF", "#1A3B8C"], ring: "#122A63" },
-  { id: "gold", name: "Gold", colors: ["#F5D46B", "#B8860B"], ring: "#8A650A" },
+  { id: "wood", name: "Wood", colors: ["#B9895B", "#8B5E3C", "#3E2A16"], ring: "#2A1B0E" },
+  { id: "pearl", name: "Pearl", colors: ["#FFFFFF", "#D7D9DE", "#84878E"], ring: "#5C5F66" },
+  { id: "onyx", name: "Onyx", colors: ["#6E6E73", "#3A3A3E", "#050505"], ring: "#000000" },
+  { id: "emerald", name: "Emerald", colors: ["#6EE0B0", "#3FBF8F", "#0A4632"], ring: "#062E20" },
+  { id: "sapphire", name: "Sapphire", colors: ["#8CADF5", "#5B8DEF", "#132C6B"], ring: "#0D1E49" },
+  { id: "gold", name: "Gold", colors: ["#FCE9A8", "#F5D46B", "#8A650A"], ring: "#6B4E06" },
 ];
 
 const MAX_VISUAL_BEADS = 33;
 const SCREEN_WIDTH = Dimensions.get("window").width;
-const STRING_HEIGHT = 90;
-const STRING_PADDING = SPACING.xl * 2;
-const AVAILABLE_WIDTH = SCREEN_WIDTH - STRING_PADDING;
-const PATH_SAMPLES = 160;
-const OVERSHOOT = 8; // px equivalent along the path
+const LOOP_WIDTH = SCREEN_WIDTH - SPACING.xl * 2;
+const LOOP_HEIGHT = 170;
+const PATH_SAMPLES = 240;
+const OVERSHOOT_FRACTION = 0.05; // 5% overshoot before settling
+const BEAD_SIZE_MAX = 26;
+const BEAD_SIZE_MIN = 16;
+const GAP_FRACTION = 0.11; // fraction of the oval's perimeter left open at the bottom
 
-// ---- Cubic Bézier + arc-length lookup table (manual PathMeasure equivalent) ----
-// React Native has no native Path/PathMeasure like Compose does, so we sample
-// the curve into a distance→point lookup table ourselves. Beads are then
-// positioned by DISTANCE ALONG THE PATH (via this table), never by
-// interpolating raw x/y directly — matching how a real PathMeasure-driven
-// animation works.
-function bezierPoint(t: number, p0: number, p1: number, p2: number, p3: number) {
-  const mt = 1 - t;
-  return mt * mt * mt * p0 + 3 * mt * mt * t * p1 + 3 * mt * t * t * p2 + t * t * t * p3;
-}
+// ---- Oval loop with a bottom gap, sampled into a distance→point table ----
+// (manual PathMeasure equivalent — React Native has no native Path API).
+// The loop is an ellipse traced from just past the gap, all the way around,
+// stopping just before the gap on the other side — beads only ever occupy
+// the traced portion, never the gap itself.
+function buildLoopTable(width: number, height: number) {
+  const cx = width / 2;
+  const cy = height / 2;
+  const rx = width / 2 - BEAD_SIZE_MAX / 2;
+  const ry = height / 2 - BEAD_SIZE_MAX / 2;
 
-function buildPathTable(width: number, height: number) {
-  // Gentle draped-string arch, matching how a held tasbih naturally curves.
-  const P0 = { x: 0, y: height * 0.62 };
-  const P1 = { x: width * 0.25, y: height * 0.02 };
-  const P2 = { x: width * 0.75, y: height * 0.02 };
-  const P3 = { x: width, y: height * 0.62 };
+  // Angle 90° (straight down) is the bottom center, where the gap sits.
+  const gapAngle = (GAP_FRACTION * Math.PI * 2) / 2; // half-gap, in radians
+  const startAngle = Math.PI / 2 + gapAngle;
+  const endAngle = Math.PI / 2 + Math.PI * 2 - gapAngle;
 
   const samples: { x: number; y: number; dist: number }[] = [];
   let cumulative = 0;
-  let prev = { x: P0.x, y: P0.y };
+  let prev: { x: number; y: number } | null = null;
   for (let i = 0; i <= PATH_SAMPLES; i++) {
     const t = i / PATH_SAMPLES;
-    const x = bezierPoint(t, P0.x, P1.x, P2.x, P3.x);
-    const y = bezierPoint(t, P0.y, P1.y, P2.y, P3.y);
-    if (i > 0) cumulative += Math.hypot(x - prev.x, y - prev.y);
+    const angle = startAngle + (endAngle - startAngle) * t;
+    const x = cx + rx * Math.cos(angle);
+    const y = cy + ry * Math.sin(angle);
+    if (prev) cumulative += Math.hypot(x - prev.x, y - prev.y);
     samples.push({ x, y, dist: cumulative });
     prev = { x, y };
   }
   return { samples, totalLength: cumulative };
 }
 
-// Worklet-safe: given a distance along the path, find the (x,y) point via
-// the lookup table, linearly interpolating between the two nearest samples.
+// Worklet-safe distance→point lookup. Unlike the closed-loop wraparound
+// used for a straight string, this path is OPEN (the gap never gets
+// traced), so distance simply clamps at the ends rather than wrapping —
+// beads slide up to the gap and no beads ever appear inside it.
 function pointAtDistance(samples: { x: number; y: number; dist: number }[], totalLength: number, distance: number) {
   "worklet";
-  let d = distance % totalLength;
-  if (d < 0) d += totalLength;
+  const d = Math.max(0, Math.min(totalLength, distance));
 
   let lo = 0;
   let hi = samples.length - 1;
@@ -94,9 +100,9 @@ function pointAtDistance(samples: { x: number; y: number; dist: number }[], tota
   return { x: a.x + (b.x - a.x) * f, y: a.y + (b.y - a.y) * f };
 }
 
-// A single bead: perfectly circular, no rotation/stretch, subtle metallic
-// sheen via a small specular highlight dot. Position derives purely from
-// the shared `offset` distance value — never animated as raw x/y.
+// A single bead: large, glossy, layered shading for a premium 3D look —
+// drop shadow, base gradient (light upper-left → dark lower-right), and a
+// specular highlight. No rotation/stretch, ever.
 function TasbihBead({
   beadIndex,
   spacing,
@@ -113,11 +119,11 @@ function TasbihBead({
   samples: { x: number; y: number; dist: number }[];
   totalLength: number;
   size: number;
-  colors: [string, string];
+  colors: [string, string, string];
   ring: string;
 }) {
   const animatedStyle = useAnimatedStyle(() => {
-    const d = beadIndex * spacing - offset.value;
+    const d = beadIndex * spacing + offset.value;
     const p = pointAtDistance(samples, totalLength, d);
     return {
       transform: [{ translateX: p.x - size / 2 }, { translateY: p.y - size / 2 }],
@@ -126,22 +132,35 @@ function TasbihBead({
 
   return (
     <Animated.View style={[{ position: "absolute", width: size, height: size }, animatedStyle]}>
-      <LinearGradient
-        colors={colors}
-        start={{ x: 0.25, y: 0.2 }}
-        end={{ x: 0.8, y: 1 }}
-        style={{ width: size, height: size, borderRadius: size / 2, borderWidth: 1, borderColor: ring }}
-      />
-      {/* Specular highlight for a subtle metallic look */}
+      {/* Drop shadow beneath the bead */}
       <View
         style={{
           position: "absolute",
-          top: size * 0.16,
-          left: size * 0.2,
-          width: size * 0.28,
-          height: size * 0.2,
-          borderRadius: size * 0.14,
-          backgroundColor: "rgba(255,255,255,0.55)",
+          top: size * 0.18,
+          left: size * 0.06,
+          width: size * 0.94,
+          height: size * 0.94,
+          borderRadius: size / 2,
+          backgroundColor: "rgba(0,0,0,0.35)",
+        }}
+      />
+      {/* Base gradient: light upper-left to dark lower-right */}
+      <LinearGradient
+        colors={colors}
+        start={{ x: 0.18, y: 0.15 }}
+        end={{ x: 0.9, y: 1 }}
+        style={{ width: size, height: size, borderRadius: size / 2, borderWidth: 1, borderColor: ring }}
+      />
+      {/* Glossy specular highlight, upper-left */}
+      <View
+        style={{
+          position: "absolute",
+          top: size * 0.14,
+          left: size * 0.18,
+          width: size * 0.32,
+          height: size * 0.22,
+          borderRadius: size * 0.16,
+          backgroundColor: "rgba(255,255,255,0.65)",
         }}
       />
     </Animated.View>
@@ -164,20 +183,24 @@ export default function DhikrScreen() {
   const target = targetOverride ?? item.target;
   const beadStyle = BEAD_STYLES[beadStyleIdx];
   const totalBeads = Math.min(target, MAX_VISUAL_BEADS);
-  const beadSize = Math.max(16, Math.min(28, Math.floor(AVAILABLE_WIDTH / totalBeads) - 2));
 
-  const progress = Math.min(count / target, 1);
-
-  const { samples, totalLength } = useMemo(
-    () => buildPathTable(AVAILABLE_WIDTH, STRING_HEIGHT),
-    [],
+  const { samples, totalLength } = useMemo(() => buildLoopTable(LOOP_WIDTH, LOOP_HEIGHT), []);
+  // Beads are sized so the full set fits along the traced (non-gap) length
+  // with a touch of breathing room, clamped to a sensible large/premium range.
+  const beadSize = Math.max(
+    BEAD_SIZE_MIN,
+    Math.min(BEAD_SIZE_MAX, Math.floor(totalLength / totalBeads) - 4),
   );
   const spacing = totalLength / totalBeads;
+  const maxOffset = totalLength - (totalBeads - 1) * spacing; // clamps sliding at the far end
 
-  // Static thread — the string never moves, only the beads slide along it.
+  const progressPct = Math.min(count / target, 1);
+
+  // Static thread — traced from the same samples, so it always matches the
+  // beads' path exactly and never covers the gap.
   const threadSegments = useMemo(() => {
     const segs: { x: number; y: number; length: number; angle: number }[] = [];
-    const step = Math.max(1, Math.floor(PATH_SAMPLES / 60));
+    const step = Math.max(1, Math.floor(PATH_SAMPLES / 90));
     for (let i = 0; i < samples.length - step; i += step) {
       const a = samples[i];
       const b = samples[i + step] ?? samples[samples.length - 1];
@@ -193,12 +216,27 @@ export default function DhikrScreen() {
     return segs;
   }, [samples]);
 
-  // The necklace's overall slide distance. Monotonically increases (never
-  // snapped back to 0 on lap completion) — the lookup table's modulo
-  // wrapping handles the visual cycling automatically, which is also more
-  // physically honest: a real tasbih string doesn't "reset," it just keeps
-  // moving through your fingers.
+  // Slide distance along the (open, gapped) loop. Clamps at both ends rather
+  // than wrapping, since the gap means this isn't a true closed circuit —
+  // beads travel up to the gap and stop, matching a real Tasbih's two ends.
   const offset = useSharedValue(0);
+  const isAnimating = useRef(false);
+
+  // Lifetime totals per phrase — persisted, and deliberately NEVER touched
+  // by the session Reset button. Only ever increases.
+  const [totals, setTotals] = useState<Record<string, number>>({});
+  const [showTotals, setShowTotals] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const raw = await storage.getItem(K_DHIKR_TOTALS, "");
+      if (raw) {
+        try {
+          setTotals(JSON.parse(raw));
+        } catch {}
+      }
+    })();
+  }, []);
 
   const selectItem = (i: number) => {
     setIndex(i);
@@ -206,27 +244,42 @@ export default function DhikrScreen() {
     setHitTarget(false);
     setTargetOverride(null);
     offset.value = 0;
+    isAnimating.current = false;
     Haptics.selectionAsync();
   };
 
-  const increment = () => {
+  const advanceOneBead = () => {
+    // Guards against overlapping animations from rapid taps/swipes.
+    if (isAnimating.current) return;
+    isAnimating.current = true;
+
     const next = count + 1;
     setCount(next);
 
+    setTotals((prev) => {
+      const updated = { ...prev, [item.id]: (prev[item.id] ?? 0) + 1 };
+      storage.setItem(K_DHIKR_TOTALS, JSON.stringify(updated));
+      return updated;
+    });
+
     const base = offset.value;
-    const target1 = base + spacing;
-    // Overshoot past the target then settle back — imitates the momentum
-    // of physically pushed prayer beads rather than a mechanical stop.
+    const targetOffset = Math.min(maxOffset, base + spacing);
+    const overshoot = spacing * OVERSHOOT_FRACTION;
+
     offset.value = withSequence(
-      withTiming(target1 + OVERSHOOT, {
-        duration: 260,
-        easing: Easing.out(Easing.cubic),
+      withTiming(Math.min(maxOffset, targetOffset + overshoot), {
+        duration: 240,
+        easing: Easing.out(Easing.cubic), // FastOutSlowIn equivalent
       }),
-      withTiming(target1, {
-        duration: 90,
+      withTiming(targetOffset, {
+        duration: 80,
         easing: Easing.inOut(Easing.ease),
       }),
     );
+    // Release the guard once the settle animation should be done.
+    setTimeout(() => {
+      isAnimating.current = false;
+    }, 340);
 
     if (next === target) {
       setHitTarget(true);
@@ -234,14 +287,33 @@ export default function DhikrScreen() {
     } else if (vibrationOn) {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
+
+    // Once the loop is exhausted (reached the far end at the gap), reset
+    // for the next lap after the current animation settles.
+    if (base + spacing >= maxOffset - 0.01) {
+      setTimeout(() => {
+        offset.value = 0;
+      }, 360);
+    }
   };
 
   const reset = () => {
     setCount(0);
     setHitTarget(false);
+    isAnimating.current = false;
     offset.value = withTiming(0, { duration: 300, easing: Easing.inOut(Easing.ease) });
     Haptics.selectionAsync();
   };
+
+  // Swipe-up gesture, in addition to tap, also advances one bead.
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_evt, gesture) => Math.abs(gesture.dy) > 12 && gesture.dy < 0,
+      onPanResponderRelease: (_evt, gesture) => {
+        if (gesture.dy < -12) advanceOneBead();
+      },
+    }),
+  ).current;
 
   return (
     <View style={[styles.root, { backgroundColor: colors.surfaceSecondary }]}>
@@ -253,7 +325,7 @@ export default function DhikrScreen() {
       >
         <Text style={[styles.title, { color: colors.onSurface }]}>Dhikr Counter</Text>
         <Text style={[styles.subtitle, { color: colors.onSurfaceTertiary }]}>
-          Tap anywhere below to count
+          Tap or swipe up to count
         </Text>
       </View>
 
@@ -283,7 +355,7 @@ export default function DhikrScreen() {
         })}
       </ScrollView>
 
-      <Pressable testID="dhikr-tap-zone" onPress={increment} style={{ flex: 1 }}>
+      <Pressable testID="dhikr-tap-zone" onPress={advanceOneBead} style={{ flex: 1 }} {...panResponder.panHandlers}>
         <View style={styles.body}>
           <View style={styles.countRow}>
             <Text style={[styles.countBig, { color: hitTarget ? colors.success : colors.brand }]} testID="dhikr-count">
@@ -293,7 +365,7 @@ export default function DhikrScreen() {
               <Text style={[styles.countTarget, { color: colors.onSurfaceTertiary }]}>/ {target}</Text>
             </Pressable>
           </View>
-          <Text style={[styles.totalText, { color: colors.onSurfaceTertiary }]}>Tap anywhere to count</Text>
+          <Text style={[styles.totalText, { color: colors.onSurfaceTertiary }]}>Tap or swipe up to count</Text>
 
           {showTargetPicker ? (
             <View style={styles.targetPickerRow} testID="dhikr-target-picker">
@@ -336,8 +408,8 @@ export default function DhikrScreen() {
             </View>
           ) : null}
 
-          {/* Bead string — static thread first, then sliding beads on top */}
-          <View style={[styles.beadStringWrap, { width: AVAILABLE_WIDTH, height: STRING_HEIGHT }]} testID="bead-string">
+          {/* Oval Tasbih loop — thread first (with a gap), beads on top */}
+          <View style={[styles.loopWrap, { width: LOOP_WIDTH, height: LOOP_HEIGHT }]} testID="bead-string">
             {threadSegments.map((seg, i) => (
               <View
                 key={`thread-${i}`}
@@ -372,7 +444,7 @@ export default function DhikrScreen() {
             <View
               style={[
                 styles.progressFill,
-                { width: `${progress * 100}%`, backgroundColor: hitTarget ? colors.success : colors.brand },
+                { width: `${progressPct * 100}%`, backgroundColor: hitTarget ? colors.success : colors.brand },
               ]}
             />
           </View>
@@ -441,8 +513,44 @@ export default function DhikrScreen() {
           <Pressable testID="dhikr-reset-btn" onPress={reset} style={styles.controlBtn}>
             <Ionicons name="refresh" size={20} color={colors.muted} />
           </Pressable>
+          <Pressable testID="dhikr-totals-btn" onPress={() => setShowTotals(true)} style={styles.controlBtn}>
+            <Ionicons name="stats-chart-outline" size={20} color={colors.brand} />
+          </Pressable>
         </View>
       </View>
+
+      <Modal
+        visible={showTotals}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowTotals(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setShowTotals(false)}>
+          <Pressable
+            style={[styles.modalSheet, { backgroundColor: colors.surface, paddingBottom: insets.bottom + SPACING.lg }]}
+            onPress={() => {}}
+          >
+            <View style={styles.modalHandle} />
+            <Text style={[styles.modalTitle, { color: colors.onSurface }]}>Lifetime Totals</Text>
+            <Text style={[styles.modalSub, { color: colors.onSurfaceTertiary }]}>
+              All-time counts, unaffected by the session Reset button
+            </Text>
+            <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
+              {DHIKR_LIST.map((d) => (
+                <View key={d.id} testID={`totals-row-${d.id}`} style={[styles.totalsRow, { borderBottomColor: colors.divider }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.totalsArabic, { color: colors.onSurface }]}>{d.arabic}</Text>
+                    <Text style={[styles.totalsLabel, { color: colors.onSurfaceTertiary }]}>{d.transliteration}</Text>
+                  </View>
+                  <Text style={[styles.totalsCount, { color: colors.brand }]}>
+                    {(totals[d.id] ?? 0).toLocaleString()}
+                  </Text>
+                </View>
+              ))}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -457,13 +565,13 @@ const styles = StyleSheet.create({
   chipText: { fontFamily: FONTS.semibold, fontSize: 13 },
   body: { alignItems: "center", padding: SPACING.xl },
   countRow: { flexDirection: "row", alignItems: "flex-end", gap: 6, marginTop: SPACING.md },
-  countBig: { fontFamily: FONTS.bold, fontSize: 92 },
-  countTarget: { fontFamily: FONTS.bold, fontSize: 30, marginBottom: 16 },
-  totalText: { fontFamily: FONTS.regular, fontSize: 12, marginTop: 2, marginBottom: SPACING.xl },
+  countBig: { fontFamily: FONTS.bold, fontSize: 80 },
+  countTarget: { fontFamily: FONTS.bold, fontSize: 28, marginBottom: 14 },
+  totalText: { fontFamily: FONTS.regular, fontSize: 12, marginTop: 2, marginBottom: SPACING.lg },
   targetPickerRow: { flexDirection: "row", gap: SPACING.sm, marginBottom: SPACING.lg },
   targetChip: { paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm, borderRadius: RADIUS.pill, borderWidth: StyleSheet.hairlineWidth },
   targetChipText: { fontFamily: FONTS.semibold, fontSize: 13 },
-  beadStringWrap: { position: "relative" },
+  loopWrap: { position: "relative" },
   thread: { position: "absolute", height: 2, borderRadius: 1 },
   progressTrack: {
     width: "100%",
@@ -491,4 +599,30 @@ const styles = StyleSheet.create({
   styleSwatchRow: { flexDirection: "row", justifyContent: "center", gap: SPACING.md, paddingBottom: SPACING.md },
   swatchWrap: { alignItems: "center" },
   swatch: { width: 36, height: 36, borderRadius: 18 },
+  modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
+  modalSheet: {
+    borderTopLeftRadius: RADIUS.lg,
+    borderTopRightRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.xl,
+    paddingTop: SPACING.md,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(120,120,120,0.4)",
+    alignSelf: "center",
+    marginBottom: SPACING.md,
+  },
+  modalTitle: { fontFamily: FONTS.bold, fontSize: 18 },
+  modalSub: { fontFamily: FONTS.regular, fontSize: 12, marginTop: 2, marginBottom: SPACING.md },
+  totalsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: SPACING.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  totalsArabic: { fontSize: 20, textAlign: "right" },
+  totalsLabel: { fontFamily: FONTS.medium, fontSize: 13, marginTop: 2 },
+  totalsCount: { fontFamily: FONTS.bold, fontSize: 20, marginLeft: SPACING.md },
 });
