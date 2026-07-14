@@ -28,7 +28,7 @@ const ALARM_BG_OPTIONS: { id: string; label: string; colors: [string, string, st
 // settings screens that can't be reliably deep-linked into from a standard
 // Android intent. We show manual instructions for these brands.
 const OEM_INSTRUCTIONS: Record<string, string> = {
-  vivo: "On Vivo phones: after tapping above, also go to Settings → Battery → Background power consumption management → SalahSync → Allow background power usage.",
+  vivo: "On Vivo phones: after tapping above, also go to Settings → Battery → Background power consumption management → SalahSync → Allow background power usage. Also go to Settings → More Settings → Permissions → Autostart → enable SalahSync, so alarms can recover automatically after a phone restart.",
   oppo: "On Oppo phones: after tapping above, also go to Settings → Battery → App Battery Management → SalahSync → Allow background activity.",
   xiaomi: "On Xiaomi/Redmi phones: after tapping above, also go to Settings → Apps → SalahSync → Battery saver → No restrictions, and enable Autostart.",
   realme: "On Realme phones: after tapping above, also go to Settings → Battery → App Battery Management → SalahSync → Allow background activity.",

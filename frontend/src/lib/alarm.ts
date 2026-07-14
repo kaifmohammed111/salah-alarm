@@ -1,4 +1,4 @@
-import { Platform } from "react-native";
+import { NativeModules, Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import {
@@ -331,6 +331,12 @@ export function registerBackgroundAlarmHandler(): void {
         await AsyncStorage.setItem(PENDING_ALARM_KEY, JSON.stringify(d));
         console.log("BACKGROUND EVENT: wrote pending alarm to storage");
       }
+      // Refresh the home screen widget right as the alarm fires, rather
+      // than waiting on Android's own ~30min periodic widget refresh floor.
+      // Uses whatever's already cached — no new data needed here.
+      try {
+        NativeModules.WidgetModule?.refreshWidget();
+      } catch {}
     } catch (e) {
       console.log("BACKGROUND EVENT ERROR:", e);
     }

@@ -326,6 +326,24 @@ class WidgetModule(reactContext: ReactApplicationContext) :
             SalahWidgetProvider.updateWidget(context, appWidgetManager, id)
         }
     }
+
+    // Re-runs the widget update using whatever is ALREADY cached in
+    // SharedPreferences — no new data needed. Since the widget's own update
+    // logic already recomputes "next prayer" fresh from the stored rows'
+    // timestamps each time it runs, calling this at precisely the moment an
+    // alarm fires (see registerBackgroundAlarmHandler in src/lib/alarm.ts)
+    // gets the widget refreshed right when a prayer transition happens,
+    // rather than waiting on Android's own ~30min periodic refresh floor.
+    @ReactMethod
+    fun refreshWidget() {
+        val context = reactApplicationContext
+        val appWidgetManager = AppWidgetManager.getInstance(context)
+        val componentName = ComponentName(context, SalahWidgetProvider::class.java)
+        val widgetIds = appWidgetManager.getAppWidgetIds(componentName)
+        for (id in widgetIds) {
+            SalahWidgetProvider.updateWidget(context, appWidgetManager, id)
+        }
+    }
 }
 `;
 
