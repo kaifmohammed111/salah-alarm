@@ -97,12 +97,28 @@ export default function HomeScreen() {
     // Each row carries its own timestamp so the native widget can work out
     // "next prayer" on its own between app opens, rather than relying
     // solely on whatever was true at the moment this effect last ran.
+    //
+    // FIX: each row's timestamp must respect settings.countdownAnchor
+    // (start vs. jamaat), same as the in-app countdown does via
+    // nextPrayerInfo(). This was previously hardcoded to `.start` for
+    // every row, so toggling the setting never changed what the widget
+    // displayed. Falls back to `.start` if a jamaat time isn't set for
+    // that prayer, so the widget never silently gets a missing timestamp.
     const rows = PRAYER_ORDER.map((k) => {
-      const timeStr = k === "sunrise" ? viewRow.sunrise : startJamaat(viewRow, k).start;
-      const rowDate = timeToDate(timeStr || "", now);
+      if (k === "sunrise") {
+        const rowDate = timeToDate(viewRow.sunrise || "", now);
+        return {
+          label: PRAYER_LABELS[k],
+          time: formatTime(viewRow.sunrise || "", settings.is24h),
+          timestamp: rowDate ? rowDate.getTime() : 0,
+        };
+      }
+      const sj = startJamaat(viewRow, k);
+      const anchorTimeStr = settings.countdownAnchor === "jamaat" ? sj.jamaat || sj.start : sj.start;
+      const rowDate = timeToDate(anchorTimeStr || "", now);
       return {
         label: PRAYER_LABELS[k],
-        time: formatTime(timeStr || "", settings.is24h),
+        time: formatTime(anchorTimeStr || "", settings.is24h),
         timestamp: rowDate ? rowDate.getTime() : 0,
       };
     });
@@ -141,8 +157,12 @@ export default function HomeScreen() {
         tomorrowFajrTimestamp,
       );
     }
+    // FIX: settings.countdownAnchor was missing here, so even a correct
+    // row-timestamp fix above would not re-push to the widget when the
+    // user toggled start/jamaat in Settings — the effect simply wouldn't
+    // re-run until something else in this list changed.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isToday, viewRow, next?.key, settings.is24h, settings.widgetStyle]);
+  }, [isToday, viewRow, next?.key, settings.is24h, settings.widgetStyle, settings.countdownAnchor]);
 
   const dateStr = viewDate.toLocaleDateString(undefined, {
     weekday: "long",
@@ -165,7 +185,7 @@ export default function HomeScreen() {
           <View style={[styles.quoteWrap, { top: insets.top + SPACING.md }]}>
             <Animated.View key={qi} entering={FadeIn.duration(700)} testID="home-quote">
               <Ionicons name="book-outline" size={16} color="rgba(255,255,255,0.7)" />
-              <Text style={styles.quoteText}>“{quote.text}”</Text>
+              <Text style={styles.quoteText}>"{quote.text}"</Text>
               <Text style={styles.quoteSource}>— {quote.source}</Text>
             </Animated.View>
 
@@ -216,7 +236,7 @@ export default function HomeScreen() {
             >
               <Ionicons name="calendar-outline" size={20} color={colors.brand} />
               <Text style={[styles.bannerText, { color: colors.onBrandTertiary }]}>
-                Please upload next month’s prayer timetable.
+                Please upload next month's prayer timetable.
               </Text>
             </Pressable>
           ) : null}
@@ -228,7 +248,7 @@ export default function HomeScreen() {
               </View>
               <Text style={[styles.emptyTitle, { color: colors.onSurface }]}>No timetable yet</Text>
               <Text style={[styles.emptySub, { color: colors.onSurfaceTertiary }]}>
-                Upload your mosque’s monthly prayer timetable to auto-schedule daily alarms.
+                Upload your mosque's monthly prayer timetable to auto-schedule daily alarms.
               </Text>
               <Pressable
                 testID="empty-upload-btn"
@@ -244,7 +264,7 @@ export default function HomeScreen() {
             <>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>
-                  {isToday ? "Today’s Prayers" : dateStr}
+                  {isToday ? "Today's Prayers" : dateStr}
                 </Text>
                 {!isToday ? (
                   <Pressable
@@ -261,7 +281,7 @@ export default function HomeScreen() {
                 <View style={[styles.noRow, { backgroundColor: colors.surfaceSecondary }]}>
                   <Ionicons name="information-circle-outline" size={20} color={colors.muted} />
                   <Text style={[styles.noRowText, { color: colors.onSurfaceTertiary }]}>
-                    No timings stored for this date. Import that month’s timetable.
+                    No timings stored for this date. Import that month's timetable.
                   </Text>
                 </View>
               ) : (
