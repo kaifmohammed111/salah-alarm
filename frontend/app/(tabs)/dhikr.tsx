@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Dimensions, Modal, PanResponder, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Dimensions, Modal, PanResponder, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -15,10 +15,12 @@ import Animated, {
 
 import { useApp } from "@/src/context/AppContext";
 import { FONTS, RADIUS, SPACING } from "@/src/theme";
-import { DHIKR_LIST } from "@/src/lib/dhikr";
+import { DHIKR_LIST, DhikrItem } from "@/src/lib/dhikr";
 import { storage } from "@/src/utils/storage";
 
 const K_DHIKR_TOTALS = "dhikr.totals";
+const K_CUSTOM_DHIKR = "dhikr.custom";
+const K_SESSION_COUNTS = "dhikr.sessionCounts";
 
 type BeadStyle = {
   id: string;
@@ -171,7 +173,6 @@ export default function DhikrScreen() {
   const { colors } = useApp();
   const insets = useSafeAreaInsets();
   const [index, setIndex] = useState(0);
-  const [count, setCount] = useState(0);
   const [hitTarget, setHitTarget] = useState(false);
   const [vibrationOn, setVibrationOn] = useState(true);
   const [beadStyleIdx, setBeadStyleIdx] = useState(1); // default: Pearl
@@ -179,8 +180,39 @@ export default function DhikrScreen() {
   const [showTargetPicker, setShowTargetPicker] = useState(false);
   const [targetOverride, setTargetOverride] = useState<number | null>(null);
 
-  const item = DHIKR_LIST[index];
+  // Custom user-added phrases, merged with the built-in list. Persisted
+  // under a separate storage key so built-ins never need to be rewritten.
+  const [customItems, setCustomItems] = useState<DhikrItem[]>([]);
+  const fullList = useMemo(() => [...DHIKR_LIST, ...customItems], [customItems]);
+
+  // Per-phrase session counts, keyed by phrase id — switching phrases
+  // (chips or prev/next) no longer resets progress the way a single shared
+  // `count` did before. Only the Reset button clears the count for
+  // whichever phrase is currently selected.
+  //
+  // Persisted to storage (not just in-memory React state) so progress also
+  // survives switching to a different tab and back, or closing the app
+  // entirely and reopening it later — "come back to it" covers both cases.
+  const [sessionCounts, setSessionCounts] = useState<Record<string, number>>({});
+  const sessionCountsLoaded = useRef(false);
+
+  const [showAddDhikr, setShowAddDhikr] = useState(false);
+  const [newArabic, setNewArabic] = useState("");
+  const [newTranslit, setNewTranslit] = useState("");
+  const [newEnglish, setNewEnglish] = useState("");
+  const [newTarget, setNewTarget] = useState("33");
+
+  // If custom items are deleted out from under the currently-selected
+  // index, clamp back into range rather than pointing past the end.
+  useEffect(() => {
+    if (index > fullList.length - 1) {
+      setIndex(Math.max(0, fullList.length - 1));
+    }
+  }, [fullList.length, index]);
+
+  const item = fullList[Math.min(index, fullList.length - 1)];
   const target = targetOverride ?? item.target;
+  const count = sessionCounts[item.id] ?? 0;
   const beadStyle = BEAD_STYLES[beadStyleIdx];
   const totalBeads = Math.min(target, MAX_VISUAL_BEADS);
 
@@ -236,15 +268,53 @@ export default function DhikrScreen() {
         } catch {}
       }
     })();
+    (async () => {
+      const raw = await storage.getItem(K_CUSTOM_DHIKR, "");
+      if (raw) {
+        try {
+          setCustomItems(JSON.parse(raw));
+        } catch {}
+      }
+    })();
+    (async () => {
+      const raw = await storage.getItem(K_SESSION_COUNTS, "");
+      if (raw) {
+        try {
+          setSessionCounts(JSON.parse(raw));
+        } catch {}
+      }
+      // Only start persisting writes after the initial load completes —
+      // otherwise the empty {} the state starts with would get written
+      // straight back to storage before the real saved value loads,
+      // wiping out a previous session's progress on every cold start.
+      sessionCountsLoaded.current = true;
+    })();
   }, []);
+
+  // Persist sessionCounts on every change, once the initial load above has
+  // completed. This is what actually makes progress survive a tab switch
+  // or the app being closed and reopened — plain React state alone only
+  // survives while this screen component stays mounted.
+  useEffect(() => {
+    if (!sessionCountsLoaded.current) return;
+    storage.setItem(K_SESSION_COUNTS, JSON.stringify(sessionCounts));
+  }, [sessionCounts]);
+
+  // Snap the bead visual (no animation) to match whichever phrase's
+  // already-stored session count when switching phrases, instead of
+  // resetting to zero. Runs after `index` changes, by which point `item`/
+  // `spacing`/`totalBeads` above already reflect the newly-selected phrase.
+  useEffect(() => {
+    const storedCount = sessionCounts[item.id] ?? 0;
+    setHitTarget(storedCount >= target);
+    const clampedBeads = Math.min(storedCount, totalBeads);
+    offset.value = clampedBeads * spacing;
+    isAnimating.current = false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index]);
 
   const selectItem = (i: number) => {
     setIndex(i);
-    setCount(0);
-    setHitTarget(false);
-    setTargetOverride(null);
-    offset.value = 0;
-    isAnimating.current = false;
     Haptics.selectionAsync();
   };
 
@@ -254,7 +324,7 @@ export default function DhikrScreen() {
     isAnimating.current = true;
 
     const next = count + 1;
-    setCount(next);
+    setSessionCounts((prev) => ({ ...prev, [item.id]: next }));
 
     setTotals((prev) => {
       const updated = { ...prev, [item.id]: (prev[item.id] ?? 0) + 1 };
@@ -298,10 +368,55 @@ export default function DhikrScreen() {
   };
 
   const reset = () => {
-    setCount(0);
+    // Only clears the currently-selected phrase's session count — other
+    // phrases' progress is untouched, and lifetime totals are never
+    // touched by this button at all.
+    setSessionCounts((prev) => ({ ...prev, [item.id]: 0 }));
     setHitTarget(false);
     isAnimating.current = false;
     offset.value = withTiming(0, { duration: 300, easing: Easing.inOut(Easing.ease) });
+    Haptics.selectionAsync();
+  };
+
+  const addCustomDhikr = () => {
+    if (!newArabic.trim() || !newTranslit.trim()) return;
+    const targetNum = parseInt(newTarget, 10) || 33;
+    const newItem: DhikrItem = {
+      id: `custom-${Date.now()}`,
+      arabic: newArabic.trim(),
+      transliteration: newTranslit.trim(),
+      english: newEnglish.trim(),
+      target: targetNum,
+    };
+    setCustomItems((prev) => {
+      const updated = [...prev, newItem];
+      storage.setItem(K_CUSTOM_DHIKR, JSON.stringify(updated));
+      return updated;
+    });
+    setNewArabic("");
+    setNewTranslit("");
+    setNewEnglish("");
+    setNewTarget("33");
+    Haptics.selectionAsync();
+  };
+
+  const deleteCustomDhikr = (id: string) => {
+    setCustomItems((prev) => {
+      const updated = prev.filter((d) => d.id !== id);
+      storage.setItem(K_CUSTOM_DHIKR, JSON.stringify(updated));
+      return updated;
+    });
+    setSessionCounts((prev) => {
+      const rest = { ...prev };
+      delete rest[id];
+      return rest;
+    });
+    setTotals((prev) => {
+      const rest = { ...prev };
+      delete rest[id];
+      storage.setItem(K_DHIKR_TOTALS, JSON.stringify(rest));
+      return rest;
+    });
     Haptics.selectionAsync();
   };
 
@@ -311,8 +426,8 @@ export default function DhikrScreen() {
   // right now" without recreating the responder every render.
   const overlayOpenRef = useRef(false);
   useEffect(() => {
-    overlayOpenRef.current = showTotals || showStylePicker || showTargetPicker;
-  }, [showTotals, showStylePicker, showTargetPicker]);
+    overlayOpenRef.current = showTotals || showStylePicker || showTargetPicker || showAddDhikr;
+  }, [showTotals, showStylePicker, showTargetPicker, showAddDhikr]);
 
   // Swipe-up gesture, in addition to tap, also advances one bead. Disabled
   // while any modal/picker is open — otherwise it can compete with (and
@@ -348,7 +463,7 @@ export default function DhikrScreen() {
         contentContainerStyle={styles.chipRow}
         style={{ flexGrow: 0, backgroundColor: colors.surface, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }}
       >
-        {DHIKR_LIST.map((d, i) => {
+        {fullList.map((d, i) => {
           const active = i === index;
           return (
             <Pressable
@@ -366,6 +481,13 @@ export default function DhikrScreen() {
             </Pressable>
           );
         })}
+        <Pressable
+          testID="dhikr-add-chip"
+          onPress={() => setShowAddDhikr(true)}
+          style={[styles.chip, styles.addChip, { backgroundColor: colors.surfaceSecondary }]}
+        >
+          <Ionicons name="add" size={16} color={colors.brand} />
+        </Pressable>
       </ScrollView>
 
       <Pressable testID="dhikr-tap-zone" onPress={advanceOneBead} style={{ flex: 1 }} {...panResponder.panHandlers}>
@@ -391,7 +513,7 @@ export default function DhikrScreen() {
                     onPress={(e) => {
                       e.stopPropagation();
                       setTargetOverride(t);
-                      setCount(0);
+                      setSessionCounts((prev) => ({ ...prev, [item.id]: 0 }));
                       setHitTarget(false);
                       offset.value = 0;
                       setShowTargetPicker(false);
@@ -408,7 +530,7 @@ export default function DhikrScreen() {
                 onPress={(e) => {
                   e.stopPropagation();
                   setTargetOverride(null);
-                  setCount(0);
+                  setSessionCounts((prev) => ({ ...prev, [item.id]: 0 }));
                   setHitTarget(false);
                   offset.value = 0;
                   setShowTargetPicker(false);
@@ -505,17 +627,17 @@ export default function DhikrScreen() {
           </Pressable>
           <Pressable
             testID="dhikr-prev"
-            onPress={() => selectItem((index - 1 + DHIKR_LIST.length) % DHIKR_LIST.length)}
+            onPress={() => selectItem((index - 1 + fullList.length) % fullList.length)}
             style={styles.controlBtn}
           >
             <Ionicons name="chevron-back" size={20} color={colors.brand} />
           </Pressable>
           <Text style={[styles.navCount, { color: colors.onSurfaceTertiary }]}>
-            {index + 1}/{DHIKR_LIST.length}
+            {index + 1}/{fullList.length}
           </Text>
           <Pressable
             testID="dhikr-next"
-            onPress={() => selectItem((index + 1) % DHIKR_LIST.length)}
+            onPress={() => selectItem((index + 1) % fullList.length)}
             style={styles.controlBtn}
           >
             <Ionicons name="chevron-forward" size={20} color={colors.brand} />
@@ -539,10 +661,15 @@ export default function DhikrScreen() {
         onRequestClose={() => setShowTotals(false)}
       >
         <Pressable style={styles.modalBackdrop} onPress={() => setShowTotals(false)}>
+          {/* FIX: no onStartShouldSetResponder / onResponderTerminationRequest
+              here. Claiming the touch responder at this parent level and
+              refusing to release it was blocking the child ScrollView below
+              from ever claiming its own scroll gesture on a slow drag — a
+              plain View with no special touch handling lets the outer
+              Pressable's onPress still handle tap-to-dismiss while the
+              ScrollView scrolls normally as a child. */}
           <View
             style={[styles.modalSheet, { backgroundColor: colors.surface, paddingBottom: insets.bottom + SPACING.lg }]}
-            onStartShouldSetResponder={() => true}
-            onResponderTerminationRequest={() => false}
           >
             <View style={styles.modalHandle} />
             <Text style={[styles.modalTitle, { color: colors.onSurface }]}>Lifetime Totals</Text>
@@ -550,7 +677,7 @@ export default function DhikrScreen() {
               All-time counts, unaffected by the session Reset button
             </Text>
             <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
-              {DHIKR_LIST.map((d) => (
+              {fullList.map((d) => (
                 <View key={d.id} testID={`totals-row-${d.id}`} style={[styles.totalsRow, { borderBottomColor: colors.divider }]}>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.totalsArabic, { color: colors.onSurface }]}>{d.arabic}</Text>
@@ -565,6 +692,86 @@ export default function DhikrScreen() {
           </View>
         </Pressable>
       </Modal>
+
+      <Modal
+        visible={showAddDhikr}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAddDhikr(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setShowAddDhikr(false)}>
+          <View
+            style={[styles.modalSheet, { backgroundColor: colors.surface, paddingBottom: insets.bottom + SPACING.lg }]}
+          >
+            <View style={styles.modalHandle} />
+            <Text style={[styles.modalTitle, { color: colors.onSurface }]}>Add Custom Dhikr</Text>
+
+            <TextInput
+              testID="add-dhikr-arabic"
+              placeholder="Arabic text"
+              placeholderTextColor={colors.onSurfaceTertiary}
+              value={newArabic}
+              onChangeText={setNewArabic}
+              style={[styles.input, { color: colors.onSurface, borderColor: colors.border }]}
+            />
+            <TextInput
+              testID="add-dhikr-translit"
+              placeholder="Transliteration"
+              placeholderTextColor={colors.onSurfaceTertiary}
+              value={newTranslit}
+              onChangeText={setNewTranslit}
+              style={[styles.input, { color: colors.onSurface, borderColor: colors.border }]}
+            />
+            <TextInput
+              testID="add-dhikr-english"
+              placeholder="English meaning"
+              placeholderTextColor={colors.onSurfaceTertiary}
+              value={newEnglish}
+              onChangeText={setNewEnglish}
+              style={[styles.input, { color: colors.onSurface, borderColor: colors.border }]}
+            />
+            <TextInput
+              testID="add-dhikr-target"
+              placeholder="Target count"
+              placeholderTextColor={colors.onSurfaceTertiary}
+              value={newTarget}
+              onChangeText={setNewTarget}
+              keyboardType="number-pad"
+              style={[styles.input, { color: colors.onSurface, borderColor: colors.border }]}
+            />
+            <Pressable
+              testID="add-dhikr-save"
+              onPress={() => {
+                addCustomDhikr();
+                setShowAddDhikr(false);
+              }}
+              style={[styles.saveBtn, { backgroundColor: colors.brand }]}
+            >
+              <Text style={styles.saveBtnText}>Save</Text>
+            </Pressable>
+
+            {customItems.length > 0 ? (
+              <>
+                <Text style={[styles.modalSub, { color: colors.onSurfaceTertiary, marginTop: SPACING.lg }]}>
+                  Your custom phrases
+                </Text>
+                <ScrollView style={{ maxHeight: 200 }} showsVerticalScrollIndicator={false}>
+                  {customItems.map((d) => (
+                    <View key={d.id} style={[styles.totalsRow, { borderBottomColor: colors.divider }]}>
+                      <Text style={{ flex: 1, fontFamily: FONTS.medium, fontSize: 14, color: colors.onSurface }}>
+                        {d.transliteration}
+                      </Text>
+                      <Pressable testID={`delete-${d.id}`} onPress={() => deleteCustomDhikr(d.id)} hitSlop={8}>
+                        <Ionicons name="trash-outline" size={18} color={colors.muted} />
+                      </Pressable>
+                    </View>
+                  ))}
+                </ScrollView>
+              </>
+            ) : null}
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -576,6 +783,7 @@ const styles = StyleSheet.create({
   subtitle: { fontFamily: FONTS.regular, fontSize: 13, marginTop: 2 },
   chipRow: { paddingHorizontal: SPACING.xl, paddingVertical: SPACING.md, gap: SPACING.sm },
   chip: { paddingHorizontal: SPACING.lg, paddingVertical: SPACING.sm, borderRadius: RADIUS.pill, marginRight: SPACING.sm },
+  addChip: { paddingHorizontal: SPACING.md, alignItems: "center", justifyContent: "center" },
   chipText: { fontFamily: FONTS.semibold, fontSize: 13 },
   body: { alignItems: "center", padding: SPACING.xl },
   countRow: { flexDirection: "row", alignItems: "flex-end", gap: 6, marginTop: SPACING.md },
@@ -639,4 +847,20 @@ const styles = StyleSheet.create({
   totalsArabic: { fontSize: 20, textAlign: "right" },
   totalsLabel: { fontFamily: FONTS.medium, fontSize: 13, marginTop: 2 },
   totalsCount: { fontFamily: FONTS.bold, fontSize: 20, marginLeft: SPACING.md },
+  input: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    marginBottom: SPACING.md,
+    fontFamily: FONTS.regular,
+    fontSize: 14,
+  },
+  saveBtn: {
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.pill,
+    alignItems: "center",
+    marginTop: SPACING.xs,
+  },
+  saveBtnText: { fontFamily: FONTS.bold, fontSize: 15, color: "#fff" },
 });
