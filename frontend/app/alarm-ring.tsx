@@ -8,6 +8,7 @@ import { useAudioPlayer } from "expo-audio";
 
 import { FONTS, SPACING } from "@/src/theme";
 import SwipeToDismiss from "@/src/components/SwipeToDismiss";
+import Starfield from "@/src/components/Starfield";
 import { clearAlarmNotifications, clearPendingAlarm } from "@/src/lib/alarm";
 import { useApp } from "@/src/context/AppContext";
 
@@ -15,9 +16,18 @@ const HERO_BG = "#20403B";
 
 const ALARM_BACKGROUNDS: Record<string, { colors: [string, string, string]; dark: boolean }> = {
   default: { colors: ["#2C5750", "#20403B", "#132925"], dark: true },
+  // Now rendered with an actual Starfield overlay (moon + individually
+  // twinkling stars) on top of this gradient — see the render below —
+  // rather than being just a plain dark gradient by itself.
   nightsky: { colors: ["#0B1E3D", "#01122D", "#000814"], dark: true },
   playful: { colors: ["#7C3AED", "#DB2777", "#F59E0B"], dark: true },
   kids: { colors: ["#FDE68A", "#93C5FD", "#C4B5FD"], dark: false },
+  // New colorways below — kept in the same dark-toned-gradient-plus-white-
+  // text style as default/nightsky/playful for consistent readability.
+  ocean: { colors: ["#012A4A", "#013A63", "#2C7DA0"], dark: true },
+  sunset: { colors: ["#431407", "#7C2D12", "#C2410C"], dark: true },
+  forest: { colors: ["#052E16", "#14532D", "#166534"], dark: true },
+  royal: { colors: ["#1E1B4B", "#4C1D95", "#A16207"], dark: true },
 };
 const beepSource = require("../assets/sounds/beep.mp3");
 const SOUND_SOURCES: Record<string, any> = {
@@ -47,6 +57,7 @@ export default function AlarmRingScreen() {
   const pre = parseInt((params.pre as string) || "0", 10);
   const player = useAudioPlayer(beepSource);
   const bgStyle = ALARM_BACKGROUNDS[settings.alarmBackground] || ALARM_BACKGROUNDS.default;
+  const isNightSky = settings.alarmBackground === "nightsky";
   const textColor = bgStyle.dark ? "#FFFFFF" : "#1F2937";
   const textColorMuted = bgStyle.dark ? "rgba(255,255,255,0.75)" : "rgba(31,41,55,0.7)";
   const dismissedRef = useRef(false);
@@ -153,6 +164,7 @@ export default function AlarmRingScreen() {
         colors={bgStyle.colors}
         style={StyleSheet.absoluteFill}
       />
+      {isNightSky ? <Starfield /> : null}
       <View style={[styles.content, { paddingTop: insets.top + SPACING.xxxl }]}>
         <View style={[styles.iconWrap, { backgroundColor: bgStyle.dark ? "rgba(255,255,255,0.12)" : "rgba(31,41,55,0.10)" }]}>
           <Ionicons name="alarm" size={64} color={textColor} />

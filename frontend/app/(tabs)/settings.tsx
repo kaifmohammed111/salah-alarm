@@ -8,20 +8,21 @@ import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 
 import { useApp } from "@/src/context/AppContext";
-import { storage } from "@/src/utils/storage";
 import { requestBatteryOptimizationExemption } from "@/src/lib/alarm";
 import { FONTS, RADIUS, SPACING } from "@/src/theme";
 
 import { settingsGuard } from "@/src/utils/settingsGuard";
 import type { Settings } from "@/src/context/AppContext";
 
-const K_BACKUP = "salah.backup";
-
 const ALARM_BG_OPTIONS: { id: string; label: string; colors: [string, string, string] }[] = [
   { id: "default", label: "Default", colors: ["#2C5750", "#20403B", "#132925"] },
   { id: "nightsky", label: "Night Sky", colors: ["#0B1E3D", "#01122D", "#000814"] },
   { id: "playful", label: "Playful", colors: ["#7C3AED", "#DB2777", "#F59E0B"] },
   { id: "kids", label: "Kids", colors: ["#FDE68A", "#93C5FD", "#C4B5FD"] },
+  { id: "ocean", label: "Ocean", colors: ["#012A4A", "#013A63", "#2C7DA0"] },
+  { id: "sunset", label: "Sunset", colors: ["#431407", "#7C2D12", "#C2410C"] },
+  { id: "forest", label: "Forest", colors: ["#052E16", "#14532D", "#166534"] },
+  { id: "royal", label: "Royal", colors: ["#1E1B4B", "#4C1D95", "#A16207"] },
 ];
 
 // OEMs known to hide/split background permissions behind vendor-specific
@@ -35,8 +36,7 @@ const OEM_INSTRUCTIONS: Record<string, string> = {
 };
 
 export default function SettingsScreen() {
-  const { colors, isDark, settings, updateSettings, exportBackup, importBackup, timetable } =
-    useApp();
+  const { colors, isDark, settings, updateSettings, timetable } = useApp();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [toast, setToast] = useState<string | null>(null);
@@ -74,17 +74,6 @@ export default function SettingsScreen() {
     setToast(msg);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     toastTimer.current = setTimeout(() => setToast(null), 2000);
-  };
-
-  const doBackup = async () => {
-    await storage.setItem(K_BACKUP, exportBackup());
-    flash("Backup saved on this device");
-  };
-  const doRestore = async () => {
-    const b = await storage.getItem(K_BACKUP, "");
-    if (!b) return flash("No backup found");
-    const ok = await importBackup(b);
-    flash(ok ? "Backup restored" : "Restore failed");
   };
 
   const doBatteryExemption = async () => {
@@ -429,25 +418,6 @@ export default function SettingsScreen() {
               <Ionicons name="open-outline" size={18} color={colors.muted} />
             </Pressable>
           ))}
-        </View>
-
-        {/* Data */}
-        <Text style={[styles.section, { color: colors.onSurfaceTertiary }]}>DATA</Text>
-        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Pressable testID="backup-btn" onPress={doBackup} style={[styles.row, { borderBottomColor: colors.divider }]}>
-            <View style={styles.rowLeft}>
-              {iconTile("cloud-upload-outline", "#DCFCE7", colors.success)}
-              <Text style={[styles.rowLabel, { color: colors.onSurface }]}>Backup timetable</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-          </Pressable>
-          <Pressable testID="restore-btn" onPress={doRestore} style={[styles.row, { borderBottomWidth: 0 }]}>
-            <View style={styles.rowLeft}>
-              {iconTile("cloud-download-outline", "#DBEAFE", colors.brand)}
-              <Text style={[styles.rowLabel, { color: colors.onSurface }]}>Restore timetable</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-          </Pressable>
         </View>
 
         <Text style={[styles.footerNote, { color: colors.muted }]}>

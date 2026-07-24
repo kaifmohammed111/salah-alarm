@@ -30,7 +30,19 @@ import { QUOTES } from "@/src/lib/quotes";
 
 type ThemeMode = "light" | "dark" | "system";
 
-export type AlarmBackgroundStyle = "default" | "nightsky" | "playful" | "kids";
+// FIX: added four new colorways (ocean/sunset/forest/royal) alongside the
+// existing default/nightsky/playful/kids set — see app/alarm-ring.tsx for
+// the actual gradient definitions and app/(tabs)/settings.tsx for the
+// picker UI.
+export type AlarmBackgroundStyle =
+  | "default"
+  | "nightsky"
+  | "playful"
+  | "kids"
+  | "ocean"
+  | "sunset"
+  | "forest"
+  | "royal";
 export type WidgetStyle = "arc" | "grid";
 
 export type Settings = {
@@ -80,8 +92,6 @@ type AppState = {
   saveTimetable: (tt: Timetable) => Promise<void>;
   clearTimetable: () => Promise<void>;
   reschedule: () => Promise<number>;
-  exportBackup: () => string;
-  importBackup: (json: string) => Promise<boolean>;
 };
 
 const Ctx = createContext<AppState | null>(null);
@@ -205,27 +215,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await storage.removeItem(K_TIMETABLE);
   };
 
-
-
-  const exportBackup = () =>
-    JSON.stringify({ settings, timetable, configs, version: 1 });
-
-  const importBackup = async (json: string): Promise<boolean> => {
-    try {
-      const parsed = JSON.parse(json);
-      if (parsed.settings) persistSettings({ ...DEFAULT_SETTINGS, ...parsed.settings });
-      if (parsed.configs) {
-        const merged = { ...defaultConfigs(), ...parsed.configs };
-        setConfigs(merged);
-        await storage.setItem(K_CONFIGS, JSON.stringify(merged));
-      }
-      if (parsed.timetable) await saveTimetable(parsed.timetable);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
   const value: AppState = {
     ready,
     colors,
@@ -241,8 +230,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     saveTimetable,
     clearTimetable,
     reschedule,
-    exportBackup,
-    importBackup,
   };
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

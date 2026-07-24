@@ -28,6 +28,7 @@ import { readFileText } from "@/src/lib/files";
 import { storage } from "@/src/utils/storage";
 import TimeField from "@/src/components/TimeField";
 import { CALC_METHODS, CalcMethodKey, checkDeviceClockDrift, generateTimetableForMonth } from "@/src/lib/calculate";
+import { useKeyboardHeight } from "@/src/hooks/use-keyboard-height";
 
 const EDIT_KEYS: (keyof DayRow)[] = ["fajr", "sunrise", "zuhr", "asr", "maghrib", "isha"];
 const K_SEEN_INSTRUCTIONS = "upload.seenInstructions";
@@ -37,6 +38,14 @@ export default function UploadScreen() {
   const now = useNow();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  // FIX: same root cause as app/editor.tsx — edgeToEdgeEnabled (app.json)
+  // makes Android's native windowSoftInputMode="adjustResize" unreliable,
+  // so the KeyboardAvoidingView below (Android: behavior=undefined) can no
+  // longer be counted on to shrink the window enough for the old fixed
+  // paddingBottom to leave room to scroll a bottom field (e.g. Isha) above
+  // the keyboard. Tracking the real keyboard height and adding it to the
+  // scroll padding fixes this without touching KeyboardAvoidingView.
+  const keyboardHeight = useKeyboardHeight();
 
   const [fileName, setFileName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -279,7 +288,14 @@ export default function UploadScreen() {
         <ScrollView
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ padding: SPACING.xl, paddingBottom: 120 }}
+          contentContainerStyle={{
+            padding: SPACING.xl,
+            // FIX: extend scroll room by the real keyboard height (Android
+            // only — iOS already gets pushed up correctly via the
+            // KeyboardAvoidingView "padding" behavior above, so adding this
+            // too would double-compensate there).
+            paddingBottom: 120 + (Platform.OS === "android" ? keyboardHeight : 0),
+          }}
         >
           {/* CSV import */}
           {fileName ? (
@@ -327,7 +343,7 @@ export default function UploadScreen() {
               Day, Date, Hijri, Fajr Start, Fajr Jamaat, Sunrise, Zuhr Start, Zuhr Jamaat, Asr Start, Asr Jamaat, Maghrib, Isha Start, Isha Jamaat
             </Text>
             <Text style={[styles.formatText, { color: colors.onBrandTertiary, marginTop: SPACING.sm }]}>
-              Ramadan timetables are detected automatically — just add “Sehri End” and “Iftari” columns.
+              Ramadan timetables are detected automatically — just add "Sehri End" and "Iftari" columns.
             </Text>
           </View>
 
@@ -487,7 +503,7 @@ export default function UploadScreen() {
           >
             <View style={styles.modalHandle} />
             <Text style={[styles.modalTitle, { color: colors.onSurface }]}>
-              Column for “{pickerFor?.label}”
+              Column for "{pickerFor?.label}"
             </Text>
             <Text style={[styles.modalSub, { color: colors.onSurfaceTertiary }]}>
               Choose which CSV column feeds this field.
@@ -724,7 +740,7 @@ export default function UploadScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.stepTitle, { color: colors.onSurface }]}>Import it here</Text>
                   <Text style={[styles.stepText, { color: colors.onSurfaceTertiary }]}>
-                    Tap “Import CSV file” below and select the file from your device.
+                    Tap "Import CSV file" below and select the file from your device.
                   </Text>
                 </View>
               </View>
