@@ -334,9 +334,20 @@ export function registerBackgroundAlarmHandler(): void {
       // Refresh the home screen widget right as the alarm fires, rather
       // than waiting on Android's own ~30min periodic widget refresh floor.
       // Uses whatever's already cached — no new data needed here.
+      //
+      // DIAGNOSTIC LOGGING ADDED: the previous version had a fully silent
+      // try/catch here — if NativeModules.WidgetModule was ever undefined
+      // in this JS engine instance, `?.refreshWidget()` would just no-op
+      // with zero evidence in logcat either way. These logs make that
+      // visible on the next capture.
       try {
+        const modulePresent = !!NativeModules.WidgetModule;
+        console.log("BACKGROUND EVENT: WidgetModule present =", modulePresent);
         NativeModules.WidgetModule?.refreshWidget();
-      } catch {}
+        console.log("BACKGROUND EVENT: refreshWidget() call issued, present =", modulePresent);
+      } catch (widgetErr) {
+        console.log("BACKGROUND EVENT: refreshWidget() threw:", widgetErr);
+      }
     } catch (e) {
       console.log("BACKGROUND EVENT ERROR:", e);
     }

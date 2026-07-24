@@ -19,6 +19,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.os.SystemClock
+import android.util.Log
 import android.widget.RemoteViews
 import org.json.JSONObject
 import kotlin.math.sin
@@ -40,6 +41,7 @@ class SalahWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray,
     ) {
+        Log.d("SalahWidget", "onUpdate() called by Android for widgetIds=\${appWidgetIds.joinToString()}")
         for (id in appWidgetIds) {
             updateWidget(context, appWidgetManager, id)
         }
@@ -116,8 +118,11 @@ class SalahWidgetProvider : AppWidgetProvider() {
         }
 
         fun updateWidget(context: Context, appWidgetManager: AppWidgetManager, widgetId: Int) {
+            Log.d("SalahWidget", "updateWidget() ENTER widgetId=\$widgetId at wallClock=\${System.currentTimeMillis()}")
+
             val prefs = context.getSharedPreferences("salah_widget", Context.MODE_PRIVATE)
             val json = prefs.getString("widget_data", null)
+            Log.d("SalahWidget", "updateWidget() stored json is null = \${json == null}, length = \${json?.length ?: 0}")
 
             val style = try {
                 if (json != null) JSONObject(json).optString("style", "arc") else "arc"
@@ -151,6 +156,7 @@ class SalahWidgetProvider : AppWidgetProvider() {
             val arcHeightPx = (46 * density).toInt()
 
             if (json == null) {
+                Log.d("SalahWidget", "updateWidget() no stored data yet, showing placeholder")
                 views.setTextViewText(R.id.next_label, "SalahSync")
                 views.setTextViewText(R.id.next_time, "Open the app")
                 views.setTextViewText(R.id.countdown, "to load today's times")
@@ -202,6 +208,7 @@ class SalahWidgetProvider : AppWidgetProvider() {
                         }
                     }
                 }
+                Log.d("SalahWidget", "updateWidget() recomputed next: label=\$chosenLabel timestamp=\$chosenTimestamp nowWall=\$nowWall")
 
                 views.setTextViewText(R.id.next_label, chosenLabel)
                 views.setTextViewText(R.id.countdown_label, "Time until $chosenLabel")
@@ -282,6 +289,7 @@ class SalahWidgetProvider : AppWidgetProvider() {
                     views.setImageViewBitmap(R.id.arc_image, drawArcBitmap(recomputedIndex, widthPx, arcHeightPx))
                 }
             } catch (e: Exception) {
+                Log.d("SalahWidget", "updateWidget() EXCEPTION: \${e.message}")
                 views.setTextViewText(R.id.next_label, "SalahSync")
                 views.setTextViewText(R.id.next_time, "--:--")
                 if (!isGrid) {
@@ -290,6 +298,7 @@ class SalahWidgetProvider : AppWidgetProvider() {
             }
 
             appWidgetManager.updateAppWidget(widgetId, views)
+            Log.d("SalahWidget", "updateWidget() EXIT widgetId=\$widgetId, appWidgetManager.updateAppWidget called")
         }
     }
 }
@@ -300,6 +309,7 @@ const WIDGET_MODULE_KT = `package __PACKAGE__
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
+import android.util.Log
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
@@ -315,6 +325,7 @@ class WidgetModule(reactContext: ReactApplicationContext) :
 
     @ReactMethod
     fun updateWidgetData(dataJson: String) {
+        Log.d("SalahWidget", "WidgetModule.updateWidgetData() called, jsonLength=\${dataJson.length}")
         val context = reactApplicationContext
         val prefs = context.getSharedPreferences("salah_widget", Context.MODE_PRIVATE)
         prefs.edit().putString("widget_data", dataJson).apply()
@@ -322,6 +333,7 @@ class WidgetModule(reactContext: ReactApplicationContext) :
         val appWidgetManager = AppWidgetManager.getInstance(context)
         val componentName = ComponentName(context, SalahWidgetProvider::class.java)
         val widgetIds = appWidgetManager.getAppWidgetIds(componentName)
+        Log.d("SalahWidget", "WidgetModule.updateWidgetData() widgetIds=\${widgetIds.joinToString()}")
         for (id in widgetIds) {
             SalahWidgetProvider.updateWidget(context, appWidgetManager, id)
         }
@@ -336,10 +348,12 @@ class WidgetModule(reactContext: ReactApplicationContext) :
     // rather than waiting on Android's own ~30min periodic refresh floor.
     @ReactMethod
     fun refreshWidget() {
+        Log.d("SalahWidget", "WidgetModule.refreshWidget() CALLED from JS")
         val context = reactApplicationContext
         val appWidgetManager = AppWidgetManager.getInstance(context)
         val componentName = ComponentName(context, SalahWidgetProvider::class.java)
         val widgetIds = appWidgetManager.getAppWidgetIds(componentName)
+        Log.d("SalahWidget", "WidgetModule.refreshWidget() widgetIds=\${widgetIds.joinToString()}")
         for (id in widgetIds) {
             SalahWidgetProvider.updateWidget(context, appWidgetManager, id)
         }
