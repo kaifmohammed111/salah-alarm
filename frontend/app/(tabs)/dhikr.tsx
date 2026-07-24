@@ -17,6 +17,7 @@ import { useApp } from "@/src/context/AppContext";
 import { FONTS, RADIUS, SPACING } from "@/src/theme";
 import { DHIKR_LIST, DhikrItem } from "@/src/lib/dhikr";
 import { storage } from "@/src/utils/storage";
+import { useKeyboardHeight } from "@/src/hooks/use-keyboard-height";
 
 const K_DHIKR_TOTALS = "dhikr.totals";
 const K_CUSTOM_DHIKR = "dhikr.custom";
@@ -197,6 +198,13 @@ export default function DhikrScreen() {
   const sessionCountsLoaded = useRef(false);
 
   const [showAddDhikr, setShowAddDhikr] = useState(false);
+  // FIX: RN's <Modal> renders in its own separate native window on
+  // Android, which does not inherit whatever keyboard-resize behavior the
+  // main Activity is configured with — so the Add Custom Dhikr sheet below
+  // needs its own explicit keyboard handling, distinct from how the rest
+  // of the app avoids the keyboard. Lifting the sheet by the real keyboard
+  // height keeps every field (including the last one) visible above it.
+  const keyboardHeight = useKeyboardHeight();
   const [newArabic, setNewArabic] = useState("");
   const [newTranslit, setNewTranslit] = useState("");
   const [newEnglish, setNewEnglish] = useState("");
@@ -701,7 +709,18 @@ export default function DhikrScreen() {
       >
         <Pressable style={styles.modalBackdrop} onPress={() => setShowAddDhikr(false)}>
           <View
-            style={[styles.modalSheet, { backgroundColor: colors.surface, paddingBottom: insets.bottom + SPACING.lg }]}
+            style={[
+              styles.modalSheet,
+              {
+                backgroundColor: colors.surface,
+                paddingBottom: insets.bottom + SPACING.lg,
+                // Lift the whole sheet above the keyboard — Modal doesn't
+                // get this from the OS on Android the way a normal screen
+                // does, so it's handled explicitly here via the real
+                // measured keyboard height instead.
+                marginBottom: keyboardHeight,
+              },
+            ]}
           >
             <View style={styles.modalHandle} />
             <Text style={[styles.modalTitle, { color: colors.onSurface }]}>Add Custom Dhikr</Text>

@@ -19,6 +19,7 @@ import { useNow } from "@/src/context/NowContext";
 import { FONTS, RADIUS, SPACING } from "@/src/theme";
 import { DayRow, PRAYER_LABELS, Timetable, findTodayRow } from "@/src/lib/prayer";
 import TimeField from "@/src/components/TimeField";
+import { useKeyboardHeight } from "@/src/hooks/use-keyboard-height";
 
 const EDIT_KEYS: (keyof DayRow)[] = ["fajr", "sunrise", "zuhr", "asr", "maghrib", "isha"];
 
@@ -46,6 +47,15 @@ export default function EditorScreen() {
   const now = useNow();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  // FIX: edgeToEdgeEnabled (app.json) makes Android's native
+  // windowSoftInputMode="adjustResize" behavior unreliable, so the
+  // KeyboardAvoidingView below (Android: behavior=undefined, per the
+  // project's documented rule against "height" on Android) is no longer
+  // guaranteed to shrink the window enough for the ScrollView's old fixed
+  // paddingBottom to leave room to scroll a bottom field like Isha above
+  // the keyboard. Tracking the real keyboard height and adding it to the
+  // scroll padding fixes this without touching KeyboardAvoidingView at all.
+  const keyboardHeight = useKeyboardHeight();
 
   const [draft, setDraft] = useState<Timetable | null>(timetable);
   const [rowIdx, setRowIdx] = useState(0);
@@ -157,7 +167,14 @@ export default function EditorScreen() {
           <ScrollView
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ padding: SPACING.xl, paddingBottom: 120 }}
+            contentContainerStyle={{
+              padding: SPACING.xl,
+              // FIX: extend scroll room by the real keyboard height (Android
+              // only — iOS already gets pushed up correctly via the
+              // KeyboardAvoidingView "padding" behavior above, so adding
+              // this too would double-compensate there).
+              paddingBottom: 120 + (Platform.OS === "android" ? keyboardHeight : 0),
+            }}
           >
             {row ? (
               <>
