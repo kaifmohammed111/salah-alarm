@@ -222,10 +222,25 @@ class MediaSessionService : Service() {
         val intent = Intent(this, MediaSessionService::class.java).apply {
             putExtra("action", action)
         }
-        return PendingIntent.getService(
-            this, action.hashCode(), intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
+        // FIX: PendingIntent.getService() follows plain startService()
+        // rules, which have background-execution restrictions on Android
+        // 8+ — tapping a notification action while the app process isn't
+        // in the foreground could silently fail with no visible error
+        // (matches exactly "play/pause does nothing"). getForegroundService()
+        // is the officially documented variant specifically for notification
+        // action buttons that need to (re)deliver to an already-foreground
+        // service like this one.
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            PendingIntent.getForegroundService(
+                this, action.hashCode(), intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        } else {
+            PendingIntent.getService(
+                this, action.hashCode(), intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+        }
     }
 
     override fun onDestroy() {
