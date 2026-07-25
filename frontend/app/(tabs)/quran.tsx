@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -546,6 +546,7 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
   const [showFailureDetails, setShowFailureDetails] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedSurahs, setSelectedSurahs] = useState<Set<number>>(new Set());
+  const [reciterSearch, setReciterSearch] = useState("");
   const [confirmDialog, setConfirmDialog] = useState<{ surahNumbers: number[]; title: string; sizeLabel: string } | null>(
     null,
   );
@@ -1118,31 +1119,51 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
           <Text style={[styles.errorText, { color: colors.error }]}>{listError}</Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: insets.bottom + SPACING.xxxl }}>
-          {(editions || []).map((e) => (
-            <Pressable
-              key={e.identifier}
-              testID={`quran-reciter-${e.identifier}`}
-              onPress={() => {
-                setSelectedEdition(e);
-                setView("surahs");
-              }}
-              style={[styles.listRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            >
-              <View style={[styles.listNumBadge, { backgroundColor: colors.brandTertiary }]}>
-                <Ionicons name="mic-outline" size={16} color={colors.brand} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.listTitle, { color: colors.onSurface }]}>{e.englishName}</Text>
-              </View>
-              {downloadedEditions.includes(e.identifier) ? (
-                <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-              ) : (
-                <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-              )}
-            </Pressable>
-          ))}
-        </ScrollView>
+        <>
+          <View style={[styles.reciterSearchWrap, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+            <Ionicons name="search-outline" size={18} color={colors.muted} />
+            <TextInput
+              testID="quran-reciter-search"
+              value={reciterSearch}
+              onChangeText={setReciterSearch}
+              placeholder="Search reciters…"
+              placeholderTextColor={colors.muted}
+              style={[styles.reciterSearchInput, { color: colors.onSurface }]}
+            />
+            {reciterSearch.length > 0 ? (
+              <Pressable testID="quran-reciter-search-clear" onPress={() => setReciterSearch("")} hitSlop={10}>
+                <Ionicons name="close-circle" size={18} color={colors.muted} />
+              </Pressable>
+            ) : null}
+          </View>
+          <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: insets.bottom + SPACING.xxxl }}>
+            {(editions || [])
+              .filter((e) => e.englishName.toLowerCase().includes(reciterSearch.trim().toLowerCase()))
+              .map((e) => (
+                <Pressable
+                  key={e.identifier}
+                  testID={`quran-reciter-${e.identifier}`}
+                  onPress={() => {
+                    setSelectedEdition(e);
+                    setView("surahs");
+                  }}
+                  style={[styles.listRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                >
+                  <View style={[styles.listNumBadge, { backgroundColor: colors.brandTertiary }]}>
+                    <Ionicons name="mic-outline" size={16} color={colors.brand} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.listTitle, { color: colors.onSurface }]}>{e.englishName}</Text>
+                  </View>
+                  {downloadedEditions.includes(e.identifier) ? (
+                    <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                  ) : (
+                    <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+                  )}
+                </Pressable>
+              ))}
+          </ScrollView>
+        </>
       )}
     </View>
   );
@@ -1153,6 +1174,15 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: SPACING.xl, paddingBottom: SPACING.md, borderBottomWidth: StyleSheet.hairlineWidth },
   title: { fontFamily: FONTS.bold, fontSize: 26, marginBottom: SPACING.md },
   modeSwitch: { flexDirection: "row", borderRadius: RADIUS.md, padding: 4 },
+  reciterSearchWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  reciterSearchInput: { flex: 1, fontFamily: FONTS.regular, fontSize: 14, paddingVertical: SPACING.xs },
   modeBtn: {
     flex: 1,
     flexDirection: "row",
