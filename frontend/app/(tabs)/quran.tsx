@@ -20,7 +20,7 @@ import {
   isSurahDownloaded,
   localSurahAudioPath,
   markEditionDownloaded,
-  surahAudioUrl,
+  mp3QuranSurahUrl,
   unmarkEditionDownloaded,
 } from "@/src/lib/quran";
 
@@ -282,7 +282,7 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
       const downloaded = await isSurahDownloaded(selectedEdition.identifier, surahNumber);
       const uri = downloaded
         ? localSurahAudioPath(selectedEdition.identifier, surahNumber)
-        : surahAudioUrl(selectedEdition.identifier, surahNumber);
+        : mp3QuranSurahUrl(selectedEdition.server, surahNumber);
       player.replace({ uri });
       player.play();
       setNowPlaying(surahNumber);
@@ -306,7 +306,7 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
     setDownloadDone(0);
     setDownloadWarning(null);
     try {
-      const { failedSurahs } = await downloadFullQuranAudio(selectedEdition.identifier, (done) => setDownloadDone(done));
+      const { failedSurahs } = await downloadFullQuranAudio(selectedEdition, (done) => setDownloadDone(done));
       const updated = await markEditionDownloaded(selectedEdition.identifier);
       setDownloadedEditions(updated);
       if (failedSurahs.length > 0) {
