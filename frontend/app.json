@@ -49,7 +49,6 @@
       "./plugins/withAlarmSounds",
       "./plugins/withLockScreenModule",
       "./plugins/withHomeWidget",
-      "./plugins/withMediaSession",
       [
         "expo-splash-screen",
         {
@@ -59,7 +58,12 @@
           "backgroundColor": "#01122D"
         }
       ],
-      "expo-audio",
+      [
+        "expo-audio",
+        {
+          "enableBackgroundPlayback": true
+        }
+      ],
       [
         "expo-notifications",
         {

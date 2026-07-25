@@ -12,13 +12,12 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
+import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from "expo-audio";
 import Slider from "@react-native-community/slider";
 
 import { useApp } from "@/src/context/AppContext";
 import { FONTS, RADIUS, SPACING, ThemeColors } from "@/src/theme";
 import IslamicPattern from "@/src/components/IslamicPattern";
-import { startMediaSession, stopMediaSession, subscribeMediaSessionEvents, updateMediaSessionState } from "@/src/lib/quranMediaSession";
 import {
   Ayah,
   AudioEdition,
@@ -554,18 +553,26 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
   const [repeat, setRepeat] = useState(false);
   const [currentSurah, setCurrentSurah] = useState<number | null>(null);
 
-  // Actual audio playback stays on expo-audio (already used elsewhere in
-  // this app, e.g. alarm-ring.tsx, and proven to work fine for playback
-  // itself). The custom native MediaSessionModule (see
-  // src/lib/quranMediaSession.ts) is a SEPARATE piece that only owns the
-  // system notification / lock-screen controls and forwards button
-  // presses back here as events — it doesn't do any playback itself. This
-  // two-piece split exists specifically because react-native-track-player
-  // (which bundles both concerns into one library) turned out to be
-  // incompatible with this project's New Architecture setup.
+  // Background playback + lock-screen/notification controls use
+  // expo-audio's own built-in support (setActiveForLockScreen), rather
+  // than a hand-written native module — confirmed via Expo's own
+  // documentation to provide a real foreground service, a system
+  // notification with controls, and indefinite background playback, all
+  // built into the library already used elsewhere in this app (e.g.
+  // alarm-ring.tsx). An earlier version of this feature used a
+  // custom-built native module instead; that's been removed in favor of
+  // this simpler, officially-supported path.
   const player = useAudioPlayer(null);
   const status = useAudioPlayerStatus(player);
   const isPlaying = !!status?.playing;
+
+  useEffect(() => {
+    setAudioModeAsync({
+      playsInSilentMode: true,
+      shouldPlayInBackground: true,
+      interruptionMode: "doNotMix",
+    }).catch((e) => console.warn("setAudioModeAsync failed", e));
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -597,7 +604,14 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
       player.play();
       setCurrentSurah(surahNumber);
       const meta = (surahList || []).find((s) => s.number === surahNumber);
-      startMediaSession(meta?.englishName || `Surah ${surahNumber}`, selectedEdition.englishName, true, 0, 0);
+      // Registers this player for lock-screen/notification controls with
+      // the current Surah's info — must be set to "doNotMix" interruption
+      // mode (already configured above) for the OS to correctly associate
+      // these controls with this player.
+      player.setActiveForLockScreen(true, {
+        title: meta?.englishName || `Surah ${surahNumber}`,
+        artist: selectedEdition.englishName,
+      });
     } catch (e) {
       console.warn("Quran playSurah failed", e);
     }
@@ -659,30 +673,6 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status?.didJustFinish]);
-
-  // Keep the system notification / lock-screen media session in sync with
-  // actual playback state — position ticks a few times a second via
-  // useAudioPlayerStatus, each tick refreshes the notification's
-  // scrubber/play-pause state.
-  useEffect(() => {
-    if (!currentSurah) return;
-    updateMediaSessionState(isPlaying, (status?.currentTime || 0) * 1000, (status?.duration || 0) * 1000);
-  }, [currentSurah, isPlaying, status?.currentTime, status?.duration]);
-
-  // Subscribe once to remote-control events (notification taps, lock
-  // screen, Bluetooth/headset buttons) and forward them to the real
-  // expo-audio player / existing next-prev logic.
-  useEffect(() => {
-    const unsubscribe = subscribeMediaSessionEvents({
-      onPlay: () => player.play(),
-      onPause: () => player.pause(),
-      onNext: () => handleNext(),
-      onPrevious: () => handlePrev(),
-      onSeekTo: (positionSeconds) => player.seekTo(positionSeconds),
-    });
-    return unsubscribe;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const pausePlayback = () => {
     try {
