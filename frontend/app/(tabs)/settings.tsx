@@ -4,6 +4,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as Device from "expo-device";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 
@@ -13,6 +15,7 @@ import { FONTS, RADIUS, SPACING } from "@/src/theme";
 
 import { settingsGuard } from "@/src/utils/settingsGuard";
 import type { Settings } from "@/src/context/AppContext";
+import { TIMETABLE_TEMPLATE_CSV, TIMETABLE_TEMPLATE_FILENAME } from "@/src/lib/csvTemplate";
 
 const ALARM_BG_OPTIONS: { id: string; label: string; colors: [string, string, string] }[] = [
   { id: "default", label: "Default", colors: ["#2C5750", "#20403B", "#132925"] },
@@ -82,6 +85,32 @@ export default function SettingsScreen() {
 
   const openConverter = () => {
     Linking.openURL("https://tools.nanonets.com/image-to-csv");
+  };
+
+  // Writes the blank-month template to a temp cache file, then hands it to
+  // the system share sheet — RN apps can't write directly to the user's
+  // Downloads folder, so "Save to Files" (or email/Drive/etc.) via the
+  // native share sheet is the standard way to offer a downloadable file.
+  const downloadTemplate = async () => {
+    try {
+      const fileUri = FileSystem.cacheDirectory + TIMETABLE_TEMPLATE_FILENAME;
+      await FileSystem.writeAsStringAsync(fileUri, TIMETABLE_TEMPLATE_CSV, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+      const available = await Sharing.isAvailableAsync();
+      if (!available) {
+        flash("Sharing isn't available on this device");
+        return;
+      }
+      await Sharing.shareAsync(fileUri, {
+        mimeType: "text/csv",
+        dialogTitle: "Save Timetable Template",
+        UTI: "public.comma-separated-values-text",
+      });
+    } catch (e) {
+      console.warn("downloadTemplate failed", e);
+      flash("Could not prepare the template file");
+    }
   };
 
   const MOSQUES = [
@@ -375,6 +404,24 @@ export default function SettingsScreen() {
               </View>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+          </Pressable>
+          <Pressable
+            testID="download-template-btn"
+            onPress={downloadTemplate}
+            style={[styles.row, { borderBottomColor: colors.divider }]}
+          >
+            <View style={styles.rowLeft}>
+              {iconTile("download-outline", colors.brandTertiary, colors.brand)}
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.rowLabel, { color: colors.onSurface }]}>
+                  Want a CSV timetable template?
+                </Text>
+                <Text style={[styles.rowSub, { color: colors.onSurfaceTertiary }]}>
+                  Download a blank month you can fill in and import
+                </Text>
+              </View>
+            </View>
+            <Ionicons name="share-outline" size={18} color={colors.muted} />
           </Pressable>
           <Pressable
             testID="convert-csv-link"
