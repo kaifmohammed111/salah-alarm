@@ -41,10 +41,17 @@ function adaptiveAlpha(baseAlpha: number, rawDeltaAbsDeg: number): number {
   const t = Math.min(rawDeltaAbsDeg / FAST_MOTION_THRESHOLD_DEG, 1);
   return baseAlpha + (0.9 - baseAlpha) * t;
 }
-// How long the dial/marker take to visually glide to each new smoothed
-// sample. Short enough to feel responsive, long enough to eliminate the
-// frame-to-frame "stepping" that a raw un-animated transform has.
-const ROTATION_ANIM_MS = 180;
+// How long the dial/marker take to visually glide to each new sample.
+// FIX: matched to the actual measured sensor cadence (confirmed via the
+// diagnostic logging below: ~8-12 samples/sec from the fused compass, i.e.
+// roughly 80-125ms apart) rather than an arbitrary guess. Using a duration
+// noticeably longer than the real inter-sample gap meant every new sample
+// interrupted the previous animation mid-flight — combined with a
+// decelerating easing curve (see below), repeatedly restarting that curve
+// before it finished produced small velocity discontinuities several
+// times a second, which is what looked like jumping/skipping rather than
+// a true value jump.
+const ROTATION_ANIM_MS = 110;
 // FIX: the animated rotation itself runs entirely on the UI thread via
 // Reanimated and doesn't need React state at all — but the previous
 // version called setHeading() (a React state update) on every single
@@ -169,7 +176,13 @@ export default function QiblaScreen() {
     // and is what actually needs to be buttery-smooth.
     rotation.value = withTiming(-unwrappedHeadingRef.current, {
       duration: ROTATION_ANIM_MS,
-      easing: Easing.out(Easing.quad),
+      // FIX: linear, not a decelerating curve — this animation gets
+      // retargeted on every new sample (a live "chase," not a one-time
+      // settle), and a decelerating curve restarted repeatedly before it
+      // finishes creates velocity discontinuities that read as jumpiness.
+      // Linear has constant velocity throughout, so interrupting it
+      // mid-flight to redirect toward a new target has no such artifact.
+      easing: Easing.linear,
     });
     // Only update React state (display readout + alignment/haptics) at a
     // throttled rate — this does NOT affect the visual rotation above.
