@@ -26,13 +26,16 @@ import {
   deleteDownloadedQuranAudio,
   deleteSingleSurahAudio,
   downloadQuranAudio,
+  estimateDownloadSizeBytes,
   fetchAudioEditions,
   fetchJuzBilingual,
   fetchSurahBilingual,
   fetchSurahList,
+  formatBytes,
   getDownloadedEditions,
   getDownloadedSurahSet,
   hasInternetConnection,
+  isOnWifi,
   isSurahDownloaded,
   localSurahAudioPath,
   markEditionDownloaded,
@@ -530,6 +533,11 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
   const [downloadingSurah, setDownloadingSurah] = useState<number | null>(null);
   const [failures, setFailures] = useState<DownloadFailure[]>([]);
   const [showFailureDetails, setShowFailureDetails] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedSurahs, setSelectedSurahs] = useState<Set<number>>(new Set());
+  const [confirmDialog, setConfirmDialog] = useState<{ surahNumbers: number[]; title: string; sizeLabel: string } | null>(
+    null,
+  );
   const [currentSurah, setCurrentSurah] = useState<number | null>(null);
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState(false);
@@ -656,35 +664,79 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
   const confirmOnline = async (): Promise<boolean> => {
     const online = await hasInternetConnection();
     if (!online) {
-      Alert.alert(
-        "No internet connection",
-        "Please connect to the internet and try again.",
-      );
+      Alert.alert("No internet connection", "Please connect to the internet and try again.");
     }
     return online;
   };
 
-  const startFullDownload = async () => {
+  // Single entry point for every download trigger (per-row button,
+  // "Download All", and "Download Selected") — shows the confirmation
+  // dialog with a title, an estimated size (fetched async, starts as
+  // "Calculating…"), and the two network-choice buttons.
+  const requestDownloadConfirm = async (surahNumbers: number[], singleName: string | null) => {
     if (!selectedEdition) return;
-    if (!(await confirmOnline())) return;
-    setDownloading(true);
-    setDownloadDone(0);
-    setDownloadEta(null);
+    const title =
+      singleName != null
+        ? `Download "${singleName}"`
+        : surahNumbers.length === 114
+          ? "Download All 114 Surahs"
+          : `Download ${surahNumbers.length} Surahs`;
+    setConfirmDialog({ surahNumbers, title, sizeLabel: "Calculating size…" });
+    const estBytes = await estimateDownloadSizeBytes(selectedEdition.server, surahNumbers);
+    setConfirmDialog((prev) =>
+      prev && prev.surahNumbers === surahNumbers
+        ? { ...prev, sizeLabel: estBytes != null ? `Approx. ${formatBytes(estBytes)}` : "Size unavailable" }
+        : prev,
+    );
+  };
+
+  const proceedDownload = async (wifiOnly: boolean) => {
+    if (!confirmDialog || !selectedEdition) return;
+    const surahNumbers = confirmDialog.surahNumbers;
+    setConfirmDialog(null);
+
+    if (wifiOnly) {
+      const onWifi = await isOnWifi();
+      if (!onWifi) {
+        Alert.alert(
+          "Wi-Fi not connected",
+          "You're not connected to Wi-Fi right now. Connect to Wi-Fi, then tap Download again to continue.",
+        );
+        return;
+      }
+    } else {
+      if (!(await confirmOnline())) return;
+    }
+
+    const isSingle = surahNumbers.length === 1;
+    if (isSingle) {
+      setDownloadingSurah(surahNumbers[0]);
+    } else {
+      setDownloading(true);
+      setDownloadDone(0);
+      setDownloadEta(null);
+    }
     setFailures([]);
     try {
-      const all = Array.from({ length: 114 }, (_, i) => i + 1);
-      const { failures: fails } = await downloadQuranAudio(selectedEdition, all, (done, _total, eta) => {
-        setDownloadDone(done);
-        setDownloadEta(eta);
+      const { failures: fails } = await downloadQuranAudio(selectedEdition, surahNumbers, (done, _total, eta) => {
+        if (!isSingle) {
+          setDownloadDone(done);
+          setDownloadEta(eta);
+        }
       });
-      const updated = await markEditionDownloaded(selectedEdition.identifier);
-      setDownloadedEditions(updated);
       setFailures(fails);
       await refreshDownloadedSurahs();
+      if (surahNumbers.length === 114) {
+        const updated = await markEditionDownloaded(selectedEdition.identifier);
+        setDownloadedEditions(updated);
+      }
+      setSelectMode(false);
+      setSelectedSurahs(new Set());
     } catch (e) {
-      console.warn("Quran full download failed", e);
+      console.warn("Quran download failed", e);
       Alert.alert("Download failed", "Check your connection and try again.");
     } finally {
+      setDownloadingSurah(null);
       setDownloading(false);
     }
   };
@@ -697,29 +749,19 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
     setDownloadedSurahSet(new Set());
   };
 
-  const downloadSingleSurah = async (surahNumber: number) => {
-    if (!selectedEdition) return;
-    if (!(await confirmOnline())) return;
-    setDownloadingSurah(surahNumber);
-    try {
-      const { failures: fails } = await downloadQuranAudio(selectedEdition, [surahNumber], () => {});
-      if (fails.length > 0) {
-        setFailures((prev) => [...prev.filter((f) => f.surah !== surahNumber), ...fails]);
-      } else {
-        setFailures((prev) => prev.filter((f) => f.surah !== surahNumber));
-        await refreshDownloadedSurahs();
-      }
-    } catch (e) {
-      console.warn("Quran single-surah download failed", e);
-    } finally {
-      setDownloadingSurah(null);
-    }
-  };
-
   const removeSingleSurah = async (surahNumber: number) => {
     if (!selectedEdition) return;
     await deleteSingleSurahAudio(selectedEdition.identifier, surahNumber);
     await refreshDownloadedSurahs();
+  };
+
+  const toggleSurahSelected = (surahNumber: number) => {
+    setSelectedSurahs((prev) => {
+      const next = new Set(prev);
+      if (next.has(surahNumber)) next.delete(surahNumber);
+      else next.add(surahNumber);
+      return next;
+    });
   };
 
   // Full-screen "Now Playing" audio player.
@@ -774,6 +816,16 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
               <Text style={[styles.listSub, { color: colors.onSurfaceTertiary }]}>Streams online — download for offline</Text>
             )}
           </View>
+          <Pressable
+            testID="quran-select-mode-toggle"
+            onPress={() => {
+              setSelectMode((v) => !v);
+              setSelectedSurahs(new Set());
+            }}
+            style={styles.selectModeBtn}
+          >
+            <Ionicons name={selectMode ? "close" : "checkbox-outline"} size={20} color={colors.brand} />
+          </Pressable>
           {downloading ? (
             <ActivityIndicator color={colors.brand} />
           ) : isDownloaded ? (
@@ -783,7 +835,7 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
           ) : (
             <Pressable
               testID="quran-start-download"
-              onPress={startFullDownload}
+              onPress={() => requestDownloadConfirm(Array.from({ length: 114 }, (_, i) => i + 1), null)}
               style={[styles.downloadBtn, { backgroundColor: colors.brand }]}
             >
               <Ionicons name="download-outline" size={16} color="#fff" />
@@ -804,30 +856,39 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
           </View>
         ) : null}
 
-        <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: insets.bottom + SPACING.xxxl }}>
+        <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: insets.bottom + (selectMode && selectedSurahs.size > 0 ? 90 : SPACING.xxxl) }}>
           {(surahList || []).map((s) => {
             const isCurrent = currentSurah === s.number;
             const isRowDownloaded = downloadedSurahSet.has(s.number);
             const isRowDownloading = downloadingSurah === s.number;
+            const isSelected = selectedSurahs.has(s.number);
             return (
               <Pressable
                 key={s.number}
                 testID={`quran-play-${s.number}`}
-                onPress={() => openPlayer(s.number)}
+                onPress={() => (selectMode ? toggleSurahSelected(s.number) : openPlayer(s.number))}
                 style={[styles.listRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
               >
-                <View style={[styles.listNumBadge, { backgroundColor: isCurrent ? colors.brand : colors.brandTertiary }]}>
-                  {isCurrent ? (
-                    <Ionicons name="volume-high" size={16} color="#fff" />
-                  ) : (
-                    <Text style={[styles.listNumText, { color: colors.brand }]}>{s.number}</Text>
-                  )}
-                </View>
+                {selectMode ? (
+                  <Ionicons
+                    name={isSelected ? "checkbox" : "square-outline"}
+                    size={24}
+                    color={isSelected ? colors.brand : colors.muted}
+                  />
+                ) : (
+                  <View style={[styles.listNumBadge, { backgroundColor: isCurrent ? colors.brand : colors.brandTertiary }]}>
+                    {isCurrent ? (
+                      <Ionicons name="volume-high" size={16} color="#fff" />
+                    ) : (
+                      <Text style={[styles.listNumText, { color: colors.brand }]}>{s.number}</Text>
+                    )}
+                  </View>
+                )}
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.listTitle, { color: colors.onSurface }]}>{s.englishName}</Text>
                   <Text style={[styles.listSub, { color: colors.onSurfaceTertiary }]}>{s.numberOfAyahs} ayahs</Text>
                 </View>
-                {isRowDownloading ? (
+                {selectMode ? null : isRowDownloading ? (
                   <ActivityIndicator size="small" color={colors.brand} />
                 ) : isRowDownloaded ? (
                   <Pressable
@@ -841,7 +902,7 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
                 ) : (
                   <Pressable
                     testID={`quran-download-surah-${s.number}`}
-                    onPress={() => downloadSingleSurah(s.number)}
+                    onPress={() => requestDownloadConfirm([s.number], s.englishName)}
                     hitSlop={10}
                     style={styles.rowDownloadBtn}
                   >
@@ -852,6 +913,66 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
             );
           })}
         </ScrollView>
+
+        {selectMode && selectedSurahs.size > 0 ? (
+          <View style={[styles.selectionBar, { backgroundColor: colors.surface, borderTopColor: colors.border, paddingBottom: insets.bottom + SPACING.sm }]}>
+            <Text style={[styles.selectionCount, { color: colors.onSurface }]}>{selectedSurahs.size} selected</Text>
+            <Pressable
+              testID="quran-download-selected"
+              onPress={() => {
+                const names = (surahList || []).find((s) => s.number === Array.from(selectedSurahs)[0])?.englishName;
+                requestDownloadConfirm(Array.from(selectedSurahs), selectedSurahs.size === 1 ? names || null : null);
+              }}
+              style={[styles.selectionDownloadBtn, { backgroundColor: colors.brand }]}
+            >
+              <Ionicons name="download-outline" size={16} color="#fff" />
+              <Text style={styles.downloadBtnText}>Download Selected</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {/* Download confirmation dialog: title, estimated size, and the
+            two network-choice options — a centered dialog rather than a
+            bottom sheet, to read as a confirmation prompt. */}
+        <Modal
+          visible={!!confirmDialog}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setConfirmDialog(null)}
+        >
+          <Pressable style={styles.confirmBackdrop} onPress={() => setConfirmDialog(null)}>
+            <View style={[styles.confirmSheet, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.confirmTitle, { color: colors.onSurface }]} numberOfLines={2}>
+                {confirmDialog?.title}
+              </Text>
+              <Text style={[styles.confirmSize, { color: colors.onSurfaceTertiary }]}>{confirmDialog?.sizeLabel}</Text>
+
+              <Pressable
+                testID="quran-confirm-any-network"
+                onPress={() => proceedDownload(false)}
+                style={[styles.confirmBtn, { backgroundColor: colors.brand }]}
+              >
+                <Text style={styles.confirmBtnTitle}>Download now</Text>
+                <Text style={styles.confirmBtnSub}>Uses any available connection — data charges may apply</Text>
+              </Pressable>
+
+              <Pressable
+                testID="quran-confirm-wifi-only"
+                onPress={() => proceedDownload(true)}
+                style={[styles.confirmBtnSecondary, { borderColor: colors.border }]}
+              >
+                <Text style={[styles.confirmBtnTitleSecondary, { color: colors.onSurface }]}>Wi-Fi only</Text>
+                <Text style={[styles.confirmBtnSub, { color: colors.onSurfaceTertiary }]}>
+                  Only download while connected to Wi-Fi
+                </Text>
+              </Pressable>
+
+              <Pressable testID="quran-confirm-cancel" onPress={() => setConfirmDialog(null)} style={styles.confirmCancelBtn}>
+                <Text style={[styles.confirmCancelText, { color: colors.muted }]}>Cancel</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Modal>
 
         <Modal
           visible={showFailureDetails}
@@ -1017,6 +1138,60 @@ const styles = StyleSheet.create({
   failureRow: { paddingVertical: SPACING.md, borderBottomWidth: StyleSheet.hairlineWidth },
   failureTitle: { fontFamily: FONTS.semibold, fontSize: 14 },
   failureReason: { fontFamily: FONTS.regular, fontSize: 12, marginTop: 2 },
+  selectModeBtn: { padding: SPACING.sm, marginRight: SPACING.xs },
+  selectionBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  selectionCount: { fontFamily: FONTS.semibold, fontSize: 14 },
+  selectionDownloadBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.pill,
+  },
+  confirmBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: SPACING.xl,
+  },
+  confirmSheet: {
+    width: "100%",
+    borderRadius: RADIUS.lg,
+    padding: SPACING.xl,
+  },
+  confirmTitle: { fontFamily: FONTS.bold, fontSize: 18, textAlign: "center" },
+  confirmSize: { fontFamily: FONTS.medium, fontSize: 13, textAlign: "center", marginTop: SPACING.xs, marginBottom: SPACING.xl },
+  confirmBtn: {
+    borderRadius: RADIUS.md,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    marginBottom: SPACING.sm,
+  },
+  confirmBtnTitle: { fontFamily: FONTS.bold, fontSize: 15, color: "#fff", textAlign: "center" },
+  confirmBtnSub: { fontFamily: FONTS.regular, fontSize: 11, color: "rgba(255,255,255,0.85)", textAlign: "center", marginTop: 2 },
+  confirmBtnSecondary: {
+    borderRadius: RADIUS.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    marginBottom: SPACING.md,
+  },
+  confirmBtnTitleSecondary: { fontFamily: FONTS.bold, fontSize: 15, textAlign: "center" },
+  confirmCancelBtn: { paddingVertical: SPACING.sm, alignItems: "center" },
+  confirmCancelText: { fontFamily: FONTS.semibold, fontSize: 14 },
   warningBar: {
     flexDirection: "row",
     alignItems: "center",

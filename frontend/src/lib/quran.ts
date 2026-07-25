@@ -228,6 +228,48 @@ export async function hasInternetConnection(): Promise<boolean> {
   }
 }
 
+// Distinguishes WiFi specifically, for the "Wi-Fi only" download option.
+export async function isOnWifi(): Promise<boolean> {
+  try {
+    const state = await Network.getNetworkStateAsync();
+    return state.type === Network.NetworkStateType.WIFI;
+  } catch {
+    return false;
+  }
+}
+
+// HEAD request to get a single Surah audio file's real size, without
+// downloading the file itself.
+export async function getSurahFileSizeBytes(server: string, surahNumber: number): Promise<number | null> {
+  try {
+    const res = await fetch(mp3QuranSurahUrl(server, surahNumber), { method: "HEAD" });
+    const len = res.headers.get("content-length") || res.headers.get("Content-Length");
+    return len ? parseInt(len, 10) : null;
+  } catch {
+    return null;
+  }
+}
+
+// Estimates total download size for a list of Surahs by sampling a few
+// (not all — could be 114 HEAD requests otherwise) and extrapolating an
+// average across the full list. Fast and reasonably representative, since
+// one reciter's files for different Surahs tend to be similar bitrate.
+export async function estimateDownloadSizeBytes(server: string, surahNumbers: number[]): Promise<number | null> {
+  const sampleCount = Math.min(5, surahNumbers.length);
+  const sample = surahNumbers.slice(0, sampleCount);
+  const sizes = (await Promise.all(sample.map((s) => getSurahFileSizeBytes(server, s)))).filter(
+    (s): s is number => s != null,
+  );
+  if (sizes.length === 0) return null;
+  const avg = sizes.reduce((a, b) => a + b, 0) / sizes.length;
+  return Math.round(avg * surahNumbers.length);
+}
+
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export type DownloadFailure = { surah: number; reason: string };
 
 // Downloads the given list of Surah numbers for one reciter, sequentially
