@@ -304,6 +304,295 @@ class SalahWidgetProvider : AppWidgetProvider() {
 }
 `;
 
+const CLOCK_WIDGET_PROVIDER_KT = `package __PACKAGE__
+
+import android.app.PendingIntent
+import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProvider
+import android.content.Context
+import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.RectF
+import android.os.SystemClock
+import android.util.Log
+import android.widget.RemoteViews
+import org.json.JSONArray
+import org.json.JSONObject
+import java.util.Calendar
+
+/**
+ * A second, independent home screen widget: a circular 24-hour dial with
+ * each prayer marked at its time-of-day position around the ring, plus a
+ * highlighted sector showing time remaining until the next prayer. Reads
+ * from the SAME SharedPreferences payload as SalahWidgetProvider (written
+ * by WidgetModule.updateWidgetData()) — no separate JS-side data path is
+ * needed, so this stays in sync automatically with every existing refresh
+ * trigger (app pushes, the alarm-triggered fast refresh, and Android's own
+ * periodic onUpdate() floor).
+ *
+ * Registered as its own distinct AppWidgetProvider (separate manifest
+ * receiver + separate appwidget-provider info XML) specifically so it
+ * shows up as its own separate entry in Android's widget picker, rather
+ * than being a style variant of the existing widget chosen in-app.
+ */
+class SalahClockWidgetProvider : AppWidgetProvider() {
+    override fun onUpdate(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetIds: IntArray,
+    ) {
+        Log.d("SalahWidget", "ClockWidget onUpdate() called for widgetIds=\${appWidgetIds.joinToString()}")
+        for (id in appWidgetIds) {
+            updateWidget(context, appWidgetManager, id)
+        }
+    }
+
+    companion object {
+        // Maps a fractional hour-of-day (0-24) to a canvas angle in degrees,
+        // where 0/24 sits at the bottom, 6 at the left, 12 at the top, and
+        // 18 at the right — a conventional 24h "sun path" dial orientation.
+        private fun angleForHour(hour: Double): Double {
+            var a = 90.0 + (hour / 24.0) * 360.0
+            a %= 360.0
+            if (a < 0) a += 360.0
+            return a
+        }
+
+        private fun hourOfMillis(ts: Long): Double {
+            val cal = Calendar.getInstance()
+            cal.timeInMillis = ts
+            val h = cal.get(Calendar.HOUR_OF_DAY)
+            val m = cal.get(Calendar.MINUTE)
+            return h + m / 60.0
+        }
+
+        private fun drawClockBitmap(rows: JSONArray?, sizePx: Int): Bitmap {
+            val size = sizePx.coerceAtLeast(1)
+            val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            val cx = size / 2f
+            val cy = size / 2f
+            val radius = size * 0.42f
+            val nowWall = System.currentTimeMillis()
+
+            fun pointAt(angleDeg: Double, r: Float): Pair<Float, Float> {
+                val rad = Math.toRadians(angleDeg)
+                val x = cx + r * Math.cos(rad).toFloat()
+                val y = cy + r * Math.sin(rad).toFloat()
+                return Pair(x, y)
+            }
+
+            val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.STROKE
+                strokeWidth = size * 0.012f
+                color = Color.parseColor("#2E4A45")
+            }
+            canvas.drawCircle(cx, cy, radius, ringPaint)
+
+            val tickPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.STROKE
+                strokeWidth = size * 0.006f
+                color = Color.parseColor("#5C7A73")
+            }
+            for (h in 0 until 24) {
+                val angle = angleForHour(h.toDouble())
+                val outer = pointAt(angle, radius)
+                val innerR = if (h % 6 == 0) radius - size * 0.045f else radius - size * 0.025f
+                val inner = pointAt(angle, innerR)
+                canvas.drawLine(inner.first, inner.second, outer.first, outer.second, tickPaint)
+            }
+
+            val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.parseColor("#B8C4C0")
+                textSize = size * 0.045f
+                textAlign = Paint.Align.CENTER
+                isFakeBoldText = true
+            }
+            val labelR = radius + size * 0.065f
+            val labels = listOf(0 to "24", 6 to "6", 12 to "12", 18 to "18")
+            for ((h, text) in labels) {
+                val angle = angleForHour(h.toDouble())
+                val p = pointAt(angle, labelR)
+                canvas.drawText(text, p.first, p.second + size * 0.015f, labelPaint)
+            }
+
+            var nextAngle: Double? = null
+            if (rows != null) {
+                for (i in 0 until rows.length()) {
+                    val row = rows.getJSONObject(i)
+                    val ts = row.optLong("timestamp", 0L)
+                    if (ts > nowWall) {
+                        nextAngle = angleForHour(hourOfMillis(ts))
+                        break
+                    }
+                }
+            }
+
+            // Highlighted "time remaining" sector, from now to the next
+            // prayer's position on the dial — a circular analogue of the
+            // existing Arc widget's horizontal progress arc.
+            val nowAngle = angleForHour(hourOfMillis(nowWall))
+            if (nextAngle != null) {
+                var sweep = nextAngle - nowAngle
+                if (sweep < 0) sweep += 360.0
+                val sectorPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                    style = Paint.Style.FILL
+                    color = Color.parseColor("#33E8B84B")
+                }
+                val rectF = RectF(cx - radius, cy - radius, cx + radius, cy + radius)
+                canvas.drawArc(rectF, nowAngle.toFloat(), sweep.toFloat(), true, sectorPaint)
+                // Re-stroke the ring on top so the sector fill doesn't
+                // visually bleed past the dial's own border.
+                canvas.drawCircle(cx, cy, radius, ringPaint)
+            }
+
+            if (rows != null) {
+                for (i in 0 until rows.length()) {
+                    val row = rows.getJSONObject(i)
+                    val ts = row.optLong("timestamp", 0L)
+                    if (ts <= 0) continue
+                    val angle = angleForHour(hourOfMillis(ts))
+                    val p = pointAt(angle, radius)
+                    val isNext = nextAngle != null && kotlin.math.abs(angle - nextAngle) < 0.01
+                    val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        style = Paint.Style.FILL
+                        color = if (isNext) Color.parseColor("#E8B84B") else Color.parseColor("#F4F1E8")
+                    }
+                    canvas.drawCircle(p.first, p.second, if (isNext) size * 0.028f else size * 0.02f, dotPaint)
+                    if (isNext) {
+                        val glowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                            style = Paint.Style.STROKE
+                            strokeWidth = size * 0.01f
+                            color = Color.parseColor("#E8B84B")
+                        }
+                        canvas.drawCircle(p.first, p.second, size * 0.045f, glowPaint)
+                    }
+                }
+            }
+
+            // "Now" hand pointing from center toward the current time.
+            val handEnd = pointAt(nowAngle, radius * 0.72f)
+            val handPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.STROKE
+                strokeWidth = size * 0.015f
+                strokeCap = Paint.Cap.ROUND
+                color = Color.parseColor("#FFFFFF")
+            }
+            canvas.drawLine(cx, cy, handEnd.first, handEnd.second, handPaint)
+            val hubPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.FILL
+                color = Color.parseColor("#FFFFFF")
+            }
+            canvas.drawCircle(cx, cy, size * 0.02f, hubPaint)
+
+            return bitmap
+        }
+
+        fun updateWidget(context: Context, appWidgetManager: AppWidgetManager, widgetId: Int) {
+            Log.d("SalahWidget", "ClockWidget updateWidget() ENTER widgetId=\$widgetId")
+            val prefs = context.getSharedPreferences("salah_widget", Context.MODE_PRIVATE)
+            val json = prefs.getString("widget_data", null)
+
+            val views = RemoteViews(context.packageName, R.layout.widget_salah_clock)
+
+            val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+            if (launchIntent != null) {
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                val pendingIntent = PendingIntent.getActivity(
+                    context,
+                    0,
+                    launchIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                )
+                views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
+            }
+
+            val options = appWidgetManager.getAppWidgetOptions(widgetId)
+            val minWidthDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 250).coerceAtLeast(180)
+            val minHeightDp = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 250).coerceAtLeast(180)
+            val density = context.resources.displayMetrics.density
+            // Square canvas sized to whichever dimension is smaller, so the
+            // dial never gets clipped regardless of the cell the launcher
+            // actually grants it.
+            val sizePx = (minOf(minWidthDp, minHeightDp) * density).toInt()
+
+            if (json == null) {
+                Log.d("SalahWidget", "ClockWidget updateWidget() no stored data yet")
+                views.setTextViewText(R.id.next_label, "SalahSync")
+                views.setTextViewText(R.id.next_time, "Open app")
+                views.setTextViewText(R.id.countdown, "")
+                views.setImageViewBitmap(R.id.clock_image, drawClockBitmap(null, sizePx))
+                appWidgetManager.updateAppWidget(widgetId, views)
+                return
+            }
+
+            try {
+                val data = JSONObject(json)
+                val rows = data.optJSONArray("rows")
+                val nowWall = System.currentTimeMillis()
+
+                var chosenLabel = data.optString("nextLabel", "—")
+                var chosenTimestamp = data.optLong("nextTimestamp", 0L)
+                if (rows != null) {
+                    for (i in 0 until rows.length()) {
+                        val row = rows.getJSONObject(i)
+                        val ts = row.optLong("timestamp", 0L)
+                        if (ts > nowWall) {
+                            chosenLabel = row.optString("label", chosenLabel)
+                            chosenTimestamp = ts
+                            break
+                        }
+                    }
+                    val allPassed = (0 until rows.length()).all {
+                        rows.getJSONObject(it).optLong("timestamp", 0L) <= nowWall
+                    }
+                    if (allPassed) {
+                        val tmrFajrTs = data.optLong("tomorrowFajrTimestamp", 0L)
+                        if (tmrFajrTs > 0) {
+                            chosenLabel = "Fajr"
+                            chosenTimestamp = tmrFajrTs
+                        }
+                    }
+                }
+
+                views.setTextViewText(R.id.next_label, chosenLabel)
+                views.setTextViewText(R.id.countdown_label, "Time until \$chosenLabel")
+                if (rows != null) {
+                    for (i in 0 until rows.length()) {
+                        val row = rows.getJSONObject(i)
+                        if (row.optString("label", "") == chosenLabel) {
+                            views.setTextViewText(R.id.next_time, row.optString("time", "--:--"))
+                        }
+                    }
+                }
+
+                if (chosenTimestamp > 0) {
+                    val nowElapsed = SystemClock.elapsedRealtime()
+                    var base = nowElapsed + (chosenTimestamp - nowWall)
+                    if (base <= nowElapsed) base = nowElapsed + 1000L
+                    views.setChronometer(R.id.countdown, base, "%s", true)
+                    views.setChronometerCountDown(R.id.countdown, true)
+                } else {
+                    views.setTextViewText(R.id.countdown, "--:--:--")
+                }
+
+                views.setImageViewBitmap(R.id.clock_image, drawClockBitmap(rows, sizePx))
+            } catch (e: Exception) {
+                Log.d("SalahWidget", "ClockWidget updateWidget() EXCEPTION: \${e.message}")
+                views.setTextViewText(R.id.next_label, "SalahSync")
+                views.setImageViewBitmap(R.id.clock_image, drawClockBitmap(null, sizePx))
+            }
+
+            appWidgetManager.updateAppWidget(widgetId, views)
+            Log.d("SalahWidget", "ClockWidget updateWidget() EXIT widgetId=\$widgetId")
+        }
+    }
+}
+`;
+
 const WIDGET_MODULE_KT = `package __PACKAGE__
 
 import android.appwidget.AppWidgetManager
@@ -337,6 +626,17 @@ class WidgetModule(reactContext: ReactApplicationContext) :
         for (id in widgetIds) {
             SalahWidgetProvider.updateWidget(context, appWidgetManager, id)
         }
+
+        // Also refresh the separate circular clock-face widget, if any
+        // instances of it are placed — both read from the same
+        // SharedPreferences payload above, so a single JS push keeps both
+        // widget types in sync with no extra data path needed.
+        val clockComponentName = ComponentName(context, SalahClockWidgetProvider::class.java)
+        val clockWidgetIds = appWidgetManager.getAppWidgetIds(clockComponentName)
+        Log.d("SalahWidget", "WidgetModule.updateWidgetData() clockWidgetIds=\${clockWidgetIds.joinToString()}")
+        for (id in clockWidgetIds) {
+            SalahClockWidgetProvider.updateWidget(context, appWidgetManager, id)
+        }
     }
 
     // Re-runs the widget update using whatever is ALREADY cached in
@@ -356,6 +656,13 @@ class WidgetModule(reactContext: ReactApplicationContext) :
         Log.d("SalahWidget", "WidgetModule.refreshWidget() widgetIds=\${widgetIds.joinToString()}")
         for (id in widgetIds) {
             SalahWidgetProvider.updateWidget(context, appWidgetManager, id)
+        }
+
+        val clockComponentName = ComponentName(context, SalahClockWidgetProvider::class.java)
+        val clockWidgetIds = appWidgetManager.getAppWidgetIds(clockComponentName)
+        Log.d("SalahWidget", "WidgetModule.refreshWidget() clockWidgetIds=\${clockWidgetIds.joinToString()}")
+        for (id in clockWidgetIds) {
+            SalahClockWidgetProvider.updateWidget(context, appWidgetManager, id)
         }
     }
 }
@@ -387,6 +694,85 @@ const WIDGET_INFO_XML = `<?xml version="1.0" encoding="utf-8"?>
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen">
 </appwidget-provider>
+`;
+
+// Separate appwidget-provider info for the circular clock-face widget —
+// roughly square minimum size so the dial has room to render as an actual
+// circle rather than getting squashed into a wide/short cell.
+const CLOCK_WIDGET_INFO_XML = `<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="180dp"
+    android:minHeight="180dp"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/widget_salah_clock"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen">
+</appwidget-provider>
+`;
+
+// Circular clock-face widget layout: the dial itself is drawn entirely as
+// a single Bitmap (see SalahClockWidgetProvider.drawClockBitmap) and set
+// into this ImageView; the next-prayer label/time/countdown sit centered
+// on top of it via an overlaid FrameLayout child — RemoteViews supports
+// FrameLayout as a widget-safe container, same as LinearLayout elsewhere.
+const WIDGET_CLOCK_LAYOUT_XML = `<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg_default"
+    android:padding="10dp">
+
+    <ImageView
+        android:id="@+id/clock_image"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitCenter" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:orientation="vertical"
+        android:gravity="center">
+
+        <TextView
+            android:id="@+id/next_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Next Prayer"
+            android:textColor="#B8C4C0"
+            android:textSize="10sp" />
+
+        <TextView
+            android:id="@+id/next_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="--:--"
+            android:textColor="#FFFFFF"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/countdown_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Time until next prayer"
+            android:textColor="#9CB3AD"
+            android:textSize="8sp"
+            android:layout_marginTop="4dp" />
+
+        <Chronometer
+            android:id="@+id/countdown"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#E8B84B"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+
+</FrameLayout>
 `;
 
 // Fajr, Isha, and Sunrise/Maghrib icons are the user's own designs
@@ -754,12 +1140,14 @@ function withHomeWidgetFiles(config) {
       const javaDir = path.join(projectRoot, "app/src/main/java", pkg.split(".").join("/"));
       fs.mkdirSync(javaDir, { recursive: true });
       fs.writeFileSync(path.join(javaDir, "SalahWidgetProvider.kt"), WIDGET_PROVIDER_KT.replace(/__PACKAGE__/g, pkg));
+      fs.writeFileSync(path.join(javaDir, "SalahClockWidgetProvider.kt"), CLOCK_WIDGET_PROVIDER_KT.replace(/__PACKAGE__/g, pkg));
       fs.writeFileSync(path.join(javaDir, "WidgetModule.kt"), WIDGET_MODULE_KT.replace(/__PACKAGE__/g, pkg));
       fs.writeFileSync(path.join(javaDir, "WidgetPackage.kt"), WIDGET_PACKAGE_KT.replace(/__PACKAGE__/g, pkg));
 
       const xmlDir = path.join(projectRoot, "app/src/main/res/xml");
       fs.mkdirSync(xmlDir, { recursive: true });
       fs.writeFileSync(path.join(xmlDir, "salah_widget_info.xml"), WIDGET_INFO_XML);
+      fs.writeFileSync(path.join(xmlDir, "salah_clock_widget_info.xml"), CLOCK_WIDGET_INFO_XML);
 
       const drawableDir = path.join(projectRoot, "app/src/main/res/drawable");
       fs.mkdirSync(drawableDir, { recursive: true });
@@ -776,6 +1164,7 @@ function withHomeWidgetFiles(config) {
       fs.writeFileSync(path.join(layoutDir, "widget_row_item.xml"), WIDGET_ROW_ITEM_XML);
       fs.writeFileSync(path.join(layoutDir, "widget_salah_grid.xml"), WIDGET_GRID_LAYOUT_XML);
       fs.writeFileSync(path.join(layoutDir, "widget_grid_row_item.xml"), WIDGET_GRID_ROW_ITEM_XML);
+      fs.writeFileSync(path.join(layoutDir, "widget_salah_clock.xml"), WIDGET_CLOCK_LAYOUT_XML);
 
       return config;
     },
@@ -807,6 +1196,35 @@ function withHomeWidgetManifest(config) {
             $: {
               "android:name": "android.appwidget.provider",
               "android:resource": "@xml/salah_widget_info",
+            },
+          },
+        ],
+      });
+    }
+
+    // Second, independent widget provider — registered as its own receiver
+    // with its own appwidget-provider info XML specifically so it shows up
+    // as its own separate, directly-selectable entry in Android's widget
+    // picker, rather than a style variant chosen inside the app.
+    const clockAlready = app.receiver.some(
+      (r) => r["$"] && r["$"]["android:name"] === ".SalahClockWidgetProvider",
+    );
+    if (!clockAlready) {
+      app.receiver.push({
+        $: {
+          "android:name": ".SalahClockWidgetProvider",
+          "android:exported": "false",
+        },
+        "intent-filter": [
+          {
+            action: [{ $: { "android:name": "android.appwidget.action.APPWIDGET_UPDATE" } }],
+          },
+        ],
+        "meta-data": [
+          {
+            $: {
+              "android:name": "android.appwidget.provider",
+              "android:resource": "@xml/salah_clock_widget_info",
             },
           },
         ],
