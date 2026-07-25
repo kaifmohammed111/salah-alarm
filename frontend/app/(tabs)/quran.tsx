@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -12,24 +12,21 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import TrackPlayer, {
-  usePlaybackState,
-  useProgress,
-  useActiveTrack,
-  State,
-  RepeatMode,
-} from "react-native-track-player";
+import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import Slider from "@react-native-community/slider";
 
 import { useApp } from "@/src/context/AppContext";
 import { FONTS, RADIUS, SPACING, ThemeColors } from "@/src/theme";
 import IslamicPattern from "@/src/components/IslamicPattern";
-import { loadQueueAndPlay } from "@/src/lib/quranPlayer";
+import { startMediaSession, stopMediaSession, subscribeMediaSessionEvents, updateMediaSessionState } from "@/src/lib/quranMediaSession";
 import {
   Ayah,
   AudioEdition,
+  DownloadControl,
   DownloadFailure,
+  DownloadProgressInfo,
   SurahMeta,
+  createDownloadControl,
   deleteDownloadedQuranAudio,
   deleteSingleSurahAudio,
   downloadQuranAudio,
@@ -43,7 +40,10 @@ import {
   getDownloadedSurahSet,
   hasInternetConnection,
   isOnWifi,
+  isSurahDownloaded,
+  localSurahAudioPath,
   markEditionDownloaded,
+  mp3QuranSurahUrl,
   unmarkEditionDownloaded,
 } from "@/src/lib/quran";
 
@@ -537,7 +537,10 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
   const [downloadedSurahSet, setDownloadedSurahSet] = useState<Set<number>>(new Set());
   const [downloading, setDownloading] = useState(false);
   const [downloadDone, setDownloadDone] = useState(0);
+  const [downloadTotal, setDownloadTotal] = useState(114);
   const [downloadEta, setDownloadEta] = useState<number | null>(null);
+  const [waitingForConnection, setWaitingForConnection] = useState(false);
+  const downloadControlRef = useRef<DownloadControl | null>(null);
   const [downloadingSurah, setDownloadingSurah] = useState<number | null>(null);
   const [failures, setFailures] = useState<DownloadFailure[]>([]);
   const [showFailureDetails, setShowFailureDetails] = useState(false);
@@ -548,26 +551,20 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
   );
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState(false);
+  const [currentSurah, setCurrentSurah] = useState<number | null>(null);
 
-  // NOTE: genuinely new ground for this app — react-native-track-player is
-  // a different library entirely from expo-audio (used elsewhere in the
-  // app, e.g. alarm-ring.tsx, which is untouched by this change). It's
-  // used here specifically because it provides real OS-level media-session
-  // integration (a system notification with play/pause/skip controls that
-  // work even while the app is backgrounded), which expo-audio doesn't
-  // offer. Worth confirming on-device: New Architecture compatibility, and
-  // that the notification actually appears and its buttons work correctly
-  // from a locked screen / another app.
-  const playbackState = usePlaybackState();
-  const progress = useProgress(500); // polls position/duration twice a second
-  const activeTrack = useActiveTrack();
-  const isPlaying = playbackState.state === State.Playing;
-  // Track IDs are set to the Surah number as a string when the queue is
-  // built (see loadQueueAndPlay) — deriving currentSurah from the actual
-  // active track, rather than tracking it separately in React state, means
-  // it stays correct automatically even when Next/Previous is pressed from
-  // the system notification, outside this screen's own UI entirely.
-  const currentSurah = activeTrack?.id != null ? Number(activeTrack.id) : null;
+  // Actual audio playback stays on expo-audio (already used elsewhere in
+  // this app, e.g. alarm-ring.tsx, and proven to work fine for playback
+  // itself). The custom native MediaSessionModule (see
+  // src/lib/quranMediaSession.ts) is a SEPARATE piece that only owns the
+  // system notification / lock-screen controls and forwards button
+  // presses back here as events — it doesn't do any playback itself. This
+  // two-piece split exists specifically because react-native-track-player
+  // (which bundles both concerns into one library) turned out to be
+  // incompatible with this project's New Architecture setup.
+  const player = useAudioPlayer(null);
+  const status = useAudioPlayerStatus(player);
+  const isPlaying = !!status?.playing;
 
   useEffect(() => {
     (async () => {
@@ -588,61 +585,108 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
     })();
   }, []);
 
-  const openPlayer = async (surahNumber: number) => {
-    if (!selectedEdition || !surahList) return;
+  const playSurah = async (surahNumber: number) => {
+    if (!selectedEdition) return;
     try {
-      await loadQueueAndPlay(selectedEdition, surahList, surahNumber, shuffle);
-      setView("player");
+      const downloaded = await isSurahDownloaded(selectedEdition.identifier, surahNumber);
+      const uri = downloaded
+        ? localSurahAudioPath(selectedEdition.identifier, surahNumber)
+        : mp3QuranSurahUrl(selectedEdition.server, surahNumber);
+      player.replace({ uri });
+      player.play();
+      setCurrentSurah(surahNumber);
+      const meta = (surahList || []).find((s) => s.number === surahNumber);
+      startMediaSession(meta?.englishName || `Surah ${surahNumber}`, selectedEdition.englishName, true, 0, 0);
     } catch (e) {
-      console.warn("Quran openPlayer failed", e);
+      console.warn("Quran playSurah failed", e);
     }
   };
 
-  // TrackPlayer's own queue already handles auto-advance to the next
-  // track and (via setRepeatMode) single-track repeat natively — no manual
-  // "did it just finish, what's next" bookkeeping needed here anymore,
-  // unlike the previous expo-audio-based version.
+  const openPlayer = (surahNumber: number) => {
+    playSurah(surahNumber);
+    setView("player");
+  };
+
   const handleNext = () => {
-    TrackPlayer.skipToNext().catch(() => {});
+    if (!currentSurah) return;
+    let next: number;
+    if (shuffle) {
+      // Avoid immediately repeating the same Surah when picking randomly.
+      do {
+        next = Math.floor(Math.random() * 114) + 1;
+      } while (next === currentSurah);
+    } else {
+      next = currentSurah >= 114 ? 1 : currentSurah + 1;
+    }
+    playSurah(next);
   };
 
   const handlePrev = () => {
-    TrackPlayer.skipToPrevious().catch(() => {});
+    if (!currentSurah) return;
+    // Previous always steps back sequentially, regardless of shuffle —
+    // shuffle affects what comes next/on-finish, not a "history" stack.
+    const prev = currentSurah <= 1 ? 114 : currentSurah - 1;
+    playSurah(prev);
   };
 
   const togglePlayPause = () => {
     if (isPlaying) {
-      TrackPlayer.pause();
+      player.pause();
     } else {
-      TrackPlayer.play();
+      player.play();
     }
   };
 
-  const handleToggleShuffle = async () => {
-    const next = !shuffle;
-    setShuffle(next);
-    // Rebuilding the queue is what makes shuffle actually affect
-    // TrackPlayer's own Next/Previous (including from the notification)
-    // rather than just this screen's buttons — the tradeoff is that the
-    // currently-playing Surah restarts from 0 when toggled, since the
-    // queue is rebuilt from scratch.
-    if (currentSurah && selectedEdition && surahList) {
-      try {
-        await loadQueueAndPlay(selectedEdition, surahList, currentSurah, next);
-      } catch (e) {
-        console.warn("Quran shuffle toggle failed", e);
-      }
-    }
+  const handleToggleShuffle = () => {
+    setShuffle((v) => !v);
   };
 
-  const handleToggleRepeat = async () => {
-    const next = !repeat;
-    setRepeat(next);
+  const handleToggleRepeat = () => {
+    setRepeat((v) => !v);
+  };
+
+  // Auto-advance to the next Surah when the current one finishes, unless
+  // Repeat is on, in which case the same Surah restarts from the
+  // beginning instead.
+  useEffect(() => {
+    if (!status?.didJustFinish) return;
+    if (repeat) {
+      player.seekTo(0);
+      player.play();
+    } else {
+      handleNext();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status?.didJustFinish]);
+
+  // Keep the system notification / lock-screen media session in sync with
+  // actual playback state — position ticks a few times a second via
+  // useAudioPlayerStatus, each tick refreshes the notification's
+  // scrubber/play-pause state.
+  useEffect(() => {
+    if (!currentSurah) return;
+    updateMediaSessionState(isPlaying, (status?.currentTime || 0) * 1000, (status?.duration || 0) * 1000);
+  }, [currentSurah, isPlaying, status?.currentTime, status?.duration]);
+
+  // Subscribe once to remote-control events (notification taps, lock
+  // screen, Bluetooth/headset buttons) and forward them to the real
+  // expo-audio player / existing next-prev logic.
+  useEffect(() => {
+    const unsubscribe = subscribeMediaSessionEvents({
+      onPlay: () => player.play(),
+      onPause: () => player.pause(),
+      onNext: () => handleNext(),
+      onPrevious: () => handlePrev(),
+      onSeekTo: (positionSeconds) => player.seekTo(positionSeconds),
+    });
+    return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const pausePlayback = () => {
     try {
-      await TrackPlayer.setRepeatMode(next ? RepeatMode.Track : RepeatMode.Off);
-    } catch (e) {
-      console.warn("Quran repeat toggle failed", e);
-    }
+      player.pause();
+    } catch {}
   };
 
   const refreshDownloadedSurahs = async () => {
@@ -708,35 +752,57 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
     }
 
     const isSingle = surahNumbers.length === 1;
+    const control = createDownloadControl();
+    downloadControlRef.current = control;
     if (isSingle) {
       setDownloadingSurah(surahNumbers[0]);
     } else {
       setDownloading(true);
       setDownloadDone(0);
+      setDownloadTotal(surahNumbers.length);
       setDownloadEta(null);
+      setWaitingForConnection(false);
     }
     setFailures([]);
     try {
-      const { failures: fails } = await downloadQuranAudio(selectedEdition, surahNumbers, (done, _total, eta) => {
-        if (!isSingle) {
-          setDownloadDone(done);
-          setDownloadEta(eta);
+      const { failures: fails, cancelled } = await downloadQuranAudio(
+        selectedEdition,
+        surahNumbers,
+        (info: DownloadProgressInfo) => {
+          if (!isSingle) {
+            setDownloadDone(info.done);
+            setDownloadEta(info.etaSeconds);
+            setWaitingForConnection(info.waitingForConnection);
+          }
+        },
+        control,
+      );
+      if (!cancelled) {
+        setFailures(fails);
+        if (surahNumbers.length === 114) {
+          const updated = await markEditionDownloaded(selectedEdition.identifier);
+          setDownloadedEditions(updated);
         }
-      });
-      setFailures(fails);
-      await refreshDownloadedSurahs();
-      if (surahNumbers.length === 114) {
-        const updated = await markEditionDownloaded(selectedEdition.identifier);
-        setDownloadedEditions(updated);
+        setSelectMode(false);
+        setSelectedSurahs(new Set());
       }
-      setSelectMode(false);
-      setSelectedSurahs(new Set());
+      // Refresh regardless of cancellation — whatever completed before
+      // cancelling should still show as downloaded.
+      await refreshDownloadedSurahs();
     } catch (e) {
       console.warn("Quran download failed", e);
       Alert.alert("Download failed", "Check your connection and try again.");
     } finally {
+      downloadControlRef.current = null;
+      setWaitingForConnection(false);
       setDownloadingSurah(null);
       setDownloading(false);
+    }
+  };
+
+  const cancelCurrentDownload = () => {
+    if (downloadControlRef.current) {
+      downloadControlRef.current.cancelled = true;
     }
   };
 
@@ -771,9 +837,9 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
         selectedEdition={selectedEdition}
         surahMeta={surahMeta}
         isPlaying={isPlaying}
-        position={progress.position}
-        duration={progress.duration}
-        onSeek={(v) => TrackPlayer.seekTo(v)}
+        position={status?.currentTime || 0}
+        duration={status?.duration || 0}
+        onSeek={(v) => player.seekTo(v)}
         shuffle={shuffle}
         repeat={repeat}
         onToggleShuffle={handleToggleShuffle}
@@ -800,7 +866,7 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
             // while browsing elsewhere in the app (or another app
             // entirely), so navigating back to the reciter list shouldn't
             // stop it either. Picking a different reciter's Surah later
-            // will naturally replace the queue via loadQueueAndPlay.
+            // will naturally replace the current playback via playSurah.
           }}
           style={[styles.backRow, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}
         >
@@ -812,9 +878,12 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
           <View style={{ flex: 1 }}>
             <Text style={[styles.listTitle, { color: colors.onSurface }]}>{selectedEdition.englishName}</Text>
             {downloading ? (
-              <Text style={[styles.listSub, { color: colors.onSurfaceTertiary }]}>
-                Downloading… {downloadDone}/114
-                {downloadEta != null ? ` · Est. ${formatEta(downloadEta)} remaining` : " · Estimating time…"}
+              <Text style={[styles.listSub, { color: waitingForConnection ? colors.error : colors.onSurfaceTertiary }]}>
+                {waitingForConnection
+                  ? "No connection — will resume automatically once reconnected"
+                  : `Downloading… ${downloadDone}/${downloadTotal} · ${Math.round((downloadDone / Math.max(1, downloadTotal)) * 100)}%${
+                      downloadEta != null ? ` · Est. ${formatEta(downloadEta)} remaining` : " · Estimating time…"
+                    }`}
               </Text>
             ) : isDownloaded ? (
               <Text style={[styles.listSub, { color: colors.success }]}>Downloaded for offline listening</Text>
@@ -822,18 +891,22 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
               <Text style={[styles.listSub, { color: colors.onSurfaceTertiary }]}>Streams online — download for offline</Text>
             )}
           </View>
-          <Pressable
-            testID="quran-select-mode-toggle"
-            onPress={() => {
-              setSelectMode((v) => !v);
-              setSelectedSurahs(new Set());
-            }}
-            style={styles.selectModeBtn}
-          >
-            <Ionicons name={selectMode ? "close" : "checkbox-outline"} size={20} color={colors.brand} />
-          </Pressable>
+          {!downloading ? (
+            <Pressable
+              testID="quran-select-mode-toggle"
+              onPress={() => {
+                setSelectMode((v) => !v);
+                setSelectedSurahs(new Set());
+              }}
+              style={styles.selectModeBtn}
+            >
+              <Ionicons name={selectMode ? "close" : "checkbox-outline"} size={20} color={colors.brand} />
+            </Pressable>
+          ) : null}
           {downloading ? (
-            <ActivityIndicator color={colors.brand} />
+            <Pressable testID="quran-cancel-download" onPress={cancelCurrentDownload} style={styles.downloadIconBtn}>
+              <Ionicons name="close-circle-outline" size={22} color={colors.error} />
+            </Pressable>
           ) : isDownloaded ? (
             <Pressable testID="quran-remove-download" onPress={removeDownload} style={styles.downloadIconBtn}>
               <Ionicons name="trash-outline" size={20} color={colors.muted} />
@@ -849,6 +922,22 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
             </Pressable>
           )}
         </View>
+
+        {downloading && !waitingForConnection ? (
+          <View style={[styles.downloadProgressWrap, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+            <View style={[styles.downloadProgressTrack, { backgroundColor: colors.surfaceTertiary }]}>
+              <View
+                style={[
+                  styles.downloadProgressFill,
+                  {
+                    width: `${Math.min(100, Math.round((downloadDone / Math.max(1, downloadTotal)) * 100))}%`,
+                    backgroundColor: colors.brand,
+                  },
+                ]}
+              />
+            </View>
+          </View>
+        ) : null}
 
         {failures.length > 0 ? (
           <View style={[styles.warningBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
@@ -894,7 +983,11 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
                   <Text style={[styles.listTitle, { color: colors.onSurface }]}>{s.englishName}</Text>
                   <Text style={[styles.listSub, { color: colors.onSurfaceTertiary }]}>{s.numberOfAyahs} ayahs</Text>
                 </View>
-                {selectMode ? null : isRowDownloading ? (
+                {selectMode ? (
+                  isRowDownloaded ? (
+                    <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                  ) : null
+                ) : isRowDownloading ? (
                   <ActivityIndicator size="small" color={colors.brand} />
                 ) : isRowDownloaded ? (
                   <Pressable
@@ -1125,6 +1218,18 @@ const styles = StyleSheet.create({
   downloadIconBtn: { padding: SPACING.sm },
   rowDownloadBtn: { padding: SPACING.xs },
   warningDetailsLink: { fontFamily: FONTS.bold, fontSize: 12 },
+  downloadProgressWrap: {
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  downloadProgressTrack: {
+    width: "100%",
+    height: 6,
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  downloadProgressFill: { height: "100%", borderRadius: 3 },
   modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
   modalSheet: {
     borderTopLeftRadius: RADIUS.lg,
