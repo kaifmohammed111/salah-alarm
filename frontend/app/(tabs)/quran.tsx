@@ -298,16 +298,25 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
     setNowPlaying(null);
   };
 
+  const [downloadWarning, setDownloadWarning] = useState<string | null>(null);
+
   const startFullDownload = async () => {
     if (!selectedEdition) return;
     setDownloading(true);
     setDownloadDone(0);
+    setDownloadWarning(null);
     try {
-      await downloadFullQuranAudio(selectedEdition.identifier, (done) => setDownloadDone(done));
+      const { failedSurahs } = await downloadFullQuranAudio(selectedEdition.identifier, (done) => setDownloadDone(done));
       const updated = await markEditionDownloaded(selectedEdition.identifier);
       setDownloadedEditions(updated);
+      if (failedSurahs.length > 0) {
+        setDownloadWarning(
+          `${failedSurahs.length} Surah${failedSurahs.length > 1 ? "s" : ""} couldn't be downloaded (will stream instead): ${failedSurahs.join(", ")}`,
+        );
+      }
     } catch (e) {
       console.warn("Quran full download failed", e);
+      setDownloadWarning("Download failed. Check your connection and try again.");
     } finally {
       setDownloading(false);
     }
@@ -366,6 +375,13 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
             </Pressable>
           )}
         </View>
+
+        {downloadWarning ? (
+          <View style={[styles.warningBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+            <Ionicons name="alert-circle-outline" size={16} color={colors.error} />
+            <Text style={[styles.warningText, { color: colors.error }]}>{downloadWarning}</Text>
+          </View>
+        ) : null}
 
         <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: insets.bottom + SPACING.xxxl }}>
           {(surahList || []).map((s) => {
@@ -498,4 +514,13 @@ const styles = StyleSheet.create({
   },
   downloadBtnText: { fontFamily: FONTS.bold, fontSize: 12, color: "#fff" },
   downloadIconBtn: { padding: SPACING.sm },
+  warningBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  warningText: { fontFamily: FONTS.regular, fontSize: 12, flex: 1 },
 });

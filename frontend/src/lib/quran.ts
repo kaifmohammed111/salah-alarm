@@ -68,19 +68,68 @@ export async function fetchSurahList(): Promise<SurahMeta[]> {
   return data;
 }
 
+const K_VERIFIED_AUDIO_EDITIONS = "quran.verifiedAudioEditions";
+
+// FIX: /edition/format/audio lists every Arabic AUDIO edition on the API —
+// but that list includes reciters who only have per-AYAH audio bundled,
+// not full-SURAH files (confirmed via the CDN's own documentation: surah
+// audio is a separate, smaller set of reciters than the general ayah-audio
+// list). This is what caused some reciters to "not load" while others
+// (Basit, Basfar, Alafasy) worked fine — those happen to have surah-level
+// files, others in the general list don't.
+//
+// A second external index file exists that's meant to list which editions
+// have surah-level audio (cdn_surah_audio.json), but its documented URL
+// returned a 404 when checked, and there's at least one recent community
+// report of that CDN infrastructure being intermittently unavailable — so
+// rather than depend on a second external source I can't currently verify,
+// this checks directly against the real audio CDN itself: a quick HEAD
+// request for each candidate reciter's Surah 1 file. This tests the exact
+// thing that actually matters (does this reciter's full-surah audio
+// exist) rather than trusting external metadata that might be stale or
+// unreachable. Runs once and the verified result is cached indefinitely,
+// same as everything else here.
+async function hasFullSurahAudio(edition: string): Promise<boolean> {
+  try {
+    const res = await fetch(surahAudioUrl(edition, 1), { method: "HEAD" });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 // Filtered to Arabic-language reciters only — translated/other-language
-// audio editions on this API aren't relevant for a Quran recitation picker.
+// audio editions on this API aren't relevant for a Quran recitation picker
+// — and further filtered to only those confirmed to actually have
+// full-Surah audio files (see hasFullSurahAudio above).
 export async function fetchAudioEditions(): Promise<AudioEdition[]> {
+  const cachedVerified = await storage.getItem(K_VERIFIED_AUDIO_EDITIONS, "");
+  if (cachedVerified) {
+    try {
+      return JSON.parse(cachedVerified);
+    } catch {}
+  }
+
+  let arabicOnly: AudioEdition[];
   const cached = await storage.getItem(K_AUDIO_EDITIONS, "");
   if (cached) {
     try {
-      return JSON.parse(cached);
-    } catch {}
+      arabicOnly = JSON.parse(cached);
+    } catch {
+      arabicOnly = [];
+    }
+  } else {
+    const data = (await fetchJson(`${BASE}/edition/format/audio`)) as AudioEdition[];
+    arabicOnly = data.filter((e) => e.language === "ar");
+    await storage.setItem(K_AUDIO_EDITIONS, JSON.stringify(arabicOnly));
   }
-  const data = (await fetchJson(`${BASE}/edition/format/audio`)) as AudioEdition[];
-  const arabicOnly = data.filter((e) => e.language === "ar");
-  await storage.setItem(K_AUDIO_EDITIONS, JSON.stringify(arabicOnly));
-  return arabicOnly;
+
+  const checks = await Promise.all(
+    arabicOnly.map(async (e) => ({ edition: e, ok: await hasFullSurahAudio(e.identifier) })),
+  );
+  const verified = checks.filter((c) => c.ok).map((c) => c.edition);
+  await storage.setItem(K_VERIFIED_AUDIO_EDITIONS, JSON.stringify(verified));
+  return verified;
 }
 
 // Fetches Arabic + English together in a single request via the API's
@@ -107,8 +156,20 @@ export async function fetchJuzBilingual(juzNumber: number): Promise<{ arabic: Ay
       return JSON.parse(cached);
     } catch {}
   }
-  const data = await fetchJson(`${BASE}/juz/${juzNumber}/editions/${ARABIC_EDITION},${ENGLISH_EDITION}`);
-  const result = { arabic: data[0].ayahs, english: data[1].ayahs };
+  // FIX: the multi-edition endpoint (/editions/ed1,ed2) is only ever
+  // documented for /surah/ — every source describing the Juz endpoint
+  // consistently shows it as single-edition only (/juz/{n}/{edition}).
+  // Assuming the same multi-edition pattern worked for Juz too (without
+  // confirming it) was the actual cause of "Could not load this Juz."
+  // Two separate single-edition requests use only the endpoint shape
+  // that's actually confirmed to exist, then combine them client-side by
+  // ayah order — same technique already used for Surah, just two calls
+  // instead of one.
+  const [arabicData, englishData] = await Promise.all([
+    fetchJson(`${BASE}/juz/${juzNumber}/${ARABIC_EDITION}`),
+    fetchJson(`${BASE}/juz/${juzNumber}/${ENGLISH_EDITION}`),
+  ]);
+  const result = { arabic: arabicData.ayahs, english: englishData.ayahs };
   await storage.setItem(cacheKey, JSON.stringify(result));
   return result;
 }
@@ -141,24 +202,37 @@ export async function isSurahDownloaded(edition: string, surahNumber: number): P
 // simultaneous requests). Skips any file already present, so a retry after
 // a partial/failed download only fetches what's missing rather than
 // starting over.
+//
+// FIX: an individual Surah failing to download (e.g. a reciter that passed
+// the Surah-1 check but is genuinely missing one specific file) no longer
+// aborts the entire 114-Surah download — it's skipped and reported back so
+// the caller can tell the user, rather than the whole download silently
+// stopping partway with no explanation.
 export async function downloadFullQuranAudio(
   edition: string,
   onProgress: (done: number, total: number) => void,
-): Promise<void> {
+): Promise<{ failedSurahs: number[] }> {
   const dir = localSurahAudioDir(edition);
   try {
     await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
   } catch {
     // Directory may already exist — fine, ignore.
   }
+  const failedSurahs: number[] = [];
   for (let s = 1; s <= 114; s++) {
     const dest = localSurahAudioPath(edition, s);
     const already = await isSurahDownloaded(edition, s);
     if (!already) {
-      await FileSystem.downloadAsync(surahAudioUrl(edition, s), dest);
+      try {
+        await FileSystem.downloadAsync(surahAudioUrl(edition, s), dest);
+      } catch (e) {
+        console.warn(`Quran download failed for surah ${s}, edition ${edition}`, e);
+        failedSurahs.push(s);
+      }
     }
     onProgress(s, 114);
   }
+  return { failedSurahs };
 }
 
 export async function deleteDownloadedQuranAudio(edition: string): Promise<void> {
