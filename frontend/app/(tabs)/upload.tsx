@@ -46,6 +46,9 @@ export default function UploadScreen() {
   // the keyboard. Tracking the real keyboard height and adding it to the
   // scroll padding fixes this without touching KeyboardAvoidingView.
   const keyboardHeight = useKeyboardHeight();
+  // Ref to the fields ScrollView — TimeField uses this to auto-scroll
+  // itself into view on focus (see src/components/TimeField.tsx).
+  const scrollRef = useRef<ScrollView>(null);
 
   const [fileName, setFileName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -286,6 +289,7 @@ export default function UploadScreen() {
         keyboardVerticalOffset={insets.top + 60}
       >
         <ScrollView
+          ref={scrollRef}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
@@ -438,6 +442,7 @@ export default function UploadScreen() {
                         <TimeField
                           testID="edit-sunrise"
                           colors={colors}
+                          scrollViewRef={scrollRef}
                           value={(row.sunrise as string) || ""}
                           onChange={(v) => updateRow((r) => ({ ...r, sunrise: v }))}
                         />
@@ -455,12 +460,14 @@ export default function UploadScreen() {
                       <TimeField
                         testID={`edit-${k}-start`}
                         colors={colors}
+                        scrollViewRef={scrollRef}
                         value={pair.start || ""}
                         onChange={(v) => updateRow((r) => ({ ...r, [k]: { ...(r[k] as any), start: v } }))}
                       />
                       <TimeField
                         testID={`edit-${k}-jamaat`}
                         colors={colors}
+                        scrollViewRef={scrollRef}
                         value={pair.jamaat || ""}
                         onChange={(v) => updateRow((r) => ({ ...r, [k]: { ...(r[k] as any), jamaat: v } }))}
                       />

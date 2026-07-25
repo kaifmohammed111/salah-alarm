@@ -56,6 +56,9 @@ export default function EditorScreen() {
   // the keyboard. Tracking the real keyboard height and adding it to the
   // scroll padding fixes this without touching KeyboardAvoidingView at all.
   const keyboardHeight = useKeyboardHeight();
+  // Ref to the fields ScrollView — TimeField uses this to auto-scroll
+  // itself into view on focus (see src/components/TimeField.tsx).
+  const scrollRef = useRef<ScrollView>(null);
 
   const [draft, setDraft] = useState<Timetable | null>(timetable);
   const [rowIdx, setRowIdx] = useState(0);
@@ -165,6 +168,7 @@ export default function EditorScreen() {
           </View>
 
           <ScrollView
+            ref={scrollRef}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{
@@ -211,6 +215,7 @@ export default function EditorScreen() {
                         <TimeField
                           testID="med-sehri"
                           colors={colors}
+                          scrollViewRef={scrollRef}
                           value={row.sehriEnd || ""}
                           onChange={(v) => updateRow((rr) => ({ ...rr, sehriEnd: v }))}
                         />
@@ -222,6 +227,7 @@ export default function EditorScreen() {
                         <TimeField
                           testID="med-iftar"
                           colors={colors}
+                          scrollViewRef={scrollRef}
                           value={row.iftar || ""}
                           onChange={(v) => updateRow((rr) => ({ ...rr, iftar: v, maghrib: { start: v, jamaat: v } }))}
                         />
@@ -247,6 +253,7 @@ export default function EditorScreen() {
                           <TimeField
                             testID="med-sunrise"
                             colors={colors}
+                            scrollViewRef={scrollRef}
                             value={(row.sunrise as string) || ""}
                             onChange={(v) => updateRow((r) => ({ ...r, sunrise: v }))}
                           />
@@ -264,12 +271,14 @@ export default function EditorScreen() {
                         <TimeField
                           testID={`med-${k}-start`}
                           colors={colors}
+                          scrollViewRef={scrollRef}
                           value={pair.start || ""}
                           onChange={(v) => updateRow((r) => ({ ...r, [k]: { ...(r[k] as any), start: v } }))}
                         />
                         <TimeField
                           testID={`med-${k}-jamaat`}
                           colors={colors}
+                          scrollViewRef={scrollRef}
                           value={pair.jamaat || ""}
                           onChange={(v) => updateRow((r) => ({ ...r, [k]: { ...(r[k] as any), jamaat: v } }))}
                         />
