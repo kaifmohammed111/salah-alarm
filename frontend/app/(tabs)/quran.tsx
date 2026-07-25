@@ -1,12 +1,23 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import Animated, {
+  cancelAnimation,
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
 import Slider from "@react-native-community/slider";
 
 import { useApp } from "@/src/context/AppContext";
 import { FONTS, RADIUS, SPACING, ThemeColors } from "@/src/theme";
+import IslamicPattern from "@/src/components/IslamicPattern";
 import {
   Ayah,
   AudioEdition,
@@ -245,6 +256,187 @@ function formatTime(seconds: number): string {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
+
+// Dedicated immersive "Now Playing" screen — deliberately uses its own
+// fixed dark + gold Islamic-inspired palette regardless of the app's
+// light/dark theme setting, similar precedent to how alarm-ring.tsx always
+// uses its own fixed gradient rather than the app theme.
+function NowPlayingScreen({
+  selectedEdition,
+  surahMeta,
+  status,
+  player,
+  shuffle,
+  repeat,
+  onToggleShuffle,
+  onToggleRepeat,
+  onPrev,
+  onNext,
+  onTogglePlayPause,
+  onBack,
+}: {
+  selectedEdition: AudioEdition;
+  surahMeta: SurahMeta | undefined;
+  status: any;
+  player: any;
+  shuffle: boolean;
+  repeat: boolean;
+  onToggleShuffle: () => void;
+  onToggleRepeat: () => void;
+  onPrev: () => void;
+  onNext: () => void;
+  onTogglePlayPause: () => void;
+  onBack: () => void;
+}) {
+  // Entrance: fade + slide up on mount.
+  const entrance = useSharedValue(0);
+  useEffect(() => {
+    entrance.value = withTiming(1, { duration: 450, easing: Easing.out(Easing.cubic) });
+  }, []);
+  const entranceStyle = useAnimatedStyle(() => ({
+    opacity: entrance.value,
+    transform: [{ translateY: (1 - entrance.value) * 24 }],
+  }));
+
+  // Album art: slow continuous rotation while playing, like a record —
+  // stops smoothly wherever it is (via cancelAnimation) rather than
+  // resetting, when paused.
+  const artRotation = useSharedValue(0);
+  useEffect(() => {
+    if (status?.playing) {
+      artRotation.value = withRepeat(
+        withTiming(artRotation.value + 360, { duration: 20000, easing: Easing.linear }),
+        -1,
+        false,
+      );
+    } else {
+      cancelAnimation(artRotation);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status?.playing]);
+  const artStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${artRotation.value}deg` }] }));
+
+  // Spring-scale press feedback for the transport buttons.
+  const playBtnScale = useSharedValue(1);
+  const prevScale = useSharedValue(1);
+  const nextScale = useSharedValue(1);
+  const playBtnStyle = useAnimatedStyle(() => ({ transform: [{ scale: playBtnScale.value }] }));
+  const prevStyle = useAnimatedStyle(() => ({ transform: [{ scale: prevScale.value }] }));
+  const nextStyle = useAnimatedStyle(() => ({ transform: [{ scale: nextScale.value }] }));
+
+  // Shuffle/repeat: animated highlight-pill fill on toggle, rather than an
+  // instant color swap.
+  const shuffleFill = useSharedValue(shuffle ? 1 : 0);
+  const repeatFill = useSharedValue(repeat ? 1 : 0);
+  useEffect(() => {
+    shuffleFill.value = withTiming(shuffle ? 1 : 0, { duration: 220 });
+  }, [shuffle, shuffleFill]);
+  useEffect(() => {
+    repeatFill.value = withTiming(repeat ? 1 : 0, { duration: 220 });
+  }, [repeat, repeatFill]);
+  const shuffleStyle = useAnimatedStyle(() => ({
+    backgroundColor: `rgba(232,184,75,${shuffleFill.value * 0.22})`,
+  }));
+  const repeatStyle = useAnimatedStyle(() => ({
+    backgroundColor: `rgba(232,184,75,${repeatFill.value * 0.22})`,
+  }));
+
+  return (
+    <View style={{ flex: 1 }}>
+      <LinearGradient colors={["#0A2E29", "#0B1E1B", "#050D0B"]} style={StyleSheet.absoluteFill} />
+      <IslamicPattern width={SCREEN_W} height={SCREEN_H} color="#E8B84B" opacity={0.045} />
+
+      <Pressable testID="quran-player-back" onPress={onBack} style={playerStyles.backRow}>
+        <Ionicons name="chevron-down" size={24} color="rgba(255,255,255,0.85)" />
+        <Text style={playerStyles.backText} numberOfLines={1}>
+          {selectedEdition.englishName}
+        </Text>
+      </Pressable>
+
+      <Animated.View style={[playerStyles.body, entranceStyle]}>
+        <View style={playerStyles.artWrap}>
+          <View style={playerStyles.artGlowOuter} />
+          <View style={playerStyles.artGlowInner} />
+          <Animated.View style={artStyle}>
+            <LinearGradient colors={["#2A6E60", "#0F332C"]} style={playerStyles.art}>
+              <Ionicons name="disc-outline" size={72} color="rgba(255,255,255,0.85)" />
+            </LinearGradient>
+          </Animated.View>
+        </View>
+
+        <Text style={playerStyles.arabic}>{surahMeta?.name}</Text>
+        <Text style={playerStyles.title}>{surahMeta?.englishName}</Text>
+        <Text style={playerStyles.sub}>{selectedEdition.englishName}</Text>
+
+        <Slider
+          style={playerStyles.slider}
+          minimumValue={0}
+          maximumValue={status?.duration || 0}
+          value={status?.currentTime || 0}
+          minimumTrackTintColor="#E8B84B"
+          maximumTrackTintColor="rgba(255,255,255,0.2)"
+          thumbTintColor="#E8B84B"
+          onSlidingComplete={(v: number) => player.seekTo(v)}
+        />
+        <View style={playerStyles.timeRow}>
+          <Text style={playerStyles.timeText}>{formatTime(status?.currentTime || 0)}</Text>
+          <Text style={playerStyles.timeText}>{formatTime(status?.duration || 0)}</Text>
+        </View>
+
+        <View style={playerStyles.controls}>
+          <Animated.View style={[playerStyles.togglePill, shuffleStyle]}>
+            <Pressable testID="quran-shuffle-btn" onPress={onToggleShuffle} style={playerStyles.sideBtn}>
+              <Ionicons name="shuffle" size={20} color={shuffle ? "#E8B84B" : "rgba(255,255,255,0.5)"} />
+            </Pressable>
+          </Animated.View>
+
+          <Pressable
+            testID="quran-prev-btn"
+            onPressIn={() => (prevScale.value = withSpring(0.85))}
+            onPressOut={() => (prevScale.value = withSpring(1))}
+            onPress={onPrev}
+          >
+            <Animated.View style={[playerStyles.secondaryBtn, prevStyle]}>
+              <Ionicons name="play-skip-back" size={26} color="#fff" />
+            </Animated.View>
+          </Pressable>
+
+          <Pressable
+            testID="quran-play-pause-btn"
+            onPressIn={() => (playBtnScale.value = withSpring(0.9))}
+            onPressOut={() => (playBtnScale.value = withSpring(1))}
+            onPress={onTogglePlayPause}
+          >
+            <Animated.View style={[playerStyles.mainBtnWrap, playBtnStyle]}>
+              <LinearGradient colors={["#F5D98A", "#C9971F"]} style={playerStyles.mainBtn}>
+                <Ionicons name={status?.playing ? "pause" : "play"} size={32} color="#0B1E1B" />
+              </LinearGradient>
+            </Animated.View>
+          </Pressable>
+
+          <Pressable
+            testID="quran-next-btn"
+            onPressIn={() => (nextScale.value = withSpring(0.85))}
+            onPressOut={() => (nextScale.value = withSpring(1))}
+            onPress={onNext}
+          >
+            <Animated.View style={[playerStyles.secondaryBtn, nextStyle]}>
+              <Ionicons name="play-skip-forward" size={26} color="#fff" />
+            </Animated.View>
+          </Pressable>
+
+          <Animated.View style={[playerStyles.togglePill, repeatStyle]}>
+            <Pressable testID="quran-repeat-btn" onPress={onToggleRepeat} style={playerStyles.sideBtn}>
+              <Ionicons name="repeat" size={20} color={repeat ? "#E8B84B" : "rgba(255,255,255,0.5)"} />
+            </Pressable>
+          </Animated.View>
+        </View>
+      </Animated.View>
+    </View>
+  );
+}
+
 type ListenView = "reciters" | "surahs" | "player";
 
 function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) {
@@ -399,75 +591,20 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
   if (view === "player" && selectedEdition && currentSurah) {
     const surahMeta = (surahList || []).find((s) => s.number === currentSurah);
     return (
-      <View style={{ flex: 1 }}>
-        <Pressable
-          testID="quran-player-back"
-          onPress={() => setView("surahs")}
-          style={[styles.backRow, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}
-        >
-          <Ionicons name="chevron-down" size={20} color={colors.brand} />
-          <Text style={[styles.backText, { color: colors.brand }]}>{selectedEdition.englishName}</Text>
-        </Pressable>
-
-        <View style={styles.playerBody}>
-          <View style={[styles.playerArt, { backgroundColor: colors.brandTertiary }]}>
-            <Ionicons name="mic" size={64} color={colors.brand} />
-          </View>
-
-          <Text style={[styles.playerArabic, { color: colors.onSurface }]}>{surahMeta?.name}</Text>
-          <Text style={[styles.playerTitle, { color: colors.onSurface }]}>{surahMeta?.englishName}</Text>
-          <Text style={[styles.playerSub, { color: colors.onSurfaceTertiary }]}>{selectedEdition.englishName}</Text>
-
-          <Slider
-            style={styles.playerSlider}
-            minimumValue={0}
-            maximumValue={status?.duration || 0}
-            value={status?.currentTime || 0}
-            minimumTrackTintColor={colors.brand}
-            maximumTrackTintColor={colors.border}
-            thumbTintColor={colors.brand}
-            onSlidingComplete={(v: number) => player.seekTo(v)}
-          />
-          <View style={styles.playerTimeRow}>
-            <Text style={[styles.playerTimeText, { color: colors.onSurfaceTertiary }]}>
-              {formatTime(status?.currentTime || 0)}
-            </Text>
-            <Text style={[styles.playerTimeText, { color: colors.onSurfaceTertiary }]}>
-              {formatTime(status?.duration || 0)}
-            </Text>
-          </View>
-
-          <View style={styles.playerControls}>
-            <Pressable
-              testID="quran-shuffle-btn"
-              onPress={() => setShuffle((v) => !v)}
-              style={styles.playerSideBtn}
-            >
-              <Ionicons name="shuffle" size={20} color={shuffle ? colors.brand : colors.muted} />
-            </Pressable>
-            <Pressable testID="quran-prev-btn" onPress={handlePrev} style={styles.playerSecondaryBtn}>
-              <Ionicons name="play-skip-back" size={26} color={colors.onSurface} />
-            </Pressable>
-            <Pressable
-              testID="quran-play-pause-btn"
-              onPress={togglePlayPause}
-              style={[styles.playerMainBtn, { backgroundColor: colors.brand }]}
-            >
-              <Ionicons name={status?.playing ? "pause" : "play"} size={32} color="#fff" />
-            </Pressable>
-            <Pressable testID="quran-next-btn" onPress={handleNext} style={styles.playerSecondaryBtn}>
-              <Ionicons name="play-skip-forward" size={26} color={colors.onSurface} />
-            </Pressable>
-            <Pressable
-              testID="quran-repeat-btn"
-              onPress={() => setRepeat((v) => !v)}
-              style={styles.playerSideBtn}
-            >
-              <Ionicons name="repeat" size={20} color={repeat ? colors.brand : colors.muted} />
-            </Pressable>
-          </View>
-        </View>
-      </View>
+      <NowPlayingScreen
+        selectedEdition={selectedEdition}
+        surahMeta={surahMeta}
+        status={status}
+        player={player}
+        shuffle={shuffle}
+        repeat={repeat}
+        onToggleShuffle={() => setShuffle((v) => !v)}
+        onToggleRepeat={() => setRepeat((v) => !v)}
+        onPrev={handlePrev}
+        onNext={handleNext}
+        onTogglePlayPause={togglePlayPause}
+        onBack={() => setView("surahs")}
+      />
     );
   }
 
@@ -702,6 +839,71 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 34,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});
+
+// Dedicated stylesheet for NowPlayingScreen — separate from the main
+// `styles` above since this screen uses its own fixed dark+gold palette
+// baked directly into these styles, rather than the app's theme colors.
+const playerStyles = StyleSheet.create({
+  backRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.xxxl,
+    paddingBottom: SPACING.md,
+  },
+  backText: { fontFamily: FONTS.semibold, fontSize: 14, color: "rgba(255,255,255,0.85)", flexShrink: 1 },
+  body: { flex: 1, alignItems: "center", padding: SPACING.xl, paddingTop: SPACING.lg },
+  artWrap: { alignItems: "center", justifyContent: "center", marginBottom: SPACING.xxl },
+  artGlowOuter: {
+    position: "absolute",
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: "rgba(232,184,75,0.06)",
+  },
+  artGlowInner: {
+    position: "absolute",
+    width: 190,
+    height: 190,
+    borderRadius: 95,
+    backgroundColor: "rgba(232,184,75,0.1)",
+  },
+  art: {
+    width: 168,
+    height: 168,
+    borderRadius: 84,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 3,
+    borderColor: "rgba(232,184,75,0.35)",
+  },
+  arabic: { fontSize: 26, color: "#F5F1E6", marginBottom: 2 },
+  title: { fontFamily: FONTS.bold, fontSize: 20, color: "#FFFFFF", textAlign: "center" },
+  sub: { fontFamily: FONTS.medium, fontSize: 14, color: "rgba(255,255,255,0.6)", marginTop: 4, marginBottom: SPACING.xxl },
+  slider: { width: "100%", height: 40 },
+  timeRow: { flexDirection: "row", justifyContent: "space-between", width: "100%", marginTop: -SPACING.xs },
+  timeText: { fontFamily: FONTS.medium, fontSize: 12, color: "rgba(255,255,255,0.6)" },
+  controls: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    marginTop: SPACING.xxl,
+    paddingHorizontal: SPACING.sm,
+  },
+  togglePill: { borderRadius: RADIUS.pill },
+  sideBtn: { padding: SPACING.sm },
+  secondaryBtn: { padding: SPACING.sm },
+  mainBtnWrap: { borderRadius: 40 },
+  mainBtn: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     alignItems: "center",
     justifyContent: "center",
   },
