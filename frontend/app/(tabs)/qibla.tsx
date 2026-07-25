@@ -7,6 +7,7 @@ import * as Location from "expo-location";
 import { Magnetometer } from "expo-sensors";
 import * as Haptics from "expo-haptics";
 import { useFocusEffect } from "@react-navigation/native";
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from "react-native-reanimated";
 
 import { useApp } from "@/src/context/AppContext";
 import { FONTS, RADIUS, SPACING } from "@/src/theme";
@@ -14,7 +15,60 @@ import { distanceToKaabaKm, qiblaBearing } from "@/src/lib/qibla";
 
 const COMPASS = 300;
 
+// How much each new sensor sample nudges the smoothed heading, as a
+// fraction of the shortest angular distance to it (0-1). Lower = smoother
+// but slightly laggier; higher = snappier but noisier.
+// The two sensor sources have very different noise characteristics: the
+// OS-fused compass (Location.watchHeadingAsync) is usually already fairly
+// clean, so it can use a lighter touch; the raw magnetometer fallback is
+// genuinely noisy (unlike the fused compass, it doesn't correct for how
+// flat/tilted the phone is held) and needs much heavier smoothing.
+// Base smoothing strength for each source when the phone is nearly still
+// (small sample-to-sample changes) — heavy smoothing here kills sensor
+// jitter. During an actual fast rotation, adaptiveAlpha() below opens
+// this up toward near-1:1 tracking so a genuine full turn doesn't lag
+// behind and then visibly "catch up" (which looked like the dial skipping
+// over sections instead of sweeping through them continuously).
+const SMOOTHING_ALPHA_FUSED = 0.35;
+const SMOOTHING_ALPHA_RAW = 0.12;
+// Once a sample-to-sample change reaches this many degrees, treat it as
+// deliberate fast motion and track it almost immediately rather than
+// smoothing it — a fixed low alpha applied uniformly to genuinely large,
+// fast changes is what caused the lag/catch-up "skipping" behavior.
+const FAST_MOTION_THRESHOLD_DEG = 12;
+
+function adaptiveAlpha(baseAlpha: number, rawDeltaAbsDeg: number): number {
+  const t = Math.min(rawDeltaAbsDeg / FAST_MOTION_THRESHOLD_DEG, 1);
+  return baseAlpha + (0.9 - baseAlpha) * t;
+}
+// How long the dial/marker take to visually glide to each new smoothed
+// sample. Short enough to feel responsive, long enough to eliminate the
+// frame-to-frame "stepping" that a raw un-animated transform has.
+const ROTATION_ANIM_MS = 180;
+// FIX: the animated rotation itself runs entirely on the UI thread via
+// Reanimated and doesn't need React state at all — but the previous
+// version called setHeading() (a React state update) on every single
+// sensor sample, which forces a full component re-render each time
+// (recalculating qiblaRelative/aligned, re-running the alignment effect,
+// reconciling ~28 child views). That JS-thread work competing with the
+// sensor callback's own cadence was a real, separate source of visible
+// stutter, independent of the animation quality itself. Throttling how
+// often the DISPLAY state updates (while still feeding the animation at
+// full raw sample rate) removes that contention — the alignment/haptic
+// logic and the on-screen degree readout don't need 100Hz updates to feel
+// responsive; a few times a second is already imperceptibly fast for those.
+const DISPLAY_STATE_THROTTLE_MS = 200;
+
 type PermState = "undetermined" | "granted" | "denied";
+
+// Shortest signed angular distance from `current` to `target`, in the
+// range (-180, 180]. Used both for the exponential smoothing filter and
+// to keep the animated rotation always taking the shortest path — without
+// this, crossing the 0°/360° boundary would otherwise make the dial spin
+// almost all the way around instead of a couple of degrees.
+function angularDelta(target: number, current: number): number {
+  return ((target - current + 540) % 360) - 180;
+}
 
 export default function QiblaScreen() {
   const { colors } = useApp();
@@ -32,6 +86,22 @@ export default function QiblaScreen() {
   const fallbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const wasAligned = useRef(false);
 
+  // Continuous (never-wrapping) accumulated heading — this is what
+  // actually drives the animated rotation. Using a value that just keeps
+  // accumulating rather than resetting to 0-360 means a `rotate` transform
+  // can always animate smoothly through it with no special-casing, since
+  // e.g. "725deg" renders identically to "5deg".
+  const unwrappedHeadingRef = useRef(0);
+  // The wrapped (0-360), smoothed heading — used for the on-screen degree
+  // readouts and the alignment/haptic logic, unchanged from before other
+  // than now being smoothed rather than raw.
+  const smoothedHeadingRef = useRef(0);
+  const headingInitializedRef = useRef(false);
+
+  // Drives both the dial and the Kaaba marker's rotation. Negative of the
+  // continuous heading, matching the original `-heading` convention.
+  const rotation = useSharedValue(0);
+
   const stopHeading = useCallback(() => {
     headingSub.current?.remove();
     headingSub.current = null;
@@ -41,6 +111,73 @@ export default function QiblaScreen() {
     // Reset alignment tracking so re-entering the screen doesn't immediately
     // fire a stale haptic based on the last known heading before we left.
     wasAligned.current = false;
+    // Force the next sample after re-focusing to snap directly rather than
+    // animating from a now-stale accumulated value.
+    headingInitializedRef.current = false;
+  }, []);
+
+  const lastStateUpdateAtRef = useRef(0);
+  const sampleCountRef = useRef(0);
+  const lastSampleAtRef = useRef(0);
+
+  // Single entry point for every incoming heading sample, regardless of
+  // which sensor source it came from. Applies the smoothing filter, then
+  // updates the continuous accumulator that drives the animated rotation
+  // (every sample, full rate) — but only pushes a React state update
+  // (used for the degree readout + alignment/haptic logic) at most every
+  // DISPLAY_STATE_THROTTLE_MS, so frequent sensor samples don't force a
+  // full component re-render each time.
+  const handleHeadingSample = useCallback((raw: number, source: "fused" | "raw") => {
+    const now = Date.now();
+    // DIAGNOSTIC: logs actual sample cadence + source once a second, so if
+    // this still feels rough we have real data (how often samples truly
+    // arrive, and from which source) instead of guessing at settings again.
+    sampleCountRef.current += 1;
+    if (now - lastSampleAtRef.current > 1000) {
+      console.log(
+        "Qibla heading sample:",
+        source,
+        "raw=",
+        Math.round(raw),
+        "samplesInLastSecond=",
+        sampleCountRef.current,
+      );
+      sampleCountRef.current = 0;
+      lastSampleAtRef.current = now;
+    }
+
+    if (!headingInitializedRef.current) {
+      // First sample after (re)starting — snap directly, nothing to smooth
+      // or animate from yet.
+      unwrappedHeadingRef.current = raw;
+      smoothedHeadingRef.current = raw;
+      rotation.value = -raw;
+      headingInitializedRef.current = true;
+      setHeading(raw);
+      lastStateUpdateAtRef.current = now;
+      return;
+    }
+    const rawDelta = angularDelta(raw, smoothedHeadingRef.current);
+    const alpha = adaptiveAlpha(
+      source === "fused" ? SMOOTHING_ALPHA_FUSED : SMOOTHING_ALPHA_RAW,
+      Math.abs(rawDelta),
+    );
+    const smoothedDelta = rawDelta * alpha;
+    smoothedHeadingRef.current = ((smoothedHeadingRef.current + smoothedDelta) % 360 + 360) % 360;
+    unwrappedHeadingRef.current += smoothedDelta;
+    // Always feed the animation, every sample — this runs on the UI thread
+    // and is what actually needs to be buttery-smooth.
+    rotation.value = withTiming(-unwrappedHeadingRef.current, {
+      duration: ROTATION_ANIM_MS,
+      easing: Easing.out(Easing.quad),
+    });
+    // Only update React state (display readout + alignment/haptics) at a
+    // throttled rate — this does NOT affect the visual rotation above.
+    if (now - lastStateUpdateAtRef.current >= DISPLAY_STATE_THROTTLE_MS) {
+      setHeading(smoothedHeadingRef.current);
+      lastStateUpdateAtRef.current = now;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Direct magnetometer hardware reading (fallback / continuous updates).
@@ -50,8 +187,9 @@ export default function QiblaScreen() {
     magSub.current = Magnetometer.addListener(({ x, y }) => {
       let angle = Math.atan2(y, x) * (180 / Math.PI);
       angle = (angle + 360) % 360;
-      setHeading(angle);
+      handleHeadingSample(angle, "raw");
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const start = useCallback(async () => {
@@ -89,7 +227,19 @@ export default function QiblaScreen() {
           const val = h.trueHeading != null && h.trueHeading >= 0 ? h.trueHeading : h.magHeading;
           if (val != null && !isNaN(val)) {
             headingReceived.current = true;
-            setHeading(val);
+            // FIX: if watchHeadingAsync took long enough to start emitting
+            // that the 1.5s fallback timer below already kicked in, the
+            // raw magnetometer could still be running here too — two
+            // independent, un-coordinated sensor sources both calling into
+            // the same heading handler was a real source of roughness
+            // (competing raw + fused readings fighting each other). Now
+            // that the OS-fused compass is confirmed live, stop the
+            // fallback so only one source drives the heading at a time.
+            if (magSub.current) {
+              magSub.current.remove();
+              magSub.current = null;
+            }
+            handleHeadingSample(val, "fused");
           }
         });
       } catch {
@@ -101,6 +251,7 @@ export default function QiblaScreen() {
     } catch (e: any) {
       setError(typeof e?.message === "string" ? e.message : "Could not get your location.");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startMagnetometer]);
 
   // Start sensors only while this tab is actually focused, and stop them the
@@ -135,6 +286,20 @@ export default function QiblaScreen() {
       wasAligned.current = false;
     }
   }, [aligned]);
+
+  // Dial rotation: directly the (continuous, smoothed) heading accumulator.
+  const dialAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${rotation.value}deg` }],
+  }));
+
+  // Kaaba marker rotation: since rotation.value === -unwrappedHeading, and
+  // the marker needs (qibla - heading), this is just qibla + rotation.value
+  // — deriving it directly from the same shared value keeps the two
+  // perfectly in sync with no extra bookkeeping or separate wraparound
+  // handling needed.
+  const kaabaAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${(qibla ?? 0) + rotation.value}deg` }],
+  }));
 
   const cardinals = [
     { label: "N", angle: 0 },
@@ -193,8 +358,10 @@ export default function QiblaScreen() {
               {/* fixed top indicator (device facing) */}
               <View style={[styles.topPointer, { borderBottomColor: aligned ? colors.success : colors.brand }]} />
 
-              {/* rotating dial with cardinals */}
-              <View style={[styles.fill, { transform: [{ rotate: `${-heading}deg` }] }]}>
+              {/* rotating dial with cardinals — animated via Reanimated for
+                  smooth motion, rather than snapping instantly to every raw
+                  sensor sample. */}
+              <Animated.View style={[styles.fill, dialAnimatedStyle]}>
                 {cardinals.map((c) => (
                   <View
                     key={c.label}
@@ -215,16 +382,19 @@ export default function QiblaScreen() {
                     <View style={[styles.tick, { backgroundColor: colors.border, height: i % 6 === 0 ? 14 : 8 }]} />
                   </View>
                 ))}
-              </View>
+              </Animated.View>
 
-              {/* Kaaba marker at the qibla bearing relative to device */}
-              <View style={[styles.fill, { transform: [{ rotate: `${qiblaRelative}deg` }] }]} pointerEvents="none">
+              {/* Kaaba marker at the qibla bearing relative to device —
+                  same animated approach, derived from the same shared
+                  rotation value so it always stays perfectly in sync with
+                  the dial. */}
+              <Animated.View style={[styles.fill, kaabaAnimatedStyle]} pointerEvents="none">
                 <View style={styles.kaabaWrap}>
                   <View style={[styles.kaabaBadge, aligned && { backgroundColor: colors.success }]}>
                     <Image source={require("../../assets/images/kaaba.png")} style={styles.kaabaImg} contentFit="contain" />
                   </View>
                 </View>
-              </View>
+              </Animated.View>
 
               {/* center readout */}
               <View style={styles.center}>
