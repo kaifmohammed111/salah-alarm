@@ -49,7 +49,6 @@
       "./plugins/withAlarmSounds",
       "./plugins/withLockScreenModule",
       "./plugins/withHomeWidget",
-      "react-native-track-player",
       [
         "expo-splash-screen",
         {
