@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -21,14 +21,18 @@ import IslamicPattern from "@/src/components/IslamicPattern";
 import {
   Ayah,
   AudioEdition,
+  DownloadFailure,
   SurahMeta,
   deleteDownloadedQuranAudio,
-  downloadFullQuranAudio,
+  deleteSingleSurahAudio,
+  downloadQuranAudio,
   fetchAudioEditions,
   fetchJuzBilingual,
   fetchSurahBilingual,
   fetchSurahList,
   getDownloadedEditions,
+  getDownloadedSurahSet,
+  hasInternetConnection,
   isSurahDownloaded,
   localSurahAudioPath,
   markEditionDownloaded,
@@ -258,6 +262,73 @@ function formatTime(seconds: number): string {
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
 
+const BISMILLAH = "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ";
+
+// A vinyl-record-style disc: dark gradient body, thin groove rings, and a
+// circular paper "label" in the center carrying the Bismillah in Arabic —
+// this mirrors how a real vinyl record's label actually looks (plain
+// circle with centered text), rather than attempting to curve text around
+// the disc's edge, which RN has no native support for and would require
+// fragile hand-built character-by-character rotation.
+function VinylDisc({ size }: { size: number }) {
+  const grooveFractions = [0.94, 0.84, 0.74, 0.64];
+  return (
+    <View style={{ width: size, height: size, borderRadius: size / 2, alignItems: "center", justifyContent: "center" }}>
+      <LinearGradient
+        colors={["#1A1A1A", "#0A0A0A", "#000000"]}
+        style={{ position: "absolute", width: size, height: size, borderRadius: size / 2 }}
+      />
+      {grooveFractions.map((f) => {
+        const g = f * size;
+        return (
+          <View
+            key={f}
+            style={{
+              position: "absolute",
+              width: g,
+              height: g,
+              borderRadius: g / 2,
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.07)",
+            }}
+          />
+        );
+      })}
+      <View
+        style={{
+          width: size * 0.42,
+          height: size * 0.42,
+          borderRadius: (size * 0.42) / 2,
+          backgroundColor: "#F5D98A",
+          alignItems: "center",
+          justifyContent: "center",
+          borderWidth: 2,
+          borderColor: "#C9971F",
+          paddingHorizontal: size * 0.03,
+        }}
+      >
+        <Text
+          style={{ fontSize: size * 0.075, color: "#0B1E1B", textAlign: "center" }}
+          numberOfLines={2}
+          adjustsFontSizeToFit
+          minimumFontScale={0.5}
+        >
+          {BISMILLAH}
+        </Text>
+      </View>
+      <View
+        style={{
+          position: "absolute",
+          width: size * 0.045,
+          height: size * 0.045,
+          borderRadius: (size * 0.045) / 2,
+          backgroundColor: "#000",
+        }}
+      />
+    </View>
+  );
+}
+
 // Dedicated immersive "Now Playing" screen — deliberately uses its own
 // fixed dark + gold Islamic-inspired palette regardless of the app's
 // light/dark theme setting, similar precedent to how alarm-ring.tsx always
@@ -359,9 +430,7 @@ function NowPlayingScreen({
           <View style={playerStyles.artGlowOuter} />
           <View style={playerStyles.artGlowInner} />
           <Animated.View style={artStyle}>
-            <LinearGradient colors={["#2A6E60", "#0F332C"]} style={playerStyles.art}>
-              <Ionicons name="disc-outline" size={72} color="rgba(255,255,255,0.85)" />
-            </LinearGradient>
+            <VinylDisc size={168} />
           </Animated.View>
         </View>
 
@@ -439,6 +508,13 @@ function NowPlayingScreen({
 
 type ListenView = "reciters" | "surahs" | "player";
 
+function formatEta(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}m ${s}s`;
+}
+
 function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) {
   const [view, setView] = useState<ListenView>("reciters");
   const [editions, setEditions] = useState<AudioEdition[] | null>(null);
@@ -447,9 +523,13 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
   const [selectedEdition, setSelectedEdition] = useState<AudioEdition | null>(null);
   const [surahList, setSurahList] = useState<SurahMeta[] | null>(null);
   const [downloadedEditions, setDownloadedEditions] = useState<string[]>([]);
+  const [downloadedSurahSet, setDownloadedSurahSet] = useState<Set<number>>(new Set());
   const [downloading, setDownloading] = useState(false);
   const [downloadDone, setDownloadDone] = useState(0);
-  const [downloadWarning, setDownloadWarning] = useState<string | null>(null);
+  const [downloadEta, setDownloadEta] = useState<number | null>(null);
+  const [downloadingSurah, setDownloadingSurah] = useState<number | null>(null);
+  const [failures, setFailures] = useState<DownloadFailure[]>([]);
+  const [showFailureDetails, setShowFailureDetails] = useState(false);
   const [currentSurah, setCurrentSurah] = useState<number | null>(null);
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState(false);
@@ -558,23 +638,52 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
     } catch {}
   };
 
+  const refreshDownloadedSurahs = async () => {
+    if (!selectedEdition) return;
+    const set = await getDownloadedSurahSet(selectedEdition.identifier);
+    setDownloadedSurahSet(set);
+  };
+
+  // Load which individual Surahs are already downloaded whenever the
+  // Surahs screen for a reciter is opened.
+  useEffect(() => {
+    if (view === "surahs" && selectedEdition) {
+      refreshDownloadedSurahs();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, selectedEdition]);
+
+  const confirmOnline = async (): Promise<boolean> => {
+    const online = await hasInternetConnection();
+    if (!online) {
+      Alert.alert(
+        "No internet connection",
+        "Please connect to the internet and try again.",
+      );
+    }
+    return online;
+  };
+
   const startFullDownload = async () => {
     if (!selectedEdition) return;
+    if (!(await confirmOnline())) return;
     setDownloading(true);
     setDownloadDone(0);
-    setDownloadWarning(null);
+    setDownloadEta(null);
+    setFailures([]);
     try {
-      const { failedSurahs } = await downloadFullQuranAudio(selectedEdition, (done) => setDownloadDone(done));
+      const all = Array.from({ length: 114 }, (_, i) => i + 1);
+      const { failures: fails } = await downloadQuranAudio(selectedEdition, all, (done, _total, eta) => {
+        setDownloadDone(done);
+        setDownloadEta(eta);
+      });
       const updated = await markEditionDownloaded(selectedEdition.identifier);
       setDownloadedEditions(updated);
-      if (failedSurahs.length > 0) {
-        setDownloadWarning(
-          `${failedSurahs.length} Surah${failedSurahs.length > 1 ? "s" : ""} couldn't be downloaded (will stream instead): ${failedSurahs.join(", ")}`,
-        );
-      }
+      setFailures(fails);
+      await refreshDownloadedSurahs();
     } catch (e) {
       console.warn("Quran full download failed", e);
-      setDownloadWarning("Download failed. Check your connection and try again.");
+      Alert.alert("Download failed", "Check your connection and try again.");
     } finally {
       setDownloading(false);
     }
@@ -585,6 +694,32 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
     await deleteDownloadedQuranAudio(selectedEdition.identifier);
     const updated = await unmarkEditionDownloaded(selectedEdition.identifier);
     setDownloadedEditions(updated);
+    setDownloadedSurahSet(new Set());
+  };
+
+  const downloadSingleSurah = async (surahNumber: number) => {
+    if (!selectedEdition) return;
+    if (!(await confirmOnline())) return;
+    setDownloadingSurah(surahNumber);
+    try {
+      const { failures: fails } = await downloadQuranAudio(selectedEdition, [surahNumber], () => {});
+      if (fails.length > 0) {
+        setFailures((prev) => [...prev.filter((f) => f.surah !== surahNumber), ...fails]);
+      } else {
+        setFailures((prev) => prev.filter((f) => f.surah !== surahNumber));
+        await refreshDownloadedSurahs();
+      }
+    } catch (e) {
+      console.warn("Quran single-surah download failed", e);
+    } finally {
+      setDownloadingSurah(null);
+    }
+  };
+
+  const removeSingleSurah = async (surahNumber: number) => {
+    if (!selectedEdition) return;
+    await deleteSingleSurahAudio(selectedEdition.identifier, surahNumber);
+    await refreshDownloadedSurahs();
   };
 
   // Full-screen "Now Playing" audio player.
@@ -631,6 +766,7 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
             {downloading ? (
               <Text style={[styles.listSub, { color: colors.onSurfaceTertiary }]}>
                 Downloading… {downloadDone}/114
+                {downloadEta != null ? ` · Est. ${formatEta(downloadEta)} remaining` : " · Estimating time…"}
               </Text>
             ) : isDownloaded ? (
               <Text style={[styles.listSub, { color: colors.success }]}>Downloaded for offline listening</Text>
@@ -656,16 +792,23 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
           )}
         </View>
 
-        {downloadWarning ? (
+        {failures.length > 0 ? (
           <View style={[styles.warningBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
             <Ionicons name="alert-circle-outline" size={16} color={colors.error} />
-            <Text style={[styles.warningText, { color: colors.error }]}>{downloadWarning}</Text>
+            <Text style={[styles.warningText, { color: colors.error }]}>
+              {failures.length} Surah{failures.length > 1 ? "s" : ""} couldn't be downloaded (will stream instead)
+            </Text>
+            <Pressable testID="quran-view-failures" onPress={() => setShowFailureDetails(true)}>
+              <Text style={[styles.warningDetailsLink, { color: colors.brand }]}>Details</Text>
+            </Pressable>
           </View>
         ) : null}
 
         <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: insets.bottom + SPACING.xxxl }}>
           {(surahList || []).map((s) => {
             const isCurrent = currentSurah === s.number;
+            const isRowDownloaded = downloadedSurahSet.has(s.number);
+            const isRowDownloading = downloadingSurah === s.number;
             return (
               <Pressable
                 key={s.number}
@@ -684,10 +827,62 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
                   <Text style={[styles.listTitle, { color: colors.onSurface }]}>{s.englishName}</Text>
                   <Text style={[styles.listSub, { color: colors.onSurfaceTertiary }]}>{s.numberOfAyahs} ayahs</Text>
                 </View>
+                {isRowDownloading ? (
+                  <ActivityIndicator size="small" color={colors.brand} />
+                ) : isRowDownloaded ? (
+                  <Pressable
+                    testID={`quran-remove-surah-${s.number}`}
+                    onPress={() => removeSingleSurah(s.number)}
+                    hitSlop={10}
+                    style={styles.rowDownloadBtn}
+                  >
+                    <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+                  </Pressable>
+                ) : (
+                  <Pressable
+                    testID={`quran-download-surah-${s.number}`}
+                    onPress={() => downloadSingleSurah(s.number)}
+                    hitSlop={10}
+                    style={styles.rowDownloadBtn}
+                  >
+                    <Ionicons name="download-outline" size={20} color={colors.muted} />
+                  </Pressable>
+                )}
               </Pressable>
             );
           })}
         </ScrollView>
+
+        <Modal
+          visible={showFailureDetails}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowFailureDetails(false)}
+        >
+          <Pressable style={styles.modalBackdrop} onPress={() => setShowFailureDetails(false)}>
+            {/* Plain View, no responder-claiming — see the dhikr totals
+                modal fix earlier in this project for why: claiming the
+                touch responder here would block the ScrollView below from
+                ever getting its own scroll gesture. */}
+            <View style={[styles.modalSheet, { backgroundColor: colors.surface, paddingBottom: insets.bottom + SPACING.lg }]}>
+              <View style={styles.modalHandle} />
+              <Text style={[styles.modalTitle, { color: colors.onSurface }]}>Download issues</Text>
+              <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
+                {failures.map((f) => {
+                  const meta = (surahList || []).find((s) => s.number === f.surah);
+                  return (
+                    <View key={f.surah} style={[styles.failureRow, { borderBottomColor: colors.divider }]}>
+                      <Text style={[styles.failureTitle, { color: colors.onSurface }]}>
+                        {meta?.englishName || `Surah ${f.surah}`}
+                      </Text>
+                      <Text style={[styles.failureReason, { color: colors.onSurfaceTertiary }]}>{f.reason}</Text>
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </Pressable>
+        </Modal>
       </View>
     );
   }
@@ -801,6 +996,27 @@ const styles = StyleSheet.create({
   },
   downloadBtnText: { fontFamily: FONTS.bold, fontSize: 12, color: "#fff" },
   downloadIconBtn: { padding: SPACING.sm },
+  rowDownloadBtn: { padding: SPACING.xs },
+  warningDetailsLink: { fontFamily: FONTS.bold, fontSize: 12 },
+  modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
+  modalSheet: {
+    borderTopLeftRadius: RADIUS.lg,
+    borderTopRightRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.xl,
+    paddingTop: SPACING.md,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(120,120,120,0.4)",
+    alignSelf: "center",
+    marginBottom: SPACING.md,
+  },
+  modalTitle: { fontFamily: FONTS.bold, fontSize: 18, marginBottom: SPACING.md },
+  failureRow: { paddingVertical: SPACING.md, borderBottomWidth: StyleSheet.hairlineWidth },
+  failureTitle: { fontFamily: FONTS.semibold, fontSize: 14 },
+  failureReason: { fontFamily: FONTS.regular, fontSize: 12, marginTop: 2 },
   warningBar: {
     flexDirection: "row",
     alignItems: "center",

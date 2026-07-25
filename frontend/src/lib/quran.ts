@@ -13,6 +13,7 @@
 // Quran text itself carries no copyright; both sources serve their content
 // specifically for this kind of programmatic/offline use.
 import * as FileSystem from "expo-file-system/legacy";
+import * as Network from "expo-network";
 import { storage } from "@/src/utils/storage";
 
 const BASE = "https://api.alquran.cloud/v1";
@@ -213,47 +214,104 @@ export async function isSurahDownloaded(editionIdentifier: string, surahNumber: 
   }
 }
 
-// Downloads all 114 Surahs for one reciter, sequentially (not in parallel —
-// avoids hammering the server or the device's network stack with 114
-// simultaneous requests). Skips any file already present, so a retry after
-// a partial/failed download only fetches what's missing rather than
-// starting over. An individual Surah failing to download doesn't abort the
-// whole thing — it's skipped and reported back so the caller can tell the
-// user, rather than the download silently stopping partway with no
-// explanation.
-export async function downloadFullQuranAudio(
+// Checks for a real, working internet connection (WiFi or mobile data —
+// deliberately not WiFi-only, since requiring WiFi specifically would
+// block legitimate downloads over cellular data for no real benefit).
+// Fails "open" (returns true) if the check itself errors, so a broken
+// connectivity check never blocks downloads that would otherwise work.
+export async function hasInternetConnection(): Promise<boolean> {
+  try {
+    const state = await Network.getNetworkStateAsync();
+    return !!state.isConnected && state.isInternetReachable !== false;
+  } catch {
+    return true;
+  }
+}
+
+export type DownloadFailure = { surah: number; reason: string };
+
+// Downloads the given list of Surah numbers for one reciter, sequentially
+// (not in parallel — avoids hammering the server or the device's network
+// stack). Skips any file already present. Generalized from the original
+// "always all 114" version so it can also be used for a single Surah at a
+// time — pass [n] to download just Surah n, or all 114 numbers for a full
+// download.
+//
+// Reports a live ETA (seconds) via onProgress, computed from the ACTUAL
+// average download time of files completed so far in this run — not a
+// guessed constant — so it only appears once real data exists (null until
+// the first file finishes) and keeps refining as the download proceeds.
+//
+// An individual Surah failing doesn't abort the rest — it's recorded with
+// its specific failure reason and reported back, rather than the whole
+// download silently stopping partway with no explanation.
+export async function downloadQuranAudio(
   edition: AudioEdition,
-  onProgress: (done: number, total: number) => void,
-): Promise<{ failedSurahs: number[] }> {
+  surahNumbers: number[],
+  onProgress: (done: number, total: number, etaSeconds: number | null) => void,
+): Promise<{ failures: DownloadFailure[] }> {
   const dir = localSurahAudioDir(edition.identifier);
   try {
     await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
   } catch {
     // Directory may already exist — fine, ignore.
   }
-  const failedSurahs: number[] = [];
-  for (let s = 1; s <= 114; s++) {
+  const failures: DownloadFailure[] = [];
+  let elapsedMsSoFar = 0;
+  let filesTimedSoFar = 0;
+
+  for (let i = 0; i < surahNumbers.length; i++) {
+    const s = surahNumbers[i];
     // Defensive: fetchAudioEditions only returns complete (114/114)
     // reciters, so this should never actually trigger — kept as a safety
     // net in case that ever changes.
     if (!edition.availableSurahs.includes(s)) {
-      failedSurahs.push(s);
-      onProgress(s, 114);
-      continue;
-    }
-    const dest = localSurahAudioPath(edition.identifier, s);
-    const already = await isSurahDownloaded(edition.identifier, s);
-    if (!already) {
-      try {
-        await FileSystem.downloadAsync(mp3QuranSurahUrl(edition.server, s), dest);
-      } catch (e) {
-        console.warn(`Quran download failed for surah ${s}, edition ${edition.identifier}`, e);
-        failedSurahs.push(s);
+      failures.push({ surah: s, reason: "This reciter doesn't have this Surah available." });
+    } else {
+      const already = await isSurahDownloaded(edition.identifier, s);
+      if (!already) {
+        const dest = localSurahAudioPath(edition.identifier, s);
+        const startedAt = Date.now();
+        try {
+          await FileSystem.downloadAsync(mp3QuranSurahUrl(edition.server, s), dest);
+          elapsedMsSoFar += Date.now() - startedAt;
+          filesTimedSoFar += 1;
+        } catch (e: any) {
+          console.warn(`Quran download failed for surah ${s}, edition ${edition.identifier}`, e);
+          const reason =
+            typeof e?.message === "string" && e.message.length > 0 && e.message.length < 200
+              ? e.message
+              : "Network error while downloading this Surah.";
+          failures.push({ surah: s, reason });
+        }
       }
     }
-    onProgress(s, 114);
+    const doneCount = i + 1;
+    const remaining = surahNumbers.length - doneCount;
+    const avgMsPerFile = filesTimedSoFar > 0 ? elapsedMsSoFar / filesTimedSoFar : null;
+    const etaSeconds = avgMsPerFile != null ? Math.round((avgMsPerFile * remaining) / 1000) : null;
+    onProgress(doneCount, surahNumbers.length, etaSeconds);
   }
-  return { failedSurahs };
+  return { failures };
+}
+
+// Checks, in parallel, which of the 114 Surahs are already downloaded for
+// a given reciter — local filesystem checks only, fast even at 114 calls.
+// Used to drive the per-Surah download indicator in the Surah list.
+export async function getDownloadedSurahSet(editionIdentifier: string): Promise<Set<number>> {
+  const checks = await Promise.all(
+    Array.from({ length: 114 }, (_, i) => i + 1).map(async (s) => ({
+      s,
+      exists: await isSurahDownloaded(editionIdentifier, s),
+    })),
+  );
+  return new Set(checks.filter((c) => c.exists).map((c) => c.s));
+}
+
+export async function deleteSingleSurahAudio(editionIdentifier: string, surahNumber: number): Promise<void> {
+  try {
+    await FileSystem.deleteAsync(localSurahAudioPath(editionIdentifier, surahNumber), { idempotent: true });
+  } catch {}
 }
 
 export async function deleteDownloadedQuranAudio(editionIdentifier: string): Promise<void> {
