@@ -14,7 +14,15 @@
 // it runs unconditionally on every JS engine boot — headless cold start or
 // normal app open — rather than depending on React's lifecycle.
 import { registerBackgroundAlarmHandler } from "./src/lib/alarm";
+import TrackPlayer from "react-native-track-player";
 
 registerBackgroundAlarmHandler();
+
+// Same registration-timing principle as above, applied to the Quran
+// player's background service — registered here, at true module scope, so
+// remote control events (play/pause/skip from the system notification,
+// lock screen, or a bluetooth headset) keep working even when the app
+// process isn't in the foreground.
+TrackPlayer.registerPlaybackService(() => require("./service"));
 
 import "expo-router/entry";

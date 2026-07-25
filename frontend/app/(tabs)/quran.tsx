@@ -12,12 +12,19 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
+import TrackPlayer, {
+  usePlaybackState,
+  useProgress,
+  useActiveTrack,
+  State,
+  RepeatMode,
+} from "react-native-track-player";
 import Slider from "@react-native-community/slider";
 
 import { useApp } from "@/src/context/AppContext";
 import { FONTS, RADIUS, SPACING, ThemeColors } from "@/src/theme";
 import IslamicPattern from "@/src/components/IslamicPattern";
+import { loadQueueAndPlay } from "@/src/lib/quranPlayer";
 import {
   Ayah,
   AudioEdition,
@@ -36,10 +43,7 @@ import {
   getDownloadedSurahSet,
   hasInternetConnection,
   isOnWifi,
-  isSurahDownloaded,
-  localSurahAudioPath,
   markEditionDownloaded,
-  mp3QuranSurahUrl,
   unmarkEditionDownloaded,
 } from "@/src/lib/quran";
 
@@ -339,8 +343,10 @@ function VinylDisc({ size }: { size: number }) {
 function NowPlayingScreen({
   selectedEdition,
   surahMeta,
-  status,
-  player,
+  isPlaying,
+  position,
+  duration,
+  onSeek,
   shuffle,
   repeat,
   onToggleShuffle,
@@ -352,8 +358,10 @@ function NowPlayingScreen({
 }: {
   selectedEdition: AudioEdition;
   surahMeta: SurahMeta | undefined;
-  status: any;
-  player: any;
+  isPlaying: boolean;
+  position: number;
+  duration: number;
+  onSeek: (v: number) => void;
   shuffle: boolean;
   repeat: boolean;
   onToggleShuffle: () => void;
@@ -378,7 +386,7 @@ function NowPlayingScreen({
   // resetting, when paused.
   const artRotation = useSharedValue(0);
   useEffect(() => {
-    if (status?.playing) {
+    if (isPlaying) {
       artRotation.value = withRepeat(
         withTiming(artRotation.value + 360, { duration: 20000, easing: Easing.linear }),
         -1,
@@ -388,7 +396,7 @@ function NowPlayingScreen({
       cancelAnimation(artRotation);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status?.playing]);
+  }, [isPlaying]);
   const artStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${artRotation.value}deg` }] }));
 
   // Spring-scale press feedback for the transport buttons.
@@ -444,16 +452,16 @@ function NowPlayingScreen({
         <Slider
           style={playerStyles.slider}
           minimumValue={0}
-          maximumValue={status?.duration || 0}
-          value={status?.currentTime || 0}
+          maximumValue={duration || 0}
+          value={position || 0}
           minimumTrackTintColor="#E8B84B"
           maximumTrackTintColor="rgba(255,255,255,0.2)"
           thumbTintColor="#E8B84B"
-          onSlidingComplete={(v: number) => player.seekTo(v)}
+          onSlidingComplete={(v: number) => onSeek(v)}
         />
         <View style={playerStyles.timeRow}>
-          <Text style={playerStyles.timeText}>{formatTime(status?.currentTime || 0)}</Text>
-          <Text style={playerStyles.timeText}>{formatTime(status?.duration || 0)}</Text>
+          <Text style={playerStyles.timeText}>{formatTime(position || 0)}</Text>
+          <Text style={playerStyles.timeText}>{formatTime(duration || 0)}</Text>
         </View>
 
         <View style={playerStyles.controls}>
@@ -482,7 +490,7 @@ function NowPlayingScreen({
           >
             <Animated.View style={[playerStyles.mainBtnWrap, playBtnStyle]}>
               <LinearGradient colors={["#F5D98A", "#C9971F"]} style={playerStyles.mainBtn}>
-                <Ionicons name={status?.playing ? "pause" : "play"} size={32} color="#0B1E1B" />
+                <Ionicons name={isPlaying ? "pause" : "play"} size={32} color="#0B1E1B" />
               </LinearGradient>
             </Animated.View>
           </Pressable>
@@ -538,24 +546,28 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
   const [confirmDialog, setConfirmDialog] = useState<{ surahNumbers: number[]; title: string; sizeLabel: string } | null>(
     null,
   );
-  const [currentSurah, setCurrentSurah] = useState<number | null>(null);
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState(false);
 
-  // NOTE: this is the first place in the app that initializes an audio
-  // player with no source at mount time, loading a real source later via
-  // .replace() — the only other usage of expo-audio in this codebase
-  // (alarm-ring.tsx) always initializes with a real bundled sound file.
-  // This is expo-audio's documented pattern for a "reactive" player whose
-  // source isn't known until later, but it's worth a real on-device check
-  // here specifically, since it's genuinely new ground for this app.
-  const player = useAudioPlayer(null);
-  // NOTE: also genuinely new ground — useAudioPlayerStatus is expo-audio's
-  // documented hook for reactive playback status (currentTime, duration,
-  // playing, didJustFinish), used here to drive the scrubber, time
-  // readouts, and auto-advance/repeat-on-finish logic. Worth confirming
-  // on-device that the exact field names below match what's returned.
-  const status = useAudioPlayerStatus(player);
+  // NOTE: genuinely new ground for this app — react-native-track-player is
+  // a different library entirely from expo-audio (used elsewhere in the
+  // app, e.g. alarm-ring.tsx, which is untouched by this change). It's
+  // used here specifically because it provides real OS-level media-session
+  // integration (a system notification with play/pause/skip controls that
+  // work even while the app is backgrounded), which expo-audio doesn't
+  // offer. Worth confirming on-device: New Architecture compatibility, and
+  // that the notification actually appears and its buttons work correctly
+  // from a locked screen / another app.
+  const playbackState = usePlaybackState();
+  const progress = useProgress(500); // polls position/duration twice a second
+  const activeTrack = useActiveTrack();
+  const isPlaying = playbackState.state === State.Playing;
+  // Track IDs are set to the Surah number as a string when the queue is
+  // built (see loadQueueAndPlay) — deriving currentSurah from the actual
+  // active track, rather than tracking it separately in React state, means
+  // it stays correct automatically even when Next/Previous is pressed from
+  // the system notification, outside this screen's own UI entirely.
+  const currentSurah = activeTrack?.id != null ? Number(activeTrack.id) : null;
 
   useEffect(() => {
     (async () => {
@@ -576,74 +588,61 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
     })();
   }, []);
 
-  const playSurah = async (surahNumber: number) => {
-    if (!selectedEdition) return;
+  const openPlayer = async (surahNumber: number) => {
+    if (!selectedEdition || !surahList) return;
     try {
-      const downloaded = await isSurahDownloaded(selectedEdition.identifier, surahNumber);
-      const uri = downloaded
-        ? localSurahAudioPath(selectedEdition.identifier, surahNumber)
-        : mp3QuranSurahUrl(selectedEdition.server, surahNumber);
-      player.replace({ uri });
-      player.play();
-      setCurrentSurah(surahNumber);
+      await loadQueueAndPlay(selectedEdition, surahList, surahNumber, shuffle);
+      setView("player");
     } catch (e) {
-      console.warn("Quran playSurah failed", e);
+      console.warn("Quran openPlayer failed", e);
     }
   };
 
-  const openPlayer = (surahNumber: number) => {
-    playSurah(surahNumber);
-    setView("player");
-  };
-
+  // TrackPlayer's own queue already handles auto-advance to the next
+  // track and (via setRepeatMode) single-track repeat natively — no manual
+  // "did it just finish, what's next" bookkeeping needed here anymore,
+  // unlike the previous expo-audio-based version.
   const handleNext = () => {
-    if (!currentSurah) return;
-    let next: number;
-    if (shuffle) {
-      // Avoid immediately repeating the same Surah when picking randomly.
-      do {
-        next = Math.floor(Math.random() * 114) + 1;
-      } while (next === currentSurah);
-    } else {
-      next = currentSurah >= 114 ? 1 : currentSurah + 1;
-    }
-    playSurah(next);
+    TrackPlayer.skipToNext().catch(() => {});
   };
 
   const handlePrev = () => {
-    if (!currentSurah) return;
-    // Previous always steps back sequentially, regardless of shuffle —
-    // shuffle affects what comes next/on-finish, not a "history" stack.
-    const prev = currentSurah <= 1 ? 114 : currentSurah - 1;
-    playSurah(prev);
+    TrackPlayer.skipToPrevious().catch(() => {});
   };
 
   const togglePlayPause = () => {
-    if (status?.playing) {
-      player.pause();
+    if (isPlaying) {
+      TrackPlayer.pause();
     } else {
-      player.play();
+      TrackPlayer.play();
     }
   };
 
-  // Auto-advance to the next Surah when the current one finishes, unless
-  // Repeat is on, in which case the same Surah restarts from the beginning
-  // instead.
-  useEffect(() => {
-    if (!status?.didJustFinish) return;
-    if (repeat) {
-      player.seekTo(0);
-      player.play();
-    } else {
-      handleNext();
+  const handleToggleShuffle = async () => {
+    const next = !shuffle;
+    setShuffle(next);
+    // Rebuilding the queue is what makes shuffle actually affect
+    // TrackPlayer's own Next/Previous (including from the notification)
+    // rather than just this screen's buttons — the tradeoff is that the
+    // currently-playing Surah restarts from 0 when toggled, since the
+    // queue is rebuilt from scratch.
+    if (currentSurah && selectedEdition && surahList) {
+      try {
+        await loadQueueAndPlay(selectedEdition, surahList, currentSurah, next);
+      } catch (e) {
+        console.warn("Quran shuffle toggle failed", e);
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status?.didJustFinish]);
+  };
 
-  const pausePlayback = () => {
+  const handleToggleRepeat = async () => {
+    const next = !repeat;
+    setRepeat(next);
     try {
-      player.pause();
-    } catch {}
+      await TrackPlayer.setRepeatMode(next ? RepeatMode.Track : RepeatMode.Off);
+    } catch (e) {
+      console.warn("Quran repeat toggle failed", e);
+    }
   };
 
   const refreshDownloadedSurahs = async () => {
@@ -771,12 +770,14 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
       <NowPlayingScreen
         selectedEdition={selectedEdition}
         surahMeta={surahMeta}
-        status={status}
-        player={player}
+        isPlaying={isPlaying}
+        position={progress.position}
+        duration={progress.duration}
+        onSeek={(v) => TrackPlayer.seekTo(v)}
         shuffle={shuffle}
         repeat={repeat}
-        onToggleShuffle={() => setShuffle((v) => !v)}
-        onToggleRepeat={() => setRepeat((v) => !v)}
+        onToggleShuffle={handleToggleShuffle}
+        onToggleRepeat={handleToggleRepeat}
         onPrev={handlePrev}
         onNext={handleNext}
         onTogglePlayPause={togglePlayPause}
@@ -794,7 +795,12 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
           onPress={() => {
             setView("reciters");
             setSelectedEdition(null);
-            pausePlayback();
+            // Deliberately NOT pausing playback here — the whole point of
+            // this feature is that listening continues in the background
+            // while browsing elsewhere in the app (or another app
+            // entirely), so navigating back to the reciter list shouldn't
+            // stop it either. Picking a different reciter's Surah later
+            // will naturally replace the queue via loadQueueAndPlay.
           }}
           style={[styles.backRow, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}
         >

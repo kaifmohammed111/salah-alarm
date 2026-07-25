@@ -33,7 +33,9 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS",
-        "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
+        "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
       ]
     },
     "web": {
@@ -47,6 +49,7 @@
       "./plugins/withAlarmSounds",
       "./plugins/withLockScreenModule",
       "./plugins/withHomeWidget",
+      "react-native-track-player",
       [
         "expo-splash-screen",
         {
