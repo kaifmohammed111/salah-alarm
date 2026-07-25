@@ -32,20 +32,32 @@ export default function TimeField({ value, onChange, testID, colors, scrollViewR
   }, [value]);
 
   const scrollIntoView = () => {
-    if (!scrollViewRef?.current || !inputRef.current) return;
+    if (!scrollViewRef?.current || !inputRef.current) {
+      console.log("TimeField scrollIntoView: missing ref", testID, {
+        hasScrollRef: !!scrollViewRef?.current,
+        hasInputRef: !!inputRef.current,
+      });
+      return;
+    }
     const scrollHandle = findNodeHandle(scrollViewRef.current);
-    if (!scrollHandle) return;
+    if (!scrollHandle) {
+      console.log("TimeField scrollIntoView: no scrollHandle", testID);
+      return;
+    }
     // measureLayout gives this field's position relative to the ScrollView's
     // own content — an absolute offset scrollTo can use directly, no need
     // to track current scroll position or compute a delta.
     (inputRef.current as any).measureLayout(
       scrollHandle,
       (_x: number, y: number) => {
+        console.log("TimeField scrollIntoView: measured", testID, "y=", y);
         // Leave a little breathing room above the field rather than
         // snapping it to the very top edge of the scroll viewport.
         scrollViewRef.current?.scrollTo({ y: Math.max(0, y - 100), animated: true });
       },
-      () => {},
+      () => {
+        console.log("TimeField scrollIntoView: measureLayout FAILED", testID);
+      },
     );
   };
 
