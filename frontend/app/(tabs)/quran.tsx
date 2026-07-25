@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useAudioPlayer } from "expo-audio";
+import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
+import Slider from "@react-native-community/slider";
 
 import { useApp } from "@/src/context/AppContext";
 import { FONTS, RADIUS, SPACING, ThemeColors } from "@/src/theme";
@@ -237,7 +238,17 @@ function ReadTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) {
   );
 }
 
+function formatTime(seconds: number): string {
+  if (!isFinite(seconds) || seconds < 0) return "0:00";
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+type ListenView = "reciters" | "surahs" | "player";
+
 function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) {
+  const [view, setView] = useState<ListenView>("reciters");
   const [editions, setEditions] = useState<AudioEdition[] | null>(null);
   const [loadingEditions, setLoadingEditions] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
@@ -246,7 +257,10 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
   const [downloadedEditions, setDownloadedEditions] = useState<string[]>([]);
   const [downloading, setDownloading] = useState(false);
   const [downloadDone, setDownloadDone] = useState(0);
-  const [nowPlaying, setNowPlaying] = useState<number | null>(null);
+  const [downloadWarning, setDownloadWarning] = useState<string | null>(null);
+  const [currentSurah, setCurrentSurah] = useState<number | null>(null);
+  const [shuffle, setShuffle] = useState(false);
+  const [repeat, setRepeat] = useState(false);
 
   // NOTE: this is the first place in the app that initializes an audio
   // player with no source at mount time, loading a real source later via
@@ -256,6 +270,12 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
   // source isn't known until later, but it's worth a real on-device check
   // here specifically, since it's genuinely new ground for this app.
   const player = useAudioPlayer(null);
+  // NOTE: also genuinely new ground — useAudioPlayerStatus is expo-audio's
+  // documented hook for reactive playback status (currentTime, duration,
+  // playing, didJustFinish), used here to drive the scrubber, time
+  // readouts, and auto-advance/repeat-on-finish logic. Worth confirming
+  // on-device that the exact field names below match what's returned.
+  const status = useAudioPlayerStatus(player);
 
   useEffect(() => {
     (async () => {
@@ -285,20 +305,66 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
         : mp3QuranSurahUrl(selectedEdition.server, surahNumber);
       player.replace({ uri });
       player.play();
-      setNowPlaying(surahNumber);
+      setCurrentSurah(surahNumber);
     } catch (e) {
       console.warn("Quran playSurah failed", e);
     }
   };
 
+  const openPlayer = (surahNumber: number) => {
+    playSurah(surahNumber);
+    setView("player");
+  };
+
+  const handleNext = () => {
+    if (!currentSurah) return;
+    let next: number;
+    if (shuffle) {
+      // Avoid immediately repeating the same Surah when picking randomly.
+      do {
+        next = Math.floor(Math.random() * 114) + 1;
+      } while (next === currentSurah);
+    } else {
+      next = currentSurah >= 114 ? 1 : currentSurah + 1;
+    }
+    playSurah(next);
+  };
+
+  const handlePrev = () => {
+    if (!currentSurah) return;
+    // Previous always steps back sequentially, regardless of shuffle —
+    // shuffle affects what comes next/on-finish, not a "history" stack.
+    const prev = currentSurah <= 1 ? 114 : currentSurah - 1;
+    playSurah(prev);
+  };
+
+  const togglePlayPause = () => {
+    if (status?.playing) {
+      player.pause();
+    } else {
+      player.play();
+    }
+  };
+
+  // Auto-advance to the next Surah when the current one finishes, unless
+  // Repeat is on, in which case the same Surah restarts from the beginning
+  // instead.
+  useEffect(() => {
+    if (!status?.didJustFinish) return;
+    if (repeat) {
+      player.seekTo(0);
+      player.play();
+    } else {
+      handleNext();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status?.didJustFinish]);
+
   const pausePlayback = () => {
     try {
       player.pause();
     } catch {}
-    setNowPlaying(null);
   };
-
-  const [downloadWarning, setDownloadWarning] = useState<string | null>(null);
 
   const startFullDownload = async () => {
     if (!selectedEdition) return;
@@ -329,13 +395,90 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
     setDownloadedEditions(updated);
   };
 
-  if (selectedEdition) {
+  // Full-screen "Now Playing" audio player.
+  if (view === "player" && selectedEdition && currentSurah) {
+    const surahMeta = (surahList || []).find((s) => s.number === currentSurah);
+    return (
+      <View style={{ flex: 1 }}>
+        <Pressable
+          testID="quran-player-back"
+          onPress={() => setView("surahs")}
+          style={[styles.backRow, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}
+        >
+          <Ionicons name="chevron-down" size={20} color={colors.brand} />
+          <Text style={[styles.backText, { color: colors.brand }]}>{selectedEdition.englishName}</Text>
+        </Pressable>
+
+        <View style={styles.playerBody}>
+          <View style={[styles.playerArt, { backgroundColor: colors.brandTertiary }]}>
+            <Ionicons name="mic" size={64} color={colors.brand} />
+          </View>
+
+          <Text style={[styles.playerArabic, { color: colors.onSurface }]}>{surahMeta?.name}</Text>
+          <Text style={[styles.playerTitle, { color: colors.onSurface }]}>{surahMeta?.englishName}</Text>
+          <Text style={[styles.playerSub, { color: colors.onSurfaceTertiary }]}>{selectedEdition.englishName}</Text>
+
+          <Slider
+            style={styles.playerSlider}
+            minimumValue={0}
+            maximumValue={status?.duration || 0}
+            value={status?.currentTime || 0}
+            minimumTrackTintColor={colors.brand}
+            maximumTrackTintColor={colors.border}
+            thumbTintColor={colors.brand}
+            onSlidingComplete={(v: number) => player.seekTo(v)}
+          />
+          <View style={styles.playerTimeRow}>
+            <Text style={[styles.playerTimeText, { color: colors.onSurfaceTertiary }]}>
+              {formatTime(status?.currentTime || 0)}
+            </Text>
+            <Text style={[styles.playerTimeText, { color: colors.onSurfaceTertiary }]}>
+              {formatTime(status?.duration || 0)}
+            </Text>
+          </View>
+
+          <View style={styles.playerControls}>
+            <Pressable
+              testID="quran-shuffle-btn"
+              onPress={() => setShuffle((v) => !v)}
+              style={styles.playerSideBtn}
+            >
+              <Ionicons name="shuffle" size={20} color={shuffle ? colors.brand : colors.muted} />
+            </Pressable>
+            <Pressable testID="quran-prev-btn" onPress={handlePrev} style={styles.playerSecondaryBtn}>
+              <Ionicons name="play-skip-back" size={26} color={colors.onSurface} />
+            </Pressable>
+            <Pressable
+              testID="quran-play-pause-btn"
+              onPress={togglePlayPause}
+              style={[styles.playerMainBtn, { backgroundColor: colors.brand }]}
+            >
+              <Ionicons name={status?.playing ? "pause" : "play"} size={32} color="#fff" />
+            </Pressable>
+            <Pressable testID="quran-next-btn" onPress={handleNext} style={styles.playerSecondaryBtn}>
+              <Ionicons name="play-skip-forward" size={26} color={colors.onSurface} />
+            </Pressable>
+            <Pressable
+              testID="quran-repeat-btn"
+              onPress={() => setRepeat((v) => !v)}
+              style={styles.playerSideBtn}
+            >
+              <Ionicons name="repeat" size={20} color={repeat ? colors.brand : colors.muted} />
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  if (view === "surahs" && selectedEdition) {
     const isDownloaded = downloadedEditions.includes(selectedEdition.identifier);
     return (
       <View style={{ flex: 1 }}>
         <Pressable
           testID="quran-listen-back"
           onPress={() => {
+            setView("reciters");
             setSelectedEdition(null);
             pausePlayback();
           }}
@@ -385,16 +528,20 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
 
         <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: insets.bottom + SPACING.xxxl }}>
           {(surahList || []).map((s) => {
-            const playing = nowPlaying === s.number;
+            const isCurrent = currentSurah === s.number;
             return (
               <Pressable
                 key={s.number}
                 testID={`quran-play-${s.number}`}
-                onPress={() => (playing ? pausePlayback() : playSurah(s.number))}
+                onPress={() => openPlayer(s.number)}
                 style={[styles.listRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
               >
-                <View style={[styles.listNumBadge, { backgroundColor: playing ? colors.brand : colors.brandTertiary }]}>
-                  <Ionicons name={playing ? "pause" : "play"} size={16} color={playing ? "#fff" : colors.brand} />
+                <View style={[styles.listNumBadge, { backgroundColor: isCurrent ? colors.brand : colors.brandTertiary }]}>
+                  {isCurrent ? (
+                    <Ionicons name="volume-high" size={16} color="#fff" />
+                  ) : (
+                    <Text style={[styles.listNumText, { color: colors.brand }]}>{s.number}</Text>
+                  )}
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.listTitle, { color: colors.onSurface }]}>{s.englishName}</Text>
@@ -424,7 +571,10 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
             <Pressable
               key={e.identifier}
               testID={`quran-reciter-${e.identifier}`}
-              onPress={() => setSelectedEdition(e)}
+              onPress={() => {
+                setSelectedEdition(e);
+                setView("surahs");
+              }}
               style={[styles.listRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
             >
               <View style={[styles.listNumBadge, { backgroundColor: colors.brandTertiary }]}>
@@ -523,4 +673,36 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   warningText: { fontFamily: FONTS.regular, fontSize: 12, flex: 1 },
+  playerBody: { flex: 1, alignItems: "center", padding: SPACING.xl, paddingTop: SPACING.xxxl },
+  playerArt: {
+    width: 180,
+    height: 180,
+    borderRadius: RADIUS.pill,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: SPACING.xxl,
+  },
+  playerArabic: { fontSize: 26, marginBottom: 2 },
+  playerTitle: { fontFamily: FONTS.bold, fontSize: 20, textAlign: "center" },
+  playerSub: { fontFamily: FONTS.medium, fontSize: 14, marginTop: 4, marginBottom: SPACING.xxl },
+  playerSlider: { width: "100%", height: 40 },
+  playerTimeRow: { flexDirection: "row", justifyContent: "space-between", width: "100%", marginTop: -SPACING.xs },
+  playerTimeText: { fontFamily: FONTS.medium, fontSize: 12 },
+  playerControls: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    marginTop: SPACING.xxl,
+    paddingHorizontal: SPACING.md,
+  },
+  playerSideBtn: { padding: SPACING.sm },
+  playerSecondaryBtn: { padding: SPACING.sm },
+  playerMainBtn: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

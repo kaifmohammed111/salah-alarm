@@ -31,7 +31,11 @@ const K_SURAH_LIST = "quran.surahList";
 // fresh cache key avoids loading stale, incompatible cached data that
 // would crash the Listen screen when it tries to read `.server` off an
 // old-shaped object.
-const K_AUDIO_EDITIONS = "quran.audioEditions.v2";
+// v3: bumped again because the cached reciter names themselves changed
+// (Arabic -> English) — v2's cache key would otherwise keep serving
+// already-cached Arabic names to anyone who opened Listen mode before
+// this fix, even after updating the app.
+const K_AUDIO_EDITIONS = "quran.audioEditions.v3";
 const K_DOWNLOADED_EDITIONS = "quran.downloadedEditions";
 const TEXT_CACHE_PREFIX = "quran.text.";
 
@@ -115,7 +119,13 @@ export async function fetchAudioEditions(): Promise<AudioEdition[]> {
     } catch {}
   }
 
-  const res = await fetch(`${MP3QURAN_BASE}/reciters?language=ar`);
+  // FIX: language=ar returns reciter/moshaf names in Arabic script — the
+  // mp3quran.net API's `language` parameter controls the language of the
+  // returned metadata (names), not a content filter (Quran audio is
+  // essentially always in Arabic regardless of this parameter). Confirmed
+  // via mp3quran.net's own English documentation page, which explicitly
+  // uses language=eng for English-language results.
+  const res = await fetch(`${MP3QURAN_BASE}/reciters?language=eng`);
   if (!res.ok) throw new Error(`Request failed: ${res.status}`);
   const json = await res.json();
   const reciters = (json.reciters || []) as Mp3QuranReciter[];
