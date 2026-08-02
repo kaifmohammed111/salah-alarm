@@ -222,13 +222,17 @@ export default function UploadScreen() {
         if (!pages || pages.length === 0) {
           throw new Error("Couldn't render this PDF's pages for OCR.");
         }
+        console.log(`[PDF OCR DEBUG] rendered ${pages.length} page(s)`);
         let ocrText = "";
         for (let i = 0; i < pages.length; i++) {
           setLoadingLabel(`Reading page ${i + 1} of ${pages.length} with OCR…`);
           const pageText = await recognizePageImage(pages[i]);
+          console.log(`[PDF OCR DEBUG] --- page ${i + 1} raw text (${pageText.length} chars) ---`);
+          console.log(pageText);
           ocrText += pageText + "\n";
         }
         result = parseTimetablePdfText(ocrText);
+        console.log(`[PDF OCR DEBUG] parsed rowCount=${result.rowCount}`);
       }
 
       if (result.rowCount === 0) {
