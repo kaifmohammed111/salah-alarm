@@ -1,16 +1,17 @@
-import { PDFJS_LIB_SOURCE } from "./pdfjsSource.generated";
+import { PDFJS_LIB_SOURCE, PDFJS_WORKER_SOURCE } from "./pdfjsSource.generated";
 
-// Builds the offline HTML page loaded into the hidden WebView. The pdf.js
-// library source is embedded directly in the <script> tag (see
+// Builds the offline HTML page loaded into the hidden WebView. Both the
+// pdf.js library AND its worker script are embedded directly (see
 // pdfjsSource.generated.ts) — nothing here ever fetches from a CDN or
-// network, so this works with airplane mode on.
+// network. pdf.js requires a worker script even in "fake worker" mode, so
+// rather than trying to suppress that, the worker source is turned into a
+// Blob URL at runtime (URL.createObjectURL) and pdf.js loads it from
+// there — still fully offline, just served from memory instead of a URL.
 //
 // Table-row reconstruction: pdf.js's getTextContent() returns a flat list
 // of positioned text fragments, not lines. We cluster fragments by Y
 // coordinate (small tolerance for baseline jitter) to rebuild visual rows,
-// then sort each row's fragments left-to-right by X coordinate — this is
-// what turns the PDF's internal draw order back into the same left-to-right
-// row text a person reading the table would see.
+// then sort each row's fragments left-to-right by X coordinate.
 export const PDF_EXTRACT_HTML = `
 <!DOCTYPE html>
 <html>
@@ -18,9 +19,9 @@ export const PDF_EXTRACT_HTML = `
 <body>
 <script>${PDFJS_LIB_SOURCE}</script>
 <script>
-  // pdfjs-dist 2.16.105 can still run fully single-threaded inside this
-  // WebView (no separate worker file needed) via disableWorker.
-  window.pdfjsLib.disableWorker = true;
+  var workerSource = ${JSON.stringify(PDFJS_WORKER_SOURCE)};
+  var workerBlob = new Blob([workerSource], { type: "application/javascript" });
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(workerBlob);
 
   function b64ToUint8Array(b64) {
     var binary = atob(b64);
@@ -61,7 +62,7 @@ export const PDF_EXTRACT_HTML = `
 
   async function extractAllText(base64) {
     var bytes = b64ToUint8Array(base64);
-    var doc = await window.pdfjsLib.getDocument({ data: bytes, disableWorker: true }).promise;
+    var doc = await window.pdfjsLib.getDocument({ data: bytes }).promise;
     var allLines = [];
     for (var p = 1; p <= doc.numPages; p++) {
       var page = await doc.getPage(p);
