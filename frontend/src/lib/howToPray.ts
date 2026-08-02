@@ -36,8 +36,8 @@ export type PrayerStep = {
 export type SegmentType = "sunnah-muakkadah" | "sunnah-ghair-muakkadah" | "fard" | "nafl" | "wajib";
 
 export const SEGMENT_TYPE_LABELS: Record<SegmentType, string> = {
-  "sunnah-muakkadah": "Sunnah (Mu'akkadah) / Important Sunnah",
-  "sunnah-ghair-muakkadah": "Sunnah (Ghair Mu'akkadah)",
+  "sunnah-muakkadah": "Sunnah (Mu'akkadah) / Emphasized Sunnah",
+  "sunnah-ghair-muakkadah": "Sunnah (Ghair Mu'akkadah) / Non Emphasized Sunnah",
   fard: "Fard / Compulsory",
   nafl: "Nafl",
   wajib: "Wajib / Compulsory",

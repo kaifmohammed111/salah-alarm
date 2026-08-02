@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { useApp } from "@/src/context/AppContext";
 import { FONTS, RADIUS, SPACING } from "@/src/theme";
@@ -154,18 +154,34 @@ export default function HowToPrayScreen() {
   return (
     <View style={[styles.root, { backgroundColor: colors.surfaceSecondary }]}>
       <View style={[styles.header, { paddingTop: insets.top + SPACING.md, backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.onSurface }]}>How to Pray</Text>
-        <Text style={[styles.headerSub, { color: colors.onSurfaceTertiary }]}>
-          {FIQH_OPTIONS.find((o) => o.key === settings.fiqh)?.label} madhab · change in Settings
-        </Text>
+        <View style={styles.headerRow}>
+          <View style={styles.headerTextCol}>
+            <Text style={[styles.title, { color: colors.onSurface }]}>How to Pray</Text>
+            <Text style={[styles.headerSub, { color: colors.onSurfaceTertiary }]}>
+              {FIQH_OPTIONS.find((o) => o.key === settings.fiqh)?.label} madhab · change in Settings
+            </Text>
+          </View>
+          <Image
+            source={require("../../assets/images/mosque-header.png")}
+            style={styles.headerMosqueArt}
+            resizeMode="contain"
+          />
+        </View>
       </View>
       <ScrollView contentContainerStyle={{ padding: SPACING.xl, paddingBottom: insets.bottom + SPACING.xxxl }}>
-        <View style={[styles.disclaimer, { backgroundColor: colors.brandTertiary }]}>
-          <Ionicons name="information-circle-outline" size={18} color={colors.brand} />
-          <Text style={[styles.disclaimerText, { color: colors.onSurface }]}>
-            This guide reflects commonly-taught basics. For detailed guidance, especially on finer points that vary
-            between madhabs, please consult a qualified local scholar or imam.
-          </Text>
+        <View style={[styles.disclaimer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[styles.disclaimerIconWrap, { backgroundColor: colors.brand }]}>
+            <Ionicons name="information" size={16} color={colors.onBrandPrimary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.disclaimerTitle, { color: colors.onSurface }]}>
+              This guide reflects commonly-taught basics.
+            </Text>
+            <Text style={[styles.disclaimerText, { color: colors.onSurfaceTertiary }]}>
+              For detailed guidance, especially on finer points that vary between madhabs, please consult a
+              qualified local scholar or imam.
+            </Text>
+          </View>
         </View>
 
         {PRAYER_CATEGORIES.map((cat) => (
@@ -180,7 +196,21 @@ export default function HowToPrayScreen() {
                   style={[styles.listRow, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 >
                   <View style={[styles.listIconWrap, { backgroundColor: colors.brandTertiary }]}>
-                    <PrayerPostureIllustration pose="standing-navel" size={44} />
+                    <MaterialCommunityIcons
+                      name={
+                        p.key === "fajr"
+                          ? "weather-sunset-up"
+                          : p.key === "zuhr"
+                          ? "weather-sunny"
+                          : p.key === "asr"
+                          ? "white-balance-sunny"
+                          : p.key === "maghrib"
+                          ? "weather-sunset-down"
+                          : "weather-night"
+                      }
+                      size={24}
+                      color={colors.brand}
+                    />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.listTitle, { color: colors.onSurface }]}>{p.label}</Text>
@@ -216,6 +246,9 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: SPACING.xl, paddingBottom: SPACING.md, borderBottomWidth: StyleSheet.hairlineWidth },
   title: { fontFamily: FONTS.bold, fontSize: 26 },
   headerSub: { fontFamily: FONTS.regular, fontSize: 12, marginTop: 2 },
+  headerRow: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" },
+  headerTextCol: { flex: 1, paddingRight: SPACING.sm },
+  headerMosqueArt: { width: 110, height: 110, marginBottom: -SPACING.md },
   promptTitle: { fontFamily: FONTS.bold, fontSize: 24, textAlign: "center", marginBottom: SPACING.sm },
   promptSub: { fontFamily: FONTS.regular, fontSize: 13, lineHeight: 19, textAlign: "center", marginBottom: SPACING.xl },
   promptOption: {
@@ -234,11 +267,15 @@ const styles = StyleSheet.create({
   detailTitle: { fontFamily: FONTS.bold, fontSize: 22 },
   disclaimer: {
     flexDirection: "row",
+    alignItems: "flex-start",
     gap: SPACING.sm,
     padding: SPACING.md,
     borderRadius: RADIUS.md,
+    borderWidth: StyleSheet.hairlineWidth,
     marginBottom: SPACING.xl,
   },
+  disclaimerIconWrap: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  disclaimerTitle: { fontFamily: FONTS.bold, fontSize: 14, marginBottom: 2 },
   disclaimerText: { flex: 1, fontFamily: FONTS.regular, fontSize: 12, lineHeight: 17 },
   sectionLabel: { fontFamily: FONTS.semibold, fontSize: 11, letterSpacing: 0.5, marginBottom: SPACING.sm, marginTop: SPACING.lg },
   listRow: {
