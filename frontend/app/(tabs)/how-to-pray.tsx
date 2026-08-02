@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { useApp } from "@/src/context/AppContext";
@@ -20,6 +21,7 @@ import {
 export default function HowToPrayScreen() {
   const { colors, settings, updateSettings } = useApp();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [selectedPrayer, setSelectedPrayer] = useState<DailyPrayerInfo | null>(null);
   const [selectedSegment, setSelectedSegment] = useState<PrayerSegment | null>(null);
 
@@ -167,9 +169,6 @@ export default function HowToPrayScreen() {
                     <Text style={[styles.segmentStatusText, { color: colors.brand }]}>{segmentStatusText}</Text>
                   </View>
                 </View>
-                <View style={[styles.segmentCountBadge, { backgroundColor: colors.brandTertiary }]}>
-                  <Text style={[styles.segmentCountText, { color: colors.brand }]}>{seg.rakahCount}</Text>
-                </View>
                 {isTappable ? (
                   <Ionicons name="chevron-forward" size={16} color={colors.muted} style={{ marginLeft: 4 }} />
                 ) : null}
@@ -189,7 +188,14 @@ export default function HowToPrayScreen() {
           <View style={styles.headerTextCol}>
             <Text style={[styles.title, { color: colors.onSurface }]}>How to Pray</Text>
             <Text style={[styles.headerSub, { color: colors.onSurfaceTertiary }]}>
-              {FIQH_OPTIONS.find((o) => o.key === settings.fiqh)?.label} madhab · change in Settings
+              {FIQH_OPTIONS.find((o) => o.key === settings.fiqh)?.label} madhab ·{" "}
+              <Text
+                testID="how-to-pray-change-madhab-link"
+                onPress={() => router.push("/settings")}
+                style={{ color: colors.brand, fontFamily: FONTS.semibold }}
+              >
+                Change Setting
+              </Text>
             </Text>
           </View>
           <Image
