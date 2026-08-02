@@ -125,16 +125,6 @@ export default function HowToPrayScreen() {
             const isTappable = seg.type === "fard" || seg.type === "wajib"; // wajib = Witr, the one non-Fard segment with unique content (Qunut)
             const fullLabel = seg.labelOverride ?? SEGMENT_TYPE_LABELS[seg.type];
             const [segmentTitleText, segmentSubtitleText] = fullLabel.split(" / ");
-            const segmentIconName =
-              seg.type === "fard"
-                ? "star"
-                : seg.type === "wajib"
-                ? "flag"
-                : seg.type === "sunnah-muakkadah"
-                ? "sparkles"
-                : seg.type === "sunnah-ghair-muakkadah"
-                ? "leaf-outline"
-                : "add-circle-outline";
             const segmentStatusText =
               seg.type === "sunnah-muakkadah"
                 ? "Recommended but optional upon good reasoning"
@@ -156,7 +146,7 @@ export default function HowToPrayScreen() {
                 ]}
               >
                 <View style={[styles.segmentIconWrap, { backgroundColor: colors.brandTertiary }]}>
-                  <Ionicons name={segmentIconName} size={18} color={colors.brand} />
+                  <Text style={[styles.segmentIconNumber, { color: colors.brand }]}>{seg.rakahCount}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.segmentTitle, { color: isTappable ? colors.onSurface : colors.muted }]}>
@@ -362,6 +352,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   segmentIconWrap: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  segmentIconNumber: { fontFamily: FONTS.bold, fontSize: 16 },
   segmentTitle: { fontFamily: FONTS.bold, fontSize: 15 },
   segmentSubtitle: { fontFamily: FONTS.regular, fontSize: 12, marginTop: 1 },
   segmentStatusBadge: {
