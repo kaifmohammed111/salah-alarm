@@ -1,17 +1,16 @@
 import { PDFJS_LIB_SOURCE, PDFJS_WORKER_SOURCE } from "./pdfjsSource.generated";
 
 // Builds the offline HTML page loaded into the hidden WebView. Both the
-// pdf.js library AND its worker script are embedded directly (see
-// pdfjsSource.generated.ts) — nothing here ever fetches from a CDN or
-// network. pdf.js requires a worker script even in "fake worker" mode, so
-// rather than trying to suppress that, the worker source is turned into a
-// Blob URL at runtime (URL.createObjectURL) and pdf.js loads it from
-// there — still fully offline, just served from memory instead of a URL.
+// pdf.js library AND its worker script are embedded directly — nothing
+// here ever fetches from a CDN or network.
 //
-// Table-row reconstruction: pdf.js's getTextContent() returns a flat list
-// of positioned text fragments, not lines. We cluster fragments by Y
-// coordinate (small tolerance for baseline jitter) to rebuild visual rows,
-// then sort each row's fragments left-to-right by X coordinate.
+// Two request types, sent as JSON via postMessage:
+//   { type: "extractText", base64 }  -> real text layer, when the PDF has one
+//   { type: "renderPages",  base64 } -> renders each page to a PNG, for
+//                                       PDFs with no text layer at all
+//                                       (e.g. a scanned/photographed poster),
+//                                       so the RN side can run on-device OCR
+//                                       on the images instead.
 export const PDF_EXTRACT_HTML = `
 <!DOCTYPE html>
 <html>
@@ -33,7 +32,7 @@ export const PDF_EXTRACT_HTML = `
 
   function linesFromTextContent(textContent) {
     var items = textContent.items.slice().sort(function (a, b) {
-      return b.transform[5] - a.transform[5]; // top to bottom
+      return b.transform[5] - a.transform[5];
     });
     var lines = [];
     var current = null;
@@ -72,8 +71,44 @@ export const PDF_EXTRACT_HTML = `
     return allLines.join("\\n");
   }
 
-  function handleMessage(data) {
-    extractAllText(data)
+  // Renders each page to a PNG at 2x scale (better OCR accuracy on small
+  // print) and returns an array of base64 PNG strings, one per page.
+  async function renderAllPages(base64) {
+    var bytes = b64ToUint8Array(base64);
+    var doc = await window.pdfjsLib.getDocument({ data: bytes }).promise;
+    var pages = [];
+    for (var p = 1; p <= doc.numPages; p++) {
+      var page = await doc.getPage(p);
+      var viewport = page.getViewport({ scale: 2.0 });
+      var canvas = document.createElement("canvas");
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      var ctx = canvas.getContext("2d");
+      await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+      var dataUrl = canvas.toDataURL("image/png");
+      pages.push(dataUrl.split(",")[1]);
+    }
+    return pages;
+  }
+
+  function handleMessage(raw) {
+    var msg;
+    try {
+      msg = JSON.parse(raw);
+    } catch (e) {
+      msg = { type: "extractText", base64: raw };
+    }
+    if (msg.type === "renderPages") {
+      renderAllPages(msg.base64)
+        .then(function (pages) {
+          window.ReactNativeWebView.postMessage(JSON.stringify({ ok: true, pages: pages }));
+        })
+        .catch(function (err) {
+          window.ReactNativeWebView.postMessage(JSON.stringify({ ok: false, error: String((err && err.message) || err) }));
+        });
+      return;
+    }
+    extractAllText(msg.base64)
       .then(function (text) {
         window.ReactNativeWebView.postMessage(JSON.stringify({ ok: true, text: text }));
       })
@@ -82,8 +117,6 @@ export const PDF_EXTRACT_HTML = `
       });
   }
 
-  // Android fires message events on document, iOS fires them on window —
-  // a well-known react-native-webview platform quirk, hence both listeners.
   window.addEventListener("message", function (event) { handleMessage(event.data); });
   document.addEventListener("message", function (event) { handleMessage(event.data); });
 

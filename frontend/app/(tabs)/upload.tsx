@@ -29,6 +29,7 @@ import { parseTimetableCsv } from "@/src/lib/csv";
 import { readFileBase64, readFileText } from "@/src/lib/files";
 import HiddenPdfExtractor, { HiddenPdfExtractorHandle } from "@/src/components/HiddenPdfExtractor";
 import { parseTimetablePdfText } from "@/src/lib/timetablePdfParser";
+import { recognizePageImage } from "@/src/lib/ocrExtract";
 import { storage } from "@/src/utils/storage";
 import TimeField from "@/src/components/TimeField";
 import { CALC_METHODS, CalcMethodKey, checkDeviceClockDrift, generateTimetableForMonth } from "@/src/lib/calculate";
@@ -204,10 +205,29 @@ export default function UploadScreen() {
       const rawText = await pdfExtractorRef.current?.extractText(base64);
       if (!rawText) throw new Error("Could not read this PDF's text.");
       setLoadingLabel("Detecting timetable rows…");
-      const result = parseTimetablePdfText(rawText);
+      let result = parseTimetablePdfText(rawText);
+
+      if (result.rowCount === 0) {
+        // No usable text layer (e.g. a scanned/photographed poster saved
+        // as a PDF) — fall back to rendering each page as an image and
+        // running on-device OCR on it instead.
+        setLoadingLabel("No readable text found — trying on-device OCR…");
+        const pages = await pdfExtractorRef.current?.renderPages(base64);
+        if (!pages || pages.length === 0) {
+          throw new Error("Couldn't render this PDF's pages for OCR.");
+        }
+        let ocrText = "";
+        for (let i = 0; i < pages.length; i++) {
+          setLoadingLabel(`Reading page ${i + 1} of ${pages.length} with OCR…`);
+          const pageText = await recognizePageImage(pages[i]);
+          ocrText += pageText + "\n";
+        }
+        result = parseTimetablePdfText(ocrText);
+      }
+
       if (result.rowCount === 0) {
         throw new Error(
-          "Couldn't detect any timetable rows in this PDF. It may use a layout this converter doesn't recognize yet.",
+          "Couldn't detect any timetable rows in this PDF, even with OCR. It may use a layout this converter doesn't recognize yet.",
         );
       }
       setPdfResult({ csv: result.csv, rowCount: result.rowCount });

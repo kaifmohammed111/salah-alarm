@@ -28,6 +28,7 @@
     "@notifee/react-native": "9.1.8",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/slider": "5.0.1",
+    "@react-native-ml-kit/text-recognition": "2.0.0",
     "adhan": "4.4.4",
     "date-fns": "4.1.0",
     "dayjs": "1.11.13",
