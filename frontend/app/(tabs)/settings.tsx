@@ -10,6 +10,7 @@ import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 
 import { useApp } from "@/src/context/AppContext";
+import { BannerAd, BannerAdSize, InterstitialAd, AdEventType, TestIds } from "react-native-google-mobile-ads";
 import { requestBatteryOptimizationExemption } from "@/src/lib/alarm";
 import { FONTS, RADIUS, SPACING } from "@/src/theme";
 
@@ -312,6 +313,14 @@ export default function SettingsScreen() {
             onChange={(v) => setDraft((d) => ({ ...d, showSunrise: v }))}
             testID="setting-sunrise"
           />
+          <View style={{ height: SPACING.sm }} />
+          <RowSwitch
+            icon="notifications-outline"
+            label="Strong Alarm Notification"
+            value={draft.strongAlarmNotification}
+            onChange={(v) => setDraft((d) => ({ ...d, strongAlarmNotification: v }))}
+            testID="setting-strong-alarm-notification"
+          />
         </View>
 
         {/* Alarm Screen */}
@@ -358,8 +367,8 @@ export default function SettingsScreen() {
           </Text>
           <View style={{ flexDirection: "row", gap: SPACING.md }}>
             {[
-              { id: "arc", label: "Arc" },
               { id: "grid", label: "Grid" },
+              { id: "clock", label: "Clock" },
             ].map((opt) => {
               const active = draft.widgetStyle === opt.id;
               return (
@@ -373,10 +382,75 @@ export default function SettingsScreen() {
                   ]}
                 >
                   <Ionicons
-                    name={opt.id === "arc" ? "pulse-outline" : "grid-outline"}
+                    name={opt.id === "clock" ? "time-outline" : "grid-outline"}
                     size={18}
                     color={active ? "#fff" : colors.brand}
                   />
+                  <Text style={[styles.widgetStyleLabel, { color: active ? "#fff" : colors.onSurface }]}>
+                    {opt.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Madhab (used by the "How to Pray" feature) */}
+        <Text style={[styles.section, { color: colors.onSurfaceTertiary }]}>MADHAB</Text>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.rowSub, { color: colors.onSurfaceTertiary, marginBottom: SPACING.md }]}>
+            Used by the How to Pray guide for madhab-specific details. Only Hanafi has full content right now.
+          </Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm }}>
+            {[
+              { id: "hanafi", label: "Hanafi" },
+              { id: "shafii", label: "Shafi'i" },
+              { id: "maliki", label: "Maliki" },
+              { id: "hanbali", label: "Hanbali" },
+            ].map((opt) => {
+              const active = draft.fiqh === opt.id;
+              const isAvailable = opt.id === "hanafi";
+              return (
+                <Pressable
+                  key={opt.id}
+                  testID={`fiqh-${opt.id}`}
+                  onPress={() => isAvailable && setDraft((d) => ({ ...d, fiqh: opt.id as any }))}
+                  disabled={!isAvailable}
+                  style={[
+                    styles.widgetStyleChip,
+                    { backgroundColor: active ? colors.brand : colors.surfaceSecondary, borderColor: colors.border },
+                    !isAvailable && { opacity: 0.5 },
+                  ]}
+                >
+                  <Text style={[styles.widgetStyleLabel, { color: active ? "#fff" : colors.onSurface }]}>
+                    {opt.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+        {/* Illustration gender — setting only for now, both currently
+            render identically; real distinct illustrations are a
+            planned follow-up once generated. */}
+        <Text style={[styles.section, { color: colors.onSurfaceTertiary }]}>ILLUSTRATION FIGURE</Text>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={{ flexDirection: "row", gap: SPACING.sm }}>
+            {[
+              { id: "male", label: "Male" },
+              { id: "female", label: "Female" },
+            ].map((opt) => {
+              const active = draft.illustrationGender === opt.id;
+              return (
+                <Pressable
+                  key={opt.id}
+                  testID={`illustration-gender-${opt.id}`}
+                  onPress={() => setDraft((d) => ({ ...d, illustrationGender: opt.id as any }))}
+                  style={[
+                    styles.widgetStyleChip,
+                    { backgroundColor: active ? colors.brand : colors.surfaceSecondary, borderColor: colors.border },
+                  ]}
+                >
                   <Text style={[styles.widgetStyleLabel, { color: active ? "#fff" : colors.onSurface }]}>
                     {opt.label}
                   </Text>
@@ -467,6 +541,47 @@ export default function SettingsScreen() {
           ))}
         </View>
 
+        {/* TEMPORARY — AdMob integration test using Google's official
+            test ad unit IDs. Remove this whole section once real ad
+            units are ready and wired into their real placements. */}
+        <Text style={[styles.section, { color: colors.onSurfaceTertiary }]}>AD TEST (TEMPORARY)</Text>
+        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, alignItems: "center", padding: SPACING.md }]}>
+          <BannerAd
+            unitId={TestIds.BANNER}
+            size={BannerAdSize.BANNER}
+            onAdLoaded={() => console.log("AdMob test banner loaded")}
+            onAdFailedToLoad={(e) => console.warn("AdMob test banner failed to load", e)}
+          />
+          <Pressable
+            testID="admob-test-interstitial-btn"
+            onPress={() => {
+              const interstitial = InterstitialAd.createForAdRequest(TestIds.INTERSTITIAL);
+              const unsubscribeLoaded = interstitial.addAdEventListener(AdEventType.LOADED, () => {
+                interstitial.show();
+              });
+              const unsubscribeError = interstitial.addAdEventListener(AdEventType.ERROR, (e) => {
+                console.warn("AdMob test interstitial failed to load", e);
+              });
+              interstitial.load();
+              // Both listeners fire at most once per load, so there's no
+              // need to hold onto these for later cleanup — they can be
+              // left to be garbage collected once this ad instance is done.
+              void unsubscribeLoaded;
+              void unsubscribeError;
+            }}
+            style={{
+              backgroundColor: colors.brand,
+              marginTop: SPACING.md,
+              paddingHorizontal: SPACING.xl,
+              paddingVertical: SPACING.md,
+              borderRadius: RADIUS.md,
+            }}
+          >
+            <Text style={{ fontFamily: FONTS.bold, fontSize: 14, color: colors.onBrandPrimary }}>
+              Show Test Interstitial
+            </Text>
+          </Pressable>
+        </View>
         <Text style={[styles.footerNote, { color: colors.muted }]}>
           {timetable ? `Timetable loaded: ${timetable.month || ""} ${timetable.year || ""}`.trim() : "No timetable loaded"}
         </Text>
@@ -523,11 +638,11 @@ const styles = StyleSheet.create({
   segmentItem: { flex: 1, paddingVertical: SPACING.sm, borderRadius: RADIUS.sm, alignItems: "center" },
   segmentText: { fontFamily: FONTS.semibold, fontSize: 14 },
   footerNote: { fontFamily: FONTS.regular, fontSize: 12, textAlign: "center", marginTop: SPACING.xl },
-  alarmBgGrid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.md },
-  alarmBgItem: { alignItems: "center", width: 76 },
+  alarmBgGrid: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
+  alarmBgItem: { alignItems: "center", width: 78 },
   alarmBgSwatch: {
-    width: 64,
-    height: 64,
+    width: 66,
+    height: 66,
     borderRadius: RADIUS.md,
     alignItems: "center",
     justifyContent: "center",

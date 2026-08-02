@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, Dimensions, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, Alert, Dimensions, FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -13,6 +13,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from "expo-audio";
+import { useFocusEffect } from "@react-navigation/native";
 import Slider from "@react-native-community/slider";
 
 import { useApp } from "@/src/context/AppContext";
@@ -26,6 +27,12 @@ import {
   DownloadProgressInfo,
   SurahMeta,
   createDownloadControl,
+  cancelDownload,
+  getLastPlayed,
+  saveLastPlayed,
+  LastPlayed,
+  getBackgroundPlaybackEnabled,
+  setBackgroundPlaybackEnabled,
   deleteDownloadedQuranAudio,
   deleteSingleSurahAudio,
   downloadQuranAudio,
@@ -33,6 +40,7 @@ import {
   fetchAudioEditions,
   fetchJuzBilingual,
   fetchSurahBilingual,
+  fetchWholeQuranBilingual,
   fetchSurahList,
   formatBytes,
   getDownloadedEditions,
@@ -50,10 +58,304 @@ type Mode = "read" | "listen";
 type BrowseBy = "surah" | "juz";
 type Insets = ReturnType<typeof useSafeAreaInsets>;
 
+// ============================================================
+// QuranScreen — owns the audio player and all playback state so
+// it survives switching between Read and Listen (previously the
+// player lived inside ListenTab, which fully unmounts — and
+// destroys the native player with it — the instant the user
+// switched to Read, even with "Play in Background" on). Now
+// playback keeps going regardless of which mode is active, with
+// a small mini-player bar shown whenever a track is loaded and
+// the full Now Playing screen isn't open.
+// ============================================================
 export default function QuranScreen() {
   const { colors } = useApp();
   const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<Mode>("read");
+
+  // ---- Browsing data (reciters, Surah list, downloaded editions) ----
+  // Lifted here (not just inside ListenTab) because playback-related
+  // logic that now lives at this level — resuming last-played, showing
+  // the mini-player's title, playSurah's metadata lookup — needs it too.
+  const [editions, setEditions] = useState<AudioEdition[] | null>(null);
+  const [loadingEditions, setLoadingEditions] = useState(true);
+  const [editionsError, setEditionsError] = useState<string | null>(null);
+  const [surahList, setSurahList] = useState<SurahMeta[] | null>(null);
+  const [downloadedEditions, setDownloadedEditions] = useState<string[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [eds, surahs, downloaded] = await Promise.all([
+          fetchAudioEditions(),
+          fetchSurahList(),
+          getDownloadedEditions(),
+        ]);
+        setEditions(eds);
+        setSurahList(surahs);
+        setDownloadedEditions(downloaded);
+      } catch {
+        setEditionsError("Could not load reciters. Check your connection and try again.");
+      } finally {
+        setLoadingEditions(false);
+      }
+    })();
+  }, []);
+
+  // ---- Playback state ----
+  const [selectedEdition, setSelectedEdition] = useState<AudioEdition | null>(null);
+  const [currentSurah, setCurrentSurah] = useState<number | null>(null);
+  const [shuffle, setShuffle] = useState(false);
+  const [repeat, setRepeat] = useState(false);
+  const [showFullPlayer, setShowFullPlayer] = useState(false);
+  const [backgroundPlaybackEnabled, setBackgroundPlaybackEnabledState] = useState(true);
+  const [sleepTimerEndAt, setSleepTimerEndAt] = useState<number | null>(null);
+  const [sleepTimerRemainingSec, setSleepTimerRemainingSec] = useState<number | null>(null);
+  // "Continue Listening" — remembers the last Surah/reciter/position
+  // across app restarts, so the reciter list can offer a resume card.
+  const [lastPlayed, setLastPlayed] = useState<LastPlayed | null>(null);
+  useEffect(() => {
+    getLastPlayed().then(setLastPlayed);
+  }, []);
+
+  // Background playback + lock-screen/notification controls use
+  // expo-audio's own built-in support (setActiveForLockScreen), rather
+  // than a hand-written native module — confirmed via Expo's own
+  // documentation to provide a real foreground service, a system
+  // notification with controls, and indefinite background playback, all
+  // built into the library already used elsewhere in this app (e.g.
+  // alarm-ring.tsx).
+  const player = useAudioPlayer(null);
+  const status = useAudioPlayerStatus(player);
+  const isPlaying = !!status?.playing;
+
+  // Latest status in a ref (not state) so the periodic save below can
+  // read the current position without needing to re-create its interval
+  // on every position tick (which would effectively defeat a "every 15s"
+  // save by resetting the timer continuously).
+  const statusRef = useRef(status);
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
+  useEffect(() => {
+    if (!isPlaying || !currentSurah || !selectedEdition) return;
+    const interval = setInterval(() => {
+      const currentTime = statusRef.current?.currentTime;
+      if (currentTime) {
+        const meta = (surahList || []).find((s) => s.number === currentSurah);
+        saveLastPlayed({
+          editionIdentifier: selectedEdition.identifier,
+          editionName: selectedEdition.englishName,
+          surahNumber: currentSurah,
+          surahName: meta?.englishName || `Surah ${currentSurah}`,
+          positionSeconds: currentTime,
+        });
+      }
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [isPlaying, currentSurah, selectedEdition, surahList]);
+
+  useEffect(() => {
+    getBackgroundPlaybackEnabled().then(setBackgroundPlaybackEnabledState);
+  }, []);
+  useEffect(() => {
+    setAudioModeAsync({
+      playsInSilentMode: true,
+      shouldPlayInBackground: backgroundPlaybackEnabled,
+      interruptionMode: "doNotMix",
+    }).catch((e) => console.warn("setAudioModeAsync failed", e));
+  }, [backgroundPlaybackEnabled]);
+
+  // Pauses playback the instant the user switches to a DIFFERENT bottom
+  // tab (Home/Alarms/Qibla/Dhikr/More), unless background playback is
+  // on. Now scoped to QuranScreen itself (not ListenTab), since
+  // QuranScreen is the level that actually corresponds to a real
+  // react-navigation focus boundary — switching between Read/Listen
+  // internally no longer affects this at all, which is the whole point
+  // of lifting playback state up here.
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        if (!backgroundPlaybackEnabled) {
+          try {
+            player.pause();
+          } catch {
+            // Defensive: expo-audio's own cleanup can release the native
+            // player before this runs in some unmount orderings, in
+            // which case pause() throws "already released" — nothing to
+            // do in that case.
+          }
+        }
+      };
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [backgroundPlaybackEnabled, player]),
+  );
+
+  useEffect(() => {
+    if (sleepTimerEndAt == null) {
+      setSleepTimerRemainingSec(null);
+      return;
+    }
+    const tick = () => {
+      const remaining = Math.round((sleepTimerEndAt - Date.now()) / 1000);
+      if (remaining <= 0) {
+        try {
+          player.pause();
+        } catch {
+          // Same "already released" defensive handling as above.
+        }
+        setSleepTimerEndAt(null);
+        setSleepTimerRemainingSec(null);
+      } else {
+        setSleepTimerRemainingSec(remaining);
+      }
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [sleepTimerEndAt, player]);
+
+  const onSetSleepTimer = (minutes: number | null) => {
+    setSleepTimerEndAt(minutes == null ? null : Date.now() + minutes * 60000);
+  };
+
+  const playSurah = async (surahNumber: number, editionOverride?: AudioEdition) => {
+    const edition = editionOverride || selectedEdition;
+    if (!edition) return;
+    try {
+      const downloaded = await isSurahDownloaded(edition.identifier, surahNumber);
+      const uri = downloaded
+        ? localSurahAudioPath(edition.identifier, surahNumber)
+        : mp3QuranSurahUrl(edition.server, surahNumber);
+      player.replace({ uri });
+      player.play();
+      setCurrentSurah(surahNumber);
+      const meta = (surahList || []).find((s) => s.number === surahNumber);
+      // Registers this player for lock-screen/notification controls with
+      // the current Surah's info — must be set to "doNotMix" interruption
+      // mode (already configured above) for the OS to correctly associate
+      // these controls with this player. Only done when the user has left
+      // background playback on.
+      if (backgroundPlaybackEnabled) {
+        player.setActiveForLockScreen(true, {
+          title: meta?.englishName || `Surah ${surahNumber}`,
+          artist: edition.englishName,
+        });
+      } else {
+        player.setActiveForLockScreen(false);
+      }
+      saveLastPlayed({
+        editionIdentifier: edition.identifier,
+        editionName: edition.englishName,
+        surahNumber,
+        surahName: meta?.englishName || `Surah ${surahNumber}`,
+        positionSeconds: 0,
+      });
+    } catch (e) {
+      console.warn("Quran playSurah failed", e);
+    }
+  };
+
+  // Lets the user turn background playback (and its lock-screen/
+  // notification controls) on or off from the Now Playing screen.
+  // Persisted via src/lib/quran.ts so the choice survives app restarts.
+  const onToggleBackgroundPlayback = async () => {
+    const next = !backgroundPlaybackEnabled;
+    setBackgroundPlaybackEnabledState(next);
+    await setBackgroundPlaybackEnabled(next);
+    if (currentSurah != null && selectedEdition) {
+      if (next) {
+        const meta = (surahList || []).find((s) => s.number === currentSurah);
+        player.setActiveForLockScreen(true, {
+          title: meta?.englishName || `Surah ${currentSurah}`,
+          artist: selectedEdition.englishName,
+        });
+      } else {
+        player.setActiveForLockScreen(false);
+      }
+    }
+  };
+
+  const openPlayer = (surahNumber: number) => {
+    playSurah(surahNumber);
+    setShowFullPlayer(true);
+  };
+
+  const onResumeLastPlayed = async () => {
+    if (!lastPlayed) return;
+    const edition = (editions || []).find((e) => e.identifier === lastPlayed.editionIdentifier);
+    if (!edition) return;
+    setSelectedEdition(edition);
+    await playSurah(lastPlayed.surahNumber, edition);
+    if (lastPlayed.positionSeconds > 0) {
+      player.seekTo(lastPlayed.positionSeconds);
+    }
+    setShowFullPlayer(true);
+  };
+
+  const handleNext = () => {
+    if (!currentSurah) return;
+    let next: number;
+    if (shuffle) {
+      // Avoid immediately repeating the same Surah when picking randomly.
+      do {
+        next = Math.floor(Math.random() * 114) + 1;
+      } while (next === currentSurah);
+    } else {
+      next = currentSurah >= 114 ? 1 : currentSurah + 1;
+    }
+    playSurah(next);
+  };
+
+  const handlePrev = () => {
+    if (!currentSurah) return;
+    // Previous always steps back sequentially, regardless of shuffle —
+    // shuffle affects what comes next/on-finish, not a "history" stack.
+    const prev = currentSurah <= 1 ? 114 : currentSurah - 1;
+    playSurah(prev);
+  };
+
+  const togglePlayPause = () => {
+    if (isPlaying) {
+      player.pause();
+      if (currentSurah && selectedEdition && status?.currentTime) {
+        const meta = (surahList || []).find((s) => s.number === currentSurah);
+        saveLastPlayed({
+          editionIdentifier: selectedEdition.identifier,
+          editionName: selectedEdition.englishName,
+          surahNumber: currentSurah,
+          surahName: meta?.englishName || `Surah ${currentSurah}`,
+          positionSeconds: status.currentTime,
+        });
+      }
+    } else {
+      player.play();
+    }
+  };
+
+  const handleToggleShuffle = () => {
+    setShuffle((v) => !v);
+  };
+
+  const handleToggleRepeat = () => {
+    setRepeat((v) => !v);
+  };
+
+  // Auto-advance to the next Surah when the current one finishes, unless
+  // Repeat is on, in which case the same Surah restarts from the
+  // beginning instead.
+  useEffect(() => {
+    if (!status?.didJustFinish) return;
+    if (repeat) {
+      player.seekTo(0);
+      player.play();
+    } else {
+      handleNext();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status?.didJustFinish]);
+
+  const currentSurahMeta = (surahList || []).find((s) => s.number === currentSurah);
 
   return (
     <View style={[styles.root, { backgroundColor: colors.surfaceSecondary }]}>
@@ -79,7 +381,98 @@ export default function QuranScreen() {
         </View>
       </View>
 
-      {mode === "read" ? <ReadTab colors={colors} insets={insets} /> : <ListenTab colors={colors} insets={insets} />}
+      {/* Both tabs stay mounted permanently (display toggling only, not
+          conditional rendering) — switching mode used to fully unmount
+          whichever tab wasn't active, wiping ReadTab's in-memory
+          wholeQuran cache every time and forcing a re-read of a large
+          cached JSON blob from storage on every switch back. Now that
+          state survives for the lifetime of the screen, matching the
+          "load once" design fetchWholeQuranBilingual already intended. */}
+      <View style={{ flex: 1, display: mode === "read" ? "flex" : "none" }}>
+        <ReadTab colors={colors} insets={insets} />
+      </View>
+      <View style={{ flex: 1, display: mode === "listen" ? "flex" : "none" }}>
+        <ListenTab
+          colors={colors}
+          insets={insets}
+          editions={editions}
+          loadingEditions={loadingEditions}
+          editionsError={editionsError}
+          surahList={surahList}
+          downloadedEditions={downloadedEditions}
+          setDownloadedEditions={setDownloadedEditions}
+          selectedEdition={selectedEdition}
+          setSelectedEdition={setSelectedEdition}
+          currentSurah={currentSurah}
+          lastPlayed={lastPlayed}
+          onResumeLastPlayed={onResumeLastPlayed}
+          openPlayer={openPlayer}
+        />
+      </View>
+
+      {/* Mini-player bar: visible in EITHER mode whenever a track is
+          loaded and the full player isn't open — this is the whole point
+          of lifting playback state up to this level. Tapping it opens
+          the full Now Playing screen. */}
+      {currentSurah && selectedEdition && !showFullPlayer ? (
+        <Pressable
+          testID="quran-mini-player"
+          onPress={() => setShowFullPlayer(true)}
+          style={[styles.miniPlayer, { backgroundColor: colors.surface, borderTopColor: colors.border, paddingBottom: Math.max(insets.bottom, SPACING.sm) }]}
+        >
+          <View style={[styles.miniPlayerIcon, { backgroundColor: colors.brandTertiary }]}>
+            <Ionicons name="musical-notes" size={16} color={colors.brand} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.miniPlayerTitle, { color: colors.onSurface }]} numberOfLines={1}>
+              {currentSurahMeta?.englishName || `Surah ${currentSurah}`}
+            </Text>
+            <Text style={[styles.miniPlayerSub, { color: colors.onSurfaceTertiary }]} numberOfLines={1}>
+              {selectedEdition.englishName}
+            </Text>
+          </View>
+          <Pressable
+            testID="quran-mini-player-toggle"
+            onPress={(e) => {
+              e.stopPropagation();
+              togglePlayPause();
+            }}
+            hitSlop={10}
+            style={styles.miniPlayerPlayBtn}
+          >
+            <Ionicons name={isPlaying ? "pause" : "play"} size={22} color={colors.brand} />
+          </Pressable>
+        </Pressable>
+      ) : null}
+
+      {/* Full Now Playing screen — rendered as an overlay independent of
+          mode, so it can be opened whether the user is on Read or
+          Listen, and reached from either the mini-player or normal
+          Listen-tab browsing. */}
+      {showFullPlayer && selectedEdition && currentSurah ? (
+        <View style={StyleSheet.absoluteFill}>
+          <NowPlayingScreen
+            selectedEdition={selectedEdition}
+            surahMeta={currentSurahMeta}
+            isPlaying={isPlaying}
+            position={status?.currentTime || 0}
+            duration={status?.duration || 0}
+            onSeek={(v) => player.seekTo(v)}
+            shuffle={shuffle}
+            repeat={repeat}
+            onToggleShuffle={handleToggleShuffle}
+            onToggleRepeat={handleToggleRepeat}
+            onPrev={handlePrev}
+            onNext={handleNext}
+            onTogglePlayPause={togglePlayPause}
+            onBack={() => setShowFullPlayer(false)}
+            backgroundPlaybackEnabled={backgroundPlaybackEnabled}
+            onToggleBackgroundPlayback={onToggleBackgroundPlayback}
+            sleepTimerRemainingSec={sleepTimerRemainingSec}
+            onSetSleepTimer={onSetSleepTimer}
+          />
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -91,9 +484,14 @@ function ReadTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) {
   const [listError, setListError] = useState<string | null>(null);
 
   const [selected, setSelected] = useState<{ type: BrowseBy; number: number } | null>(null);
-  const [ayahs, setAyahs] = useState<{ arabic: Ayah[]; english: Ayah[] } | null>(null);
-  const [loadingAyahs, setLoadingAyahs] = useState(false);
-  const [ayahError, setAyahError] = useState<string | null>(null);
+  // Holds the ENTIRE Quran (Arabic + English), not just the selected
+  // Surah/Juz — loaded once (cached after) so the page reader below lets
+  // the user swipe freely across all 604 pages from any starting point,
+  // rather than being boxed into just the Surah/Juz they opened.
+  const [wholeQuran, setWholeQuran] = useState<{ arabic: Ayah[]; english: Ayah[] } | null>(null);
+  const [loadingWholeQuran, setLoadingWholeQuran] = useState(false);
+  const [wholeQuranError, setWholeQuranError] = useState<string | null>(null);
+  const pagerRef = useRef<FlatList<any>>(null);
 
   useEffect(() => {
     (async () => {
@@ -108,35 +506,78 @@ function ReadTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) {
     })();
   }, []);
 
-  const openSurah = async (n: number) => {
-    setSelected({ type: "surah", number: n });
-    setAyahs(null);
-    setAyahError(null);
-    setLoadingAyahs(true);
+  const [wholeQuranProgress, setWholeQuranProgress] = useState<{ done: number; total: number } | null>(null);
+  const [waitingForConnection, setWaitingForConnection] = useState(false);
+
+  const ensureWholeQuranLoaded = async () => {
+    if (wholeQuran) return;
+    setWholeQuranError(null);
+    setLoadingWholeQuran(true);
+    setWholeQuranProgress({ done: 0, total: 114 });
+    setWaitingForConnection(false);
     try {
-      const data = await fetchSurahBilingual(n);
-      setAyahs(data);
-    } catch {
-      setAyahError("Could not load this Surah. Check your connection and try again.");
+      const data = await fetchWholeQuranBilingual((info) => {
+        setWholeQuranProgress({ done: info.done, total: info.total });
+        setWaitingForConnection(info.waitingForConnection);
+      });
+      setWholeQuran(data);
+    } catch (e) {
+      console.warn("fetchWholeQuranBilingual failed", e);
+      setWholeQuranError("Could not load the Quran text. Check your connection and try again.");
     } finally {
-      setLoadingAyahs(false);
+      setLoadingWholeQuran(false);
+      setWaitingForConnection(false);
     }
   };
 
-  const openJuz = async (n: number) => {
-    setSelected({ type: "juz", number: n });
-    setAyahs(null);
-    setAyahError(null);
-    setLoadingAyahs(true);
-    try {
-      const data = await fetchJuzBilingual(n);
-      setAyahs(data);
-    } catch {
-      setAyahError("Could not load this Juz. Check your connection and try again.");
-    } finally {
-      setLoadingAyahs(false);
-    }
+  const openSurah = (n: number) => {
+    setSelected({ type: "surah", number: n });
+    ensureWholeQuranLoaded();
   };
+
+  const openJuz = (n: number) => {
+    setSelected({ type: "juz", number: n });
+    ensureWholeQuranLoaded();
+  };
+
+  // Groups the flat, sequentially-ordered ayah list into actual Mushaf
+  // pages using each ayah's real `page` field from the API — a single
+  // pass works because page numbers only ever increase moving forward.
+  const pages = useMemo(() => {
+    if (!wholeQuran) return [];
+    const result: { pageNumber: number; arabic: Ayah[]; english: Ayah[] }[] = [];
+    let current: { pageNumber: number; arabic: Ayah[]; english: Ayah[] } | null = null;
+    for (let i = 0; i < wholeQuran.arabic.length; i++) {
+      const a = wholeQuran.arabic[i];
+      const en = wholeQuran.english[i];
+      // Defensive: skip anything malformed rather than crash, even though
+      // fetchWholeQuranBilingual now filters these out at the source too
+      // (belt-and-suspenders, and covers any already-cached data from
+      // before that fix existed).
+      if (!a || typeof a.page !== "number") continue;
+      if (!current || current.pageNumber !== a.page) {
+        current = { pageNumber: a.page, arabic: [], english: [] };
+        result.push(current);
+      }
+      current.arabic.push(a);
+      current.english.push(en);
+    }
+    return result;
+  }, [wholeQuran]);
+
+  // Which page to open on: the page of the first ayah matching the
+  // selected Surah or Juz. From there the user can keep swiping through
+  // the rest of the Quran freely — there's no separate "whole Quran"
+  // entry point by design; Surah/Juz selection is just a jump-to-page.
+  const targetPageIndex = useMemo(() => {
+    if (!selected || !wholeQuran || pages.length === 0) return 0;
+    const firstMatch = wholeQuran.arabic.find((a) =>
+      selected.type === "surah" ? a?.surah?.number === selected.number : a?.juz === selected.number,
+    );
+    if (!firstMatch) return 0;
+    const idx = pages.findIndex((p) => p.pageNumber === firstMatch.page);
+    return idx >= 0 ? idx : 0;
+  }, [selected, wholeQuran, pages]);
 
   if (selected) {
     return (
@@ -151,36 +592,89 @@ function ReadTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) {
             {selected.type === "surah" ? "All Surahs" : "All Juz"}
           </Text>
         </Pressable>
-        {loadingAyahs ? (
+        {loadingWholeQuran ? (
           <View style={styles.centerFill}>
             <ActivityIndicator color={colors.brand} />
+            <Text style={[styles.pageLoadingText, { color: colors.onSurfaceTertiary }]}>
+              {waitingForConnection
+                ? "Waiting for connection\u2026"
+                : `Preparing full Quran text${"\n"}(one-time setup — instant after this)`}
+            </Text>
+            {wholeQuranProgress ? (
+              <>
+                <View
+                  style={[
+                    styles.downloadProgressTrack,
+                    { backgroundColor: colors.surfaceTertiary, marginTop: SPACING.md, width: 200 },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.downloadProgressFill,
+                      {
+                        width: `${Math.round((wholeQuranProgress.done / wholeQuranProgress.total) * 100)}%`,
+                        backgroundColor: colors.brand,
+                      },
+                    ]}
+                  />
+                </View>
+                <Text style={[styles.pageLoadingText, { color: colors.onSurfaceTertiary, marginTop: SPACING.xs }]}>
+                  {wholeQuranProgress.done}/{wholeQuranProgress.total} Surahs
+                </Text>
+              </>
+            ) : null}
           </View>
-        ) : ayahError ? (
+        ) : wholeQuranError ? (
           <View style={styles.centerFill}>
-            <Text style={[styles.errorText, { color: colors.error }]}>{ayahError}</Text>
+            <Text style={[styles.errorText, { color: colors.error }]}>{wholeQuranError}</Text>
           </View>
-        ) : ayahs ? (
-          <ScrollView contentContainerStyle={{ padding: SPACING.xl, paddingBottom: insets.bottom + SPACING.xxxl }}>
-            {ayahs.arabic.map((a, i) => {
-              const en = ayahs.english[i];
-              const showSurahHeader =
-                selected.type === "juz" && (i === 0 || ayahs.arabic[i - 1].surah.number !== a.surah.number);
-              return (
-                <React.Fragment key={a.number}>
-                  {showSurahHeader ? (
-                    <Text style={[styles.juzSurahHeader, { color: colors.brand }]}>{a.surah.englishName}</Text>
-                  ) : null}
-                  <View style={[styles.ayahCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                    <View style={[styles.ayahNumBadge, { backgroundColor: colors.brandTertiary }]}>
-                      <Text style={[styles.ayahNumText, { color: colors.brand }]}>{a.numberInSurah}</Text>
-                    </View>
-                    <Text style={[styles.ayahArabic, { color: colors.onSurface }]}>{a.text}</Text>
-                    <Text style={[styles.ayahEnglish, { color: colors.onSurfaceTertiary }]}>{en?.text}</Text>
-                  </View>
-                </React.Fragment>
-              );
-            })}
-          </ScrollView>
+        ) : pages.length > 0 ? (
+          <FlatList
+            key={`${selected.type}-${selected.number}`}
+            ref={pagerRef}
+            testID="quran-page-pager"
+            style={{ flex: 1 }}
+            data={pages}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item) => String(item.pageNumber)}
+            initialScrollIndex={targetPageIndex}
+            getItemLayout={(_, index) => ({ length: SCREEN_W, offset: SCREEN_W * index, index })}
+            onScrollToIndexFailed={(info) => {
+              setTimeout(() => {
+                pagerRef.current?.scrollToIndex({ index: info.index, animated: false });
+              }, 50);
+            }}
+            renderItem={({ item }) => (
+              <ScrollView
+                style={{ width: SCREEN_W }}
+                contentContainerStyle={{ padding: SPACING.xl, paddingBottom: insets.bottom + SPACING.xxxl }}
+              >
+                <Text style={[styles.pageNumberLabel, { color: colors.onSurfaceTertiary }]}>
+                  Page {item.pageNumber} of 604
+                </Text>
+                {item.arabic.map((a, i) => {
+                  const en = item.english[i];
+                  const showSurahHeader = i === 0 || item.arabic[i - 1].surah.number !== a.surah.number;
+                  return (
+                    <React.Fragment key={a.number}>
+                      {showSurahHeader ? (
+                        <Text style={[styles.juzSurahHeader, { color: colors.brand }]}>{a.surah.englishName}</Text>
+                      ) : null}
+                      <View style={styles.pageAyahBlock}>
+                        <Text style={[styles.pageArabicText, { color: colors.onSurface }]}>
+                          {a.text}
+                          <Text style={[styles.pageAyahMarker, { color: colors.brand }]}> ({a.numberInSurah})</Text>
+                        </Text>
+                        <Text style={[styles.pageEnglishText, { color: colors.onSurfaceTertiary }]}>{en?.text}</Text>
+                      </View>
+                    </React.Fragment>
+                  );
+                })}
+              </ScrollView>
+            )}
+          />
         ) : null}
       </View>
     );
@@ -354,6 +848,10 @@ function NowPlayingScreen({
   onNext,
   onTogglePlayPause,
   onBack,
+  backgroundPlaybackEnabled,
+  onToggleBackgroundPlayback,
+  sleepTimerRemainingSec,
+  onSetSleepTimer,
 }: {
   selectedEdition: AudioEdition;
   surahMeta: SurahMeta | undefined;
@@ -369,7 +867,12 @@ function NowPlayingScreen({
   onNext: () => void;
   onTogglePlayPause: () => void;
   onBack: () => void;
+  backgroundPlaybackEnabled: boolean;
+  onToggleBackgroundPlayback: () => void;
+  sleepTimerRemainingSec: number | null;
+  onSetSleepTimer: (minutes: number | null) => void;
 }) {
+  const [sleepTimerModalOpen, setSleepTimerModalOpen] = useState(false);
   // Entrance: fade + slide up on mount.
   const entrance = useSharedValue(0);
   useEffect(() => {
@@ -428,12 +931,40 @@ function NowPlayingScreen({
       <LinearGradient colors={["#0A2E29", "#0B1E1B", "#050D0B"]} style={StyleSheet.absoluteFill} />
       <IslamicPattern width={SCREEN_W} height={SCREEN_H} color="#E8B84B" opacity={0.045} />
 
-      <Pressable testID="quran-player-back" onPress={onBack} style={playerStyles.backRow}>
-        <Ionicons name="chevron-down" size={24} color="rgba(255,255,255,0.85)" />
-        <Text style={playerStyles.backText} numberOfLines={1}>
-          {selectedEdition.englishName}
-        </Text>
-      </Pressable>
+      <View style={playerStyles.backRow}>
+        <Pressable testID="quran-player-back" onPress={onBack} style={playerStyles.backRowLeft}>
+          <Ionicons name="chevron-down" size={24} color="rgba(255,255,255,0.85)" />
+          <Text style={playerStyles.backText} numberOfLines={1}>
+            {selectedEdition.englishName}
+          </Text>
+        </Pressable>
+        {/* Background-playback toggle: headset icon + label, gold when on
+            (audio keeps playing + shows lock-screen/notification controls
+            after leaving the tab/app) or muted when off (playback pauses,
+            at the same position, the instant the user switches tabs).
+            Persisted via src/lib/quran.ts. */}
+        <Pressable
+          testID="quran-toggle-background-playback"
+          onPress={onToggleBackgroundPlayback}
+          hitSlop={10}
+          style={playerStyles.backgroundToggleBtn}
+        >
+          <Ionicons
+            name="headset"
+            size={16}
+            color={backgroundPlaybackEnabled ? "#E8B84B" : "rgba(255,255,255,0.5)"}
+          />
+          <Text
+            style={[
+              playerStyles.backgroundToggleText,
+              { color: backgroundPlaybackEnabled ? "#E8B84B" : "rgba(255,255,255,0.5)" },
+            ]}
+            numberOfLines={1}
+          >
+            Play in Background
+          </Text>
+        </Pressable>
+      </View>
 
       <Animated.View style={[playerStyles.body, entranceStyle]}>
         <View style={playerStyles.artWrap}>
@@ -511,12 +1042,68 @@ function NowPlayingScreen({
             </Pressable>
           </Animated.View>
         </View>
+        <Pressable
+          testID="quran-sleep-timer-btn"
+          onPress={() => setSleepTimerModalOpen(true)}
+          style={playerStyles.sleepTimerBtn}
+        >
+          <Ionicons
+            name="timer-outline"
+            size={16}
+            color={sleepTimerRemainingSec != null ? "#E8B84B" : "rgba(255,255,255,0.5)"}
+          />
+          <Text
+            style={[
+              playerStyles.sleepTimerText,
+              { color: sleepTimerRemainingSec != null ? "#E8B84B" : "rgba(255,255,255,0.5)" },
+            ]}
+          >
+            {sleepTimerRemainingSec != null ? `Sleep in ${formatTime(sleepTimerRemainingSec)}` : "Sleep Timer"}
+          </Text>
+        </Pressable>
       </Animated.View>
+      <Modal
+        visible={sleepTimerModalOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSleepTimerModalOpen(false)}
+      >
+        <Pressable style={playerStyles.sleepModalBackdrop} onPress={() => setSleepTimerModalOpen(false)}>
+          <View style={playerStyles.sleepModalSheet}>
+            <Text style={playerStyles.sleepModalTitle}>Sleep Timer</Text>
+            {[5, 10, 15, 30, 45, 60].map((mins) => (
+              <Pressable
+                key={mins}
+                testID={`quran-sleep-timer-${mins}`}
+                onPress={() => {
+                  onSetSleepTimer(mins);
+                  setSleepTimerModalOpen(false);
+                }}
+                style={playerStyles.sleepModalOption}
+              >
+                <Text style={playerStyles.sleepModalOptionText}>{mins} minutes</Text>
+              </Pressable>
+            ))}
+            {sleepTimerRemainingSec != null ? (
+              <Pressable
+                testID="quran-sleep-timer-off"
+                onPress={() => {
+                  onSetSleepTimer(null);
+                  setSleepTimerModalOpen(false);
+                }}
+                style={playerStyles.sleepModalOption}
+              >
+                <Text style={[playerStyles.sleepModalOptionText, { color: "#E8918A" }]}>Turn off</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
 
-type ListenView = "reciters" | "surahs" | "player";
+type ListenView = "reciters" | "surahs";
 
 function formatEta(seconds: number): string {
   if (seconds < 60) return `${seconds}s`;
@@ -525,19 +1112,51 @@ function formatEta(seconds: number): string {
   return `${m}m ${s}s`;
 }
 
-function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) {
+// ListenTab now only owns browsing/downloads UI — all playback state
+// (player, currentSurah, shuffle/repeat, background/sleep-timer
+// settings) lives in QuranScreen and is passed down as props, so
+// playback survives switching to Read.
+function ListenTab({
+  colors,
+  insets,
+  editions,
+  loadingEditions,
+  editionsError,
+  surahList,
+  downloadedEditions,
+  setDownloadedEditions,
+  selectedEdition,
+  setSelectedEdition,
+  currentSurah,
+  lastPlayed,
+  onResumeLastPlayed,
+  openPlayer,
+}: {
+  colors: ThemeColors;
+  insets: Insets;
+  editions: AudioEdition[] | null;
+  loadingEditions: boolean;
+  editionsError: string | null;
+  surahList: SurahMeta[] | null;
+  downloadedEditions: string[];
+  setDownloadedEditions: (v: string[]) => void;
+  selectedEdition: AudioEdition | null;
+  setSelectedEdition: (e: AudioEdition | null) => void;
+  currentSurah: number | null;
+  lastPlayed: LastPlayed | null;
+  onResumeLastPlayed: () => void;
+  openPlayer: (surahNumber: number) => void;
+}) {
   const [view, setView] = useState<ListenView>("reciters");
-  const [editions, setEditions] = useState<AudioEdition[] | null>(null);
-  const [loadingEditions, setLoadingEditions] = useState(true);
-  const [listError, setListError] = useState<string | null>(null);
-  const [selectedEdition, setSelectedEdition] = useState<AudioEdition | null>(null);
-  const [surahList, setSurahList] = useState<SurahMeta[] | null>(null);
-  const [downloadedEditions, setDownloadedEditions] = useState<string[]>([]);
   const [downloadedSurahSet, setDownloadedSurahSet] = useState<Set<number>>(new Set());
   const [downloading, setDownloading] = useState(false);
   const [downloadDone, setDownloadDone] = useState(0);
   const [downloadTotal, setDownloadTotal] = useState(114);
   const [downloadEta, setDownloadEta] = useState<number | null>(null);
+  // Fractional progress (0..1) within the single file currently being
+  // downloaded — lets the percentage bar move continuously between
+  // whole-file completions instead of freezing on slow connections.
+  const [currentFileFraction, setCurrentFileFraction] = useState(0);
   const [waitingForConnection, setWaitingForConnection] = useState(false);
   const downloadControlRef = useRef<DownloadControl | null>(null);
   const [downloadingSurah, setDownloadingSurah] = useState<number | null>(null);
@@ -549,136 +1168,6 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
   const [confirmDialog, setConfirmDialog] = useState<{ surahNumbers: number[]; title: string; sizeLabel: string } | null>(
     null,
   );
-  const [shuffle, setShuffle] = useState(false);
-  const [repeat, setRepeat] = useState(false);
-  const [currentSurah, setCurrentSurah] = useState<number | null>(null);
-
-  // Background playback + lock-screen/notification controls use
-  // expo-audio's own built-in support (setActiveForLockScreen), rather
-  // than a hand-written native module — confirmed via Expo's own
-  // documentation to provide a real foreground service, a system
-  // notification with controls, and indefinite background playback, all
-  // built into the library already used elsewhere in this app (e.g.
-  // alarm-ring.tsx). An earlier version of this feature used a
-  // custom-built native module instead; that's been removed in favor of
-  // this simpler, officially-supported path.
-  const player = useAudioPlayer(null);
-  const status = useAudioPlayerStatus(player);
-  const isPlaying = !!status?.playing;
-
-  useEffect(() => {
-    setAudioModeAsync({
-      playsInSilentMode: true,
-      shouldPlayInBackground: true,
-      interruptionMode: "doNotMix",
-    }).catch((e) => console.warn("setAudioModeAsync failed", e));
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const [eds, surahs, downloaded] = await Promise.all([
-          fetchAudioEditions(),
-          fetchSurahList(),
-          getDownloadedEditions(),
-        ]);
-        setEditions(eds);
-        setSurahList(surahs);
-        setDownloadedEditions(downloaded);
-      } catch {
-        setListError("Could not load reciters. Check your connection and try again.");
-      } finally {
-        setLoadingEditions(false);
-      }
-    })();
-  }, []);
-
-  const playSurah = async (surahNumber: number) => {
-    if (!selectedEdition) return;
-    try {
-      const downloaded = await isSurahDownloaded(selectedEdition.identifier, surahNumber);
-      const uri = downloaded
-        ? localSurahAudioPath(selectedEdition.identifier, surahNumber)
-        : mp3QuranSurahUrl(selectedEdition.server, surahNumber);
-      player.replace({ uri });
-      player.play();
-      setCurrentSurah(surahNumber);
-      const meta = (surahList || []).find((s) => s.number === surahNumber);
-      // Registers this player for lock-screen/notification controls with
-      // the current Surah's info — must be set to "doNotMix" interruption
-      // mode (already configured above) for the OS to correctly associate
-      // these controls with this player.
-      player.setActiveForLockScreen(true, {
-        title: meta?.englishName || `Surah ${surahNumber}`,
-        artist: selectedEdition.englishName,
-      });
-    } catch (e) {
-      console.warn("Quran playSurah failed", e);
-    }
-  };
-
-  const openPlayer = (surahNumber: number) => {
-    playSurah(surahNumber);
-    setView("player");
-  };
-
-  const handleNext = () => {
-    if (!currentSurah) return;
-    let next: number;
-    if (shuffle) {
-      // Avoid immediately repeating the same Surah when picking randomly.
-      do {
-        next = Math.floor(Math.random() * 114) + 1;
-      } while (next === currentSurah);
-    } else {
-      next = currentSurah >= 114 ? 1 : currentSurah + 1;
-    }
-    playSurah(next);
-  };
-
-  const handlePrev = () => {
-    if (!currentSurah) return;
-    // Previous always steps back sequentially, regardless of shuffle —
-    // shuffle affects what comes next/on-finish, not a "history" stack.
-    const prev = currentSurah <= 1 ? 114 : currentSurah - 1;
-    playSurah(prev);
-  };
-
-  const togglePlayPause = () => {
-    if (isPlaying) {
-      player.pause();
-    } else {
-      player.play();
-    }
-  };
-
-  const handleToggleShuffle = () => {
-    setShuffle((v) => !v);
-  };
-
-  const handleToggleRepeat = () => {
-    setRepeat((v) => !v);
-  };
-
-  // Auto-advance to the next Surah when the current one finishes, unless
-  // Repeat is on, in which case the same Surah restarts from the
-  // beginning instead.
-  useEffect(() => {
-    if (!status?.didJustFinish) return;
-    if (repeat) {
-      player.seekTo(0);
-      player.play();
-    } else {
-      handleNext();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status?.didJustFinish]);
-
-  const pausePlayback = () => {
-    try {
-      player.pause();
-    } catch {}
-  };
 
   const refreshDownloadedSurahs = async () => {
     if (!selectedEdition) return;
@@ -753,6 +1242,7 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
       setDownloadTotal(surahNumbers.length);
       setDownloadEta(null);
       setWaitingForConnection(false);
+      setCurrentFileFraction(0);
     }
     setFailures([]);
     try {
@@ -764,6 +1254,7 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
             setDownloadDone(info.done);
             setDownloadEta(info.etaSeconds);
             setWaitingForConnection(info.waitingForConnection);
+            setCurrentFileFraction(info.currentFileFraction);
           }
         },
         control,
@@ -788,12 +1279,17 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
       setWaitingForConnection(false);
       setDownloadingSurah(null);
       setDownloading(false);
+      setCurrentFileFraction(0);
     }
   };
 
   const cancelCurrentDownload = () => {
     if (downloadControlRef.current) {
-      downloadControlRef.current.cancelled = true;
+      // pauseAsync() actually interrupts the in-flight network request
+      // now, instead of only setting a flag checked between files (which
+      // is what made Cancel feel "stuck" until the current file finished
+      // on its own).
+      cancelDownload(downloadControlRef.current);
     }
   };
 
@@ -819,29 +1315,6 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
       return next;
     });
   };
-
-  // Full-screen "Now Playing" audio player.
-  if (view === "player" && selectedEdition && currentSurah) {
-    const surahMeta = (surahList || []).find((s) => s.number === currentSurah);
-    return (
-      <NowPlayingScreen
-        selectedEdition={selectedEdition}
-        surahMeta={surahMeta}
-        isPlaying={isPlaying}
-        position={status?.currentTime || 0}
-        duration={status?.duration || 0}
-        onSeek={(v) => player.seekTo(v)}
-        shuffle={shuffle}
-        repeat={repeat}
-        onToggleShuffle={handleToggleShuffle}
-        onToggleRepeat={handleToggleRepeat}
-        onPrev={handlePrev}
-        onNext={handleNext}
-        onTogglePlayPause={togglePlayPause}
-        onBack={() => setView("surahs")}
-      />
-    );
-  }
 
   if (view === "surahs" && selectedEdition) {
     const isDownloaded = downloadedEditions.includes(selectedEdition.identifier);
@@ -872,7 +1345,7 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
               <Text style={[styles.listSub, { color: waitingForConnection ? colors.error : colors.onSurfaceTertiary }]}>
                 {waitingForConnection
                   ? "No connection — will resume automatically once reconnected"
-                  : `Downloading… ${downloadDone}/${downloadTotal} · ${Math.round((downloadDone / Math.max(1, downloadTotal)) * 100)}%${
+                  : `Downloading… ${downloadDone}/${downloadTotal} · ${Math.round(((downloadDone + currentFileFraction) / Math.max(1, downloadTotal)) * 100)}%${
                       downloadEta != null ? ` · Est. ${formatEta(downloadEta)} remaining` : " · Estimating time…"
                     }`}
               </Text>
@@ -921,7 +1394,7 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
                 style={[
                   styles.downloadProgressFill,
                   {
-                    width: `${Math.min(100, Math.round((downloadDone / Math.max(1, downloadTotal)) * 100))}%`,
+                    width: `${Math.min(100, Math.round(((downloadDone + currentFileFraction) / Math.max(1, downloadTotal)) * 100))}%`,
                     backgroundColor: colors.brand,
                   },
                 ]}
@@ -1091,6 +1564,25 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
                   );
                 })}
               </ScrollView>
+              {/* Retries exactly the Surahs that failed, in one tap —
+                  reuses the same confirm-dialog entry point as every other
+                  download trigger (per-row, Download All, Download
+                  Selected), so it gets the network-choice prompt and size
+                  estimate for free. */}
+              <Pressable
+                testID="quran-retry-failed"
+                onPress={() => {
+                  const retryNumbers = failures.map((f) => f.surah);
+                  setShowFailureDetails(false);
+                  requestDownloadConfirm(retryNumbers, null);
+                }}
+                style={[styles.selectionDownloadBtn, { backgroundColor: colors.brand, marginTop: SPACING.md }]}
+              >
+                <Ionicons name="refresh-outline" size={16} color="#fff" />
+                <Text style={styles.downloadBtnText}>
+                  Retry {failures.length} Failed Surah{failures.length > 1 ? "s" : ""}
+                </Text>
+              </Pressable>
             </View>
           </Pressable>
         </Modal>
@@ -1104,12 +1596,30 @@ function ListenTab({ colors, insets }: { colors: ThemeColors; insets: Insets }) 
         <View style={styles.centerFill}>
           <ActivityIndicator color={colors.brand} />
         </View>
-      ) : listError ? (
+      ) : editionsError ? (
         <View style={styles.centerFill}>
-          <Text style={[styles.errorText, { color: colors.error }]}>{listError}</Text>
+          <Text style={[styles.errorText, { color: colors.error }]}>{editionsError}</Text>
         </View>
       ) : (
         <>
+          {lastPlayed ? (
+            <Pressable
+              testID="quran-resume-last-played"
+              onPress={onResumeLastPlayed}
+              style={[styles.resumeCard, { backgroundColor: colors.brandTertiary, borderColor: colors.border }]}
+            >
+              <Ionicons name="play-circle" size={32} color={colors.brand} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.resumeLabel, { color: colors.onSurfaceTertiary }]}>Continue Listening</Text>
+                <Text style={[styles.resumeTitle, { color: colors.onSurface }]} numberOfLines={1}>
+                  {lastPlayed.surahName}
+                </Text>
+                <Text style={[styles.resumeSub, { color: colors.onSurfaceTertiary }]} numberOfLines={1}>
+                  {lastPlayed.editionName}
+                </Text>
+              </View>
+            </Pressable>
+          ) : null}
           <View style={[styles.reciterSearchWrap, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
             <Ionicons name="search-outline" size={18} color={colors.muted} />
             <TextInput
@@ -1164,6 +1674,18 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: SPACING.xl, paddingBottom: SPACING.md, borderBottomWidth: StyleSheet.hairlineWidth },
   title: { fontFamily: FONTS.bold, fontSize: 26, marginBottom: SPACING.md },
   modeSwitch: { flexDirection: "row", borderRadius: RADIUS.md, padding: 4 },
+  miniPlayer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  miniPlayerIcon: { width: 34, height: 34, borderRadius: RADIUS.sm, alignItems: "center", justifyContent: "center" },
+  miniPlayerTitle: { fontFamily: FONTS.semibold, fontSize: 14 },
+  miniPlayerSub: { fontFamily: FONTS.regular, fontSize: 12, marginTop: 1 },
+  miniPlayerPlayBtn: { padding: SPACING.xs },
   reciterSearchWrap: {
     flexDirection: "row",
     alignItems: "center",
@@ -1188,6 +1710,19 @@ const styles = StyleSheet.create({
   segmentItem: { flex: 1, paddingVertical: SPACING.sm, borderRadius: RADIUS.sm, alignItems: "center" },
   segmentText: { fontFamily: FONTS.semibold, fontSize: 13 },
   centerFill: { flex: 1, alignItems: "center", justifyContent: "center", padding: SPACING.xl },
+  resumeCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.md,
+    margin: SPACING.lg,
+    marginBottom: 0,
+    padding: SPACING.md,
+    borderRadius: RADIUS.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  resumeLabel: { fontFamily: FONTS.semibold, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5 },
+  resumeTitle: { fontFamily: FONTS.bold, fontSize: 16, marginTop: 2 },
+  resumeSub: { fontFamily: FONTS.regular, fontSize: 13, marginTop: 1 },
   errorText: { fontFamily: FONTS.medium, fontSize: 14, textAlign: "center" },
   backRow: {
     flexDirection: "row",
@@ -1218,6 +1753,12 @@ const styles = StyleSheet.create({
   ayahNumText: { fontFamily: FONTS.bold, fontSize: 12 },
   ayahArabic: { fontSize: 24, lineHeight: 42, textAlign: "right" },
   ayahEnglish: { fontFamily: FONTS.regular, fontSize: 14, lineHeight: 21, marginTop: SPACING.md },
+  pageLoadingText: { fontFamily: FONTS.medium, fontSize: 13, textAlign: "center", marginTop: SPACING.md, lineHeight: 19 },
+  pageNumberLabel: { fontFamily: FONTS.semibold, fontSize: 12, textAlign: "center", marginBottom: SPACING.lg },
+  pageAyahBlock: { marginBottom: SPACING.lg },
+  pageArabicText: { fontSize: 24, lineHeight: 42, textAlign: "right" },
+  pageAyahMarker: { fontFamily: FONTS.bold, fontSize: 14 },
+  pageEnglishText: { fontFamily: FONTS.regular, fontSize: 14, lineHeight: 21, marginTop: SPACING.sm },
   downloadBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -1373,11 +1914,46 @@ const playerStyles = StyleSheet.create({
   backRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: SPACING.sm,
+    justifyContent: "space-between",
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.xxxl,
     paddingBottom: SPACING.md,
   },
+  backRowLeft: { flexDirection: "row", alignItems: "center", gap: SPACING.sm, flex: 1, marginRight: SPACING.sm, minWidth: 0 },
+  backgroundToggleBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: SPACING.xs, paddingHorizontal: SPACING.xs },
+  backgroundToggleText: { fontFamily: FONTS.semibold, fontSize: 11 },
+  sleepTimerBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "center",
+    marginTop: SPACING.lg,
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.md,
+  },
+  sleepTimerText: { fontFamily: FONTS.semibold, fontSize: 12 },
+  sleepModalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
+  sleepModalSheet: {
+    backgroundColor: "#0F211D",
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
+    width: 260,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(232,184,75,0.25)",
+  },
+  sleepModalTitle: {
+    fontFamily: FONTS.bold,
+    fontSize: 16,
+    color: "#fff",
+    textAlign: "center",
+    marginBottom: SPACING.md,
+  },
+  sleepModalOption: {
+    paddingVertical: SPACING.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: "rgba(255,255,255,0.1)",
+  },
+  sleepModalOptionText: { fontFamily: FONTS.medium, fontSize: 15, color: "#fff", textAlign: "center" },
   backText: { fontFamily: FONTS.semibold, fontSize: 14, color: "rgba(255,255,255,0.85)", flexShrink: 1 },
   body: { flex: 1, alignItems: "center", padding: SPACING.xl, paddingTop: SPACING.lg },
   artWrap: { alignItems: "center", justifyContent: "center", marginBottom: SPACING.xxl },

@@ -1,4 +1,4 @@
-import { Stack, useRouter } from "expo-router";
+import { Stack, useRouter, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useRef, useState } from "react";
 import { AppState, LogBox, Platform } from "react-native";
@@ -8,7 +8,7 @@ import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { StatusBar } from "expo-status-bar";
 import { useFonts } from "expo-font";
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
-import { AppProvider } from "@/src/context/AppContext";
+import { AppProvider, useApp } from "@/src/context/AppContext";
 import { NowProvider } from "@/src/context/NowContext";
 import CustomSplashOverlay from "@/src/components/CustomSplashOverlay";
 import {
@@ -96,6 +96,28 @@ function AlarmGate() {
   }, []);
   return null;
 }
+// Redirects to the first-run onboarding screen whenever there's no saved
+// timetable yet (a brand-new install, or one where it was cleared) —
+// lets the user choose between importing a CSV or calculating prayer
+// times from their location. Exempts /onboarding and /upload themselves
+// from the redirect so navigating between the choice screen and the
+// CSV import flow (reached from onboarding) doesn't bounce back and
+// forth.
+function OnboardingGate() {
+  const { ready, timetable } = useApp();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (!ready) return;
+    if (timetable) return;
+    if (pathname === "/onboarding" || pathname === "/upload") return;
+    router.replace("/onboarding");
+  }, [ready, timetable, pathname, router]);
+
+  return null;
+}
+
 // Keep the native splash visible from cold start until icon fonts register.
 SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
@@ -120,6 +142,7 @@ export default function RootLayout() {
               <BottomSheetModalProvider>
                 <StatusBar style="auto" />
                 <AlarmGate />
+                <OnboardingGate />
                 <Stack screenOptions={{ headerShown: false }}>
                   <Stack.Screen
                     name="alarm-ring"
@@ -131,6 +154,13 @@ export default function RootLayout() {
                       // whenever this screen is reached via in-app foreground
                       // navigation (rather than a fresh cold-launched Activity),
                       // making the swipe-to-dismiss gesture unresponsive.
+                    }}
+                  />
+                  <Stack.Screen
+                    name="onboarding"
+                    options={{
+                      // Mandatory first-run step — no swipe-back escape hatch.
+                      gestureEnabled: false,
                     }}
                   />
                 </Stack>

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Linking,
   Modal,
@@ -69,6 +70,8 @@ export default function UploadScreen() {
   const [manualLat, setManualLat] = useState("");
   const [manualLon, setManualLon] = useState("");
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [showLocationPermModal, setShowLocationPermModal] = useState(false);
+  const [manualCoordsConfirmed, setManualCoordsConfirmed] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
 
   useEffect(() => {
@@ -205,7 +208,9 @@ export default function UploadScreen() {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== "granted") {
-          throw new Error("Location permission is needed to calculate prayer times for your area.");
+          setLoading(false);
+          setShowLocationPermModal(true);
+          return;
         }
         let pos = await Location.getLastKnownPositionAsync();
         if (!pos) {
@@ -247,6 +252,12 @@ export default function UploadScreen() {
         methodKey,
         effectiveAsr,
       );
+      // Informational only (same spirit as calcMethodLabel/calcAsrLabel
+      // already attached inside generateTimetableForMonth) — shows
+      // whether GPS or manually-typed coordinates produced this
+      // timetable, and the exact values used.
+      (tt as any).calcLocationLabel =
+        locationMode === "manual" ? `Coordinates (${latitude.toFixed(4)}, ${longitude.toFixed(4)})` : "GPS";
       setFileName(null);
       setCsvText(null);
       setCsvHeaders([]);
@@ -427,6 +438,7 @@ export default function UploadScreen() {
                   <Ionicons name="navigate-outline" size={13} color={colors.brand} />
                   <Text style={[styles.methodBadgeText, { color: colors.brand }]}>
                     Calculated using {(draft as any).calcMethodLabel} · {(draft as any).calcAsrLabel}
+                    {(draft as any).calcLocationLabel ? ` · ${(draft as any).calcLocationLabel}` : ""}
                   </Text>
                 </View>
               ) : null}
@@ -497,6 +509,46 @@ export default function UploadScreen() {
       </KeyboardAvoidingView>
 
       {/* Column re-assignment picker */}
+      <Modal
+        visible={showLocationPermModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLocationPermModal(false)}
+      >
+        <Pressable style={permModalStyles.backdrop} onPress={() => setShowLocationPermModal(false)}>
+          <Pressable
+            style={[permModalStyles.card, { backgroundColor: colors.surface }]}
+            onPress={() => {}}
+          >
+            <View style={[permModalStyles.iconCircle, { backgroundColor: colors.brandTertiary }]}>
+              <Ionicons name="location" size={32} color={colors.brand} />
+            </View>
+            <Text style={[permModalStyles.title, { color: colors.onSurface }]}>Location Permission Needed</Text>
+            <Text style={[permModalStyles.message, { color: colors.onSurfaceTertiary }]}>
+              SalahSync needs your location to calculate prayer times. Please grant location permission and make
+              sure your device's location services are turned on.
+            </Text>
+            <Pressable
+              testID="location-perm-open-settings"
+              onPress={() => {
+                setShowLocationPermModal(false);
+                Linking.openSettings();
+              }}
+              style={[permModalStyles.primaryBtn, { backgroundColor: colors.brand }]}
+            >
+              <Text style={permModalStyles.primaryBtnText}>Open Settings</Text>
+            </Pressable>
+            <Pressable
+              testID="location-perm-cancel"
+              onPress={() => setShowLocationPermModal(false)}
+              style={permModalStyles.cancelBtn}
+            >
+              <Text style={[permModalStyles.cancelBtnText, { color: colors.muted }]}>Cancel</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       <Modal
         visible={!!pickerFor}
         transparent
@@ -608,6 +660,7 @@ export default function UploadScreen() {
                 onPress={() => {
                   setLocationMode("gps");
                   setLocationError(null);
+                  lastCalcRef.current = null;
                 }}
                 style={[
                   styles.preChip,
@@ -623,6 +676,7 @@ export default function UploadScreen() {
                 onPress={() => {
                   setLocationMode("manual");
                   setLocationError(null);
+                  lastCalcRef.current = null;
                 }}
                 style={[
                   styles.preChip,
@@ -636,32 +690,96 @@ export default function UploadScreen() {
             </View>
 
             {locationMode === "manual" ? (
-              <View style={{ flexDirection: "row", gap: SPACING.sm, marginBottom: SPACING.sm }}>
-                <TextInput
-                  testID="manual-lat-input"
-                  value={manualLat}
-                  onChangeText={setManualLat}
-                  placeholder="Latitude (e.g. 51.5072)"
-                  placeholderTextColor={colors.muted}
-                  keyboardType="numbers-and-punctuation"
+              <>
+                <View style={{ flexDirection: "row", gap: SPACING.sm, marginBottom: SPACING.sm }}>
+                  <TextInput
+                    testID="manual-lat-input"
+                    value={manualLat}
+                    onChangeText={(v) => {
+                      setManualLat(v);
+                      setManualCoordsConfirmed(false);
+                      // Real bug fix: without this, editing coordinates
+                      // without switching modes left the previously-used
+                      // method still showing as "active" — tapping it
+                      // again silently reused the OLD stale coordinates
+                      // instead of the newly-typed ones, since the
+                      // reuse-cache check only looked at the method key,
+                      // not whether the coordinates had changed.
+                      lastCalcRef.current = null;
+                    }}
+                    placeholder="Latitude (e.g. 51.5072)"
+                    placeholderTextColor={colors.muted}
+                    keyboardType="numbers-and-punctuation"
+                    style={[
+                      styles.preInput,
+                      { flex: 1, backgroundColor: colors.surfaceSecondary, color: colors.onSurface, borderColor: colors.border },
+                    ]}
+                  />
+                  <TextInput
+                    testID="manual-lon-input"
+                    value={manualLon}
+                    onChangeText={(v) => {
+                      setManualLon(v);
+                      setManualCoordsConfirmed(false);
+                      lastCalcRef.current = null;
+                    }}
+                    placeholder="Longitude (e.g. -0.1276)"
+                    placeholderTextColor={colors.muted}
+                    keyboardType="numbers-and-punctuation"
+                    style={[
+                      styles.preInput,
+                      { flex: 1, backgroundColor: colors.surfaceSecondary, color: colors.onSurface, borderColor: colors.border },
+                    ]}
+                  />
+                </View>
+                {/* Explicit confirm step — previously the only way to
+                    "submit" manually-typed coordinates was to tap a
+                    calculation method in the list below, which wasn't
+                    discoverable as the trigger. This validates using the
+                    exact same rules calculateByLocation already applies,
+                    purely for clear feedback before the user picks a
+                    method. */}
+                <Pressable
+                  testID="manual-coords-confirm-btn"
+                  onPress={() => {
+                    const lat = parseFloat(manualLat);
+                    const lon = parseFloat(manualLon);
+                    if (isNaN(lat) || lat < -90 || lat > 90) {
+                      setLocationError("Enter a valid latitude between -90 and 90.");
+                      setManualCoordsConfirmed(false);
+                      return;
+                    }
+                    if (isNaN(lon) || lon < -180 || lon > 180) {
+                      setLocationError("Enter a valid longitude between -180 and 180.");
+                      setManualCoordsConfirmed(false);
+                      return;
+                    }
+                    setLocationError(null);
+                    setManualCoordsConfirmed(true);
+                  }}
                   style={[
-                    styles.preInput,
-                    { flex: 1, backgroundColor: colors.surfaceSecondary, color: colors.onSurface, borderColor: colors.border },
+                    styles.csvBtn,
+                    {
+                      backgroundColor: manualCoordsConfirmed ? colors.success : colors.brand,
+                      marginBottom: SPACING.sm,
+                    },
                   ]}
-                />
-                <TextInput
-                  testID="manual-lon-input"
-                  value={manualLon}
-                  onChangeText={setManualLon}
-                  placeholder="Longitude (e.g. -0.1276)"
-                  placeholderTextColor={colors.muted}
-                  keyboardType="numbers-and-punctuation"
-                  style={[
-                    styles.preInput,
-                    { flex: 1, backgroundColor: colors.surfaceSecondary, color: colors.onSurface, borderColor: colors.border },
-                  ]}
-                />
-              </View>
+                >
+                  <Ionicons
+                    name={manualCoordsConfirmed ? "checkmark-circle" : "checkmark-outline"}
+                    size={18}
+                    color={colors.onBrandPrimary}
+                  />
+                  <Text style={[styles.csvBtnText, { color: colors.onBrandPrimary }]}>
+                    {manualCoordsConfirmed ? "Coordinates confirmed" : "Confirm Coordinates"}
+                  </Text>
+                </Pressable>
+                {manualCoordsConfirmed ? (
+                  <Text style={{ fontSize: 12, color: colors.onSurfaceTertiary, marginBottom: SPACING.sm }}>
+                    Now choose a calculation method below to continue
+                  </Text>
+                ) : null}
+              </>
             ) : null}
 
             {locationError ? (
@@ -929,4 +1047,16 @@ const styles = StyleSheet.create({
   stepText: { fontFamily: FONTS.regular, fontSize: 13, marginTop: 2, lineHeight: 18 },
   stepLinkBtn: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: SPACING.sm },
   stepLinkText: { fontFamily: FONTS.semibold, fontSize: 13 },
+});
+
+const permModalStyles = StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", alignItems: "center", justifyContent: "center", padding: SPACING.xl },
+  card: { width: "100%", maxWidth: 340, borderRadius: RADIUS.lg, padding: SPACING.xl, alignItems: "center" },
+  iconCircle: { width: 64, height: 64, borderRadius: 32, alignItems: "center", justifyContent: "center", marginBottom: SPACING.md },
+  title: { fontFamily: FONTS.bold, fontSize: 18, textAlign: "center", marginBottom: SPACING.sm },
+  message: { fontFamily: FONTS.regular, fontSize: 13, lineHeight: 19, textAlign: "center", marginBottom: SPACING.xl },
+  primaryBtn: { width: "100%", paddingVertical: SPACING.md, borderRadius: RADIUS.md, alignItems: "center", marginBottom: SPACING.sm },
+  primaryBtnText: { fontFamily: FONTS.bold, fontSize: 15, color: "#fff" },
+  cancelBtn: { paddingVertical: SPACING.sm, alignItems: "center" },
+  cancelBtnText: { fontFamily: FONTS.semibold, fontSize: 14 },
 });

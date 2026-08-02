@@ -17,8 +17,9 @@ export function updateWidget(
   nextTimestamp: number,
   rows: WidgetRow[],
   nextIndex: number,
-  style: "arc" | "grid",
+  style: "grid" | "clock",
   tomorrowFajrTimestamp: number,
+  anchor: "start" | "jamaat",
 ): void {
   if (Platform.OS !== "android") return;
   const payload = {
@@ -29,6 +30,7 @@ export function updateWidget(
     nextIndex,
     style,
     tomorrowFajrTimestamp,
+    anchor,
   };
   try {
     NativeModules.WidgetModule?.updateWidgetData(JSON.stringify(payload));

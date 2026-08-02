@@ -43,7 +43,7 @@ export type AlarmBackgroundStyle =
   | "sunset"
   | "forest"
   | "royal";
-export type WidgetStyle = "arc" | "grid";
+export type WidgetStyle = "grid" | "clock";
 
 export type Settings = {
   is24h: boolean;
@@ -58,6 +58,19 @@ export type Settings = {
   // by this setting.
   countdownAnchor: "start" | "jamaat";
   widgetStyle: WidgetStyle;
+  // When on, alarm notifications are non-swipeable (ongoing) with a
+  // longer, more insistent vibration pattern — a compensating measure
+  // for Android's platform-level restriction on auto-launching the
+  // full-screen alarm UI while the phone is actively in use (screen on,
+  // user engaged elsewhere), which can't be overridden from app code.
+  strongAlarmNotification: boolean;
+  // Which madhab's prayer-performance details (hand position, Wudu
+  // steps, etc.) to show in the "How to Pray" feature — separate from
+  // asrMethod, which only controls Asr's shadow-length calculation, a
+  // narrower concept. null means the user hasn't chosen yet, which
+  // triggers the one-time "choose your madhab" prompt; once set, it's
+  // only changed again via Settings, not re-prompted.
+  fiqh: "hanafi" | "shafii" | "maliki" | "hanbali" | null;
 };
 
 const DEFAULT_SETTINGS: Settings = {
@@ -68,7 +81,9 @@ const DEFAULT_SETTINGS: Settings = {
   preAlarmAnchor: "jamaat",
   alarmBackground: "default",
   countdownAnchor: "jamaat",
-  widgetStyle: "arc",
+  widgetStyle: "grid",
+  strongAlarmNotification: false,
+  fiqh: null,
 };
 
 function defaultConfigs(): Record<PrayerKey, AlarmConfig> {
@@ -141,7 +156,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setQuoteStartIndex(nextIdx);
       await storage.setItem(K_QUOTE_IDX, nextIdx);
       try {
-        if (s) setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(s) });
+        if (s) {
+          const loaded = { ...DEFAULT_SETTINGS, ...JSON.parse(s) };
+          // Migration: "arc" was removed as a widget style option — any
+          // install that already saved this legacy value falls back to
+          // "grid" instead of silently keeping a now-hidden style with no
+          // way to change it in Settings.
+          if ((loaded.widgetStyle as string) === "arc") {
+            loaded.widgetStyle = "grid";
+          }
+          setSettings(loaded);
+        }
       } catch {}
       try {
         if (tt) setTimetable(JSON.parse(tt));
@@ -149,6 +174,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       try {
         if (cf) setConfigs({ ...defaultConfigs(), ...JSON.parse(cf) });
       } catch {}
+      // One-time cleanup: the streak feature was removed after brief
+      // testing, but its data key was already written to storage on
+      // devices that tried it. Harmless to leave (nothing reads it
+      // anymore), but removing it is cheap and tidier. Safe to no-op
+      // forever after the first run once the key no longer exists.
+      await storage.removeItem("streaks.log");
       await requestAlarmPermissions();
       await requestBatteryOptimizationExemption();
       setReady(true);
@@ -179,14 +210,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const rescheduleRef = useRef<any>(null);
   const reschedule = useCallback(async () => {
-    return scheduleAlarms(timetable, configs, settings.showSunrise, settings.preAlarmAnchor);
+    return scheduleAlarms(timetable, configs, settings.showSunrise, settings.preAlarmAnchor, settings.strongAlarmNotification);
   }, [timetable, configs, settings.showSunrise, settings.preAlarmAnchor]);
   rescheduleRef.current = reschedule;
 
   // Reschedule whenever inputs change (and daily, as the horizon rolls forward).
   useEffect(() => {
     if (!ready) return;
-    scheduleAlarms(timetable, configs, settings.showSunrise, settings.preAlarmAnchor);
+    scheduleAlarms(timetable, configs, settings.showSunrise, settings.preAlarmAnchor, settings.strongAlarmNotification);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, timetable, configs, settings.showSunrise, settings.preAlarmAnchor, todayRow?.date]);
 

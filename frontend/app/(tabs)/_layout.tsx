@@ -1,7 +1,9 @@
+import { useEffect, useRef } from "react";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import { Alert, Platform } from "react-native";
+import { Alert, Platform, View } from "react-native";
+import { AdEventType, BannerAd, BannerAdSize, InterstitialAd, TestIds } from "react-native-google-mobile-ads";
 import { useNavigationState } from "@react-navigation/native";
 import { useApp } from "@/src/context/AppContext";
 import { FONTS } from "@/src/theme";
@@ -18,8 +20,63 @@ export default function TabsLayout() {
     return state.routes[state.index]?.name;
   });
 
+  // Interstitial: shown on genuine tab switches (a natural break point,
+  // matching Google's own guidance — not an arbitrary background timer),
+  // with a cooldown so it doesn't fire on every single switch. Loaded
+  // ahead of time and reloaded automatically once dismissed, so there's
+  // no visible delay when it's actually time to show one.
+  const interstitialRef = useRef<InterstitialAd | null>(null);
+  const interstitialLoadedRef = useRef(false);
+  const lastShownRef = useRef(0);
+  const isFirstRender = useRef(true);
+  const INTERSTITIAL_COOLDOWN_MS = 2 * 60 * 1000;
+
+  useEffect(() => {
+    const loadInterstitial = () => {
+      const interstitial = InterstitialAd.createForAdRequest(TestIds.INTERSTITIAL);
+      interstitialLoadedRef.current = false;
+      const unsubscribeLoaded = interstitial.addAdEventListener(AdEventType.LOADED, () => {
+        interstitialLoadedRef.current = true;
+      });
+      const unsubscribeClosed = interstitial.addAdEventListener(AdEventType.CLOSED, () => {
+        // Preload the next one immediately once this one is dismissed.
+        loadInterstitial();
+      });
+      const unsubscribeError = interstitial.addAdEventListener(AdEventType.ERROR, (e) => {
+        console.warn("Interstitial failed to load", e);
+      });
+      interstitial.load();
+      interstitialRef.current = interstitial;
+      // Listeners are per-ad-instance and get replaced wholesale by the
+      // next loadInterstitial() call, so there's no separate cleanup
+      // needed beyond what the component unmount effect below handles.
+      void unsubscribeLoaded;
+      void unsubscribeClosed;
+      void unsubscribeError;
+    };
+    loadInterstitial();
+  }, []);
+
+  useEffect(() => {
+    // Skip the very first mount — only real tab SWITCHES should count,
+    // not just landing on the initial tab.
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    const now = Date.now();
+    if (now - lastShownRef.current < INTERSTITIAL_COOLDOWN_MS) return;
+    if (interstitialLoadedRef.current && interstitialRef.current) {
+      interstitialRef.current.show();
+      lastShownRef.current = now;
+      interstitialLoadedRef.current = false;
+    }
+  }, [currentRouteName]);
+
   return (
+    <View style={{ flex: 1, backgroundColor: colors.surface }}>
     <Tabs
+      style={{ flex: 1 }}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.brand,
@@ -77,13 +134,6 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="alarms"
-        options={{
-          title: "Alarms",
-          tabBarIcon: ({ color, size }) => <Ionicons name="alarm" size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="qibla"
         options={{
           title: "Qibla",
@@ -112,6 +162,13 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="how-to-pray"
+        options={{
+          title: "How to Pray",
+          tabBarIcon: ({ color, size }) => <Ionicons name="book-outline" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: "Settings",
@@ -119,5 +176,14 @@ export default function TabsLayout() {
         }}
       />
     </Tabs>
+    {/* TEST — banner ad on every page, verifying the tab bar above it
+        stays fully clickable. Not a final placement decision; revisit
+        once this is confirmed. */}
+    <BannerAd
+      unitId={TestIds.BANNER}
+      size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+      onAdFailedToLoad={(e) => console.warn("Tab bar test banner failed to load", e)}
+    />
+    </View>
   );
 }

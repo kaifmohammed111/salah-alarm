@@ -38,6 +38,50 @@ const K_SURAH_LIST = "quran.surahList";
 // this fix, even after updating the app.
 const K_AUDIO_EDITIONS = "quran.audioEditions.v3";
 const K_DOWNLOADED_EDITIONS = "quran.downloadedEditions";
+const K_BACKGROUND_PLAYBACK_ENABLED = "quran.backgroundPlaybackEnabled";
+
+// Whether Quran audio should keep playing (with lock-screen/notification
+// controls) after the user leaves the app. Defaults to true so existing
+// behavior doesn't silently change for anyone who already had it working.
+export async function getBackgroundPlaybackEnabled(): Promise<boolean> {
+  const raw = await storage.getItem(K_BACKGROUND_PLAYBACK_ENABLED, "true");
+  return raw !== "false";
+}
+
+export async function setBackgroundPlaybackEnabled(enabled: boolean): Promise<void> {
+  await storage.setItem(K_BACKGROUND_PLAYBACK_ENABLED, enabled ? "true" : "false");
+}
+
+export type LastPlayed = {
+  editionIdentifier: string;
+  editionName: string;
+  surahNumber: number;
+  surahName: string;
+  positionSeconds: number;
+};
+
+const K_LAST_PLAYED = "quran.lastPlayed";
+
+// Lets the Listen tab show a "Continue Listening" card on relaunch and
+// resume exactly where playback left off. Saved on every new Surah start
+// (position 0), on pause, and periodically while playing — deliberately
+// NOT saved continuously on every position tick, to avoid excessive
+// storage writes.
+export async function saveLastPlayed(data: LastPlayed): Promise<void> {
+  try {
+    await storage.setItem(K_LAST_PLAYED, JSON.stringify(data));
+  } catch {}
+}
+
+export async function getLastPlayed(): Promise<LastPlayed | null> {
+  const raw = await storage.getItem(K_LAST_PLAYED, "");
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
 const TEXT_CACHE_PREFIX = "quran.text.";
 
 export type SurahMeta = {
@@ -54,6 +98,11 @@ export type Ayah = {
   numberInSurah: number;
   text: string;
   surah: { number: number; englishName: string; name: string };
+  // Standard 604-page Mushaf page number and Juz (1-30) this ayah falls
+  // on — used by the page-based Read mode to group ayahs into full pages
+  // and to jump to the right starting page for a chosen Surah/Juz.
+  page: number;
+  juz: number;
 };
 
 export type AudioEdition = {
@@ -112,11 +161,36 @@ type Mp3QuranReciter = {
 // what actually fixes "some reciters don't load": rather than showing
 // partial reciters and having to handle missing-Surah cases throughout the
 // UI, only fully-complete recitations are offered at all.
+// Manual corrections for reciter name transliterations that read oddly
+// in English (as supplied by the user) — a display-only substitution.
+// Substring-based (not exact-match) so it also corrects a name when it's
+// combined with a reading-style suffix, e.g. "Name (Reading)". The
+// underlying MP3Quran.net data used for matching/downloads is untouched;
+// only what's shown on screen changes.
+const RECITER_NAME_OVERRIDES: [string, string][] = [
+  ["Abdulrahman Alsudaes", "Abdul Rahman Al-Sudais"],
+  ["Maher Al Meaqli", "Maher Al-Muaiqly"],
+  ["Abdulbasit Abdulsamad", "Abdul Basit 'Abd us-Samad"],
+];
+
+function applyReciterNameOverrides(englishName: string): string {
+  let result = englishName;
+  for (const [from, to] of RECITER_NAME_OVERRIDES) {
+    if (result.includes(from)) {
+      result = result.split(from).join(to);
+    }
+  }
+  return result;
+}
+
 export async function fetchAudioEditions(): Promise<AudioEdition[]> {
   const cached = await storage.getItem(K_AUDIO_EDITIONS, "");
   if (cached) {
     try {
-      return JSON.parse(cached);
+      const parsed = JSON.parse(cached) as AudioEdition[];
+      // Apply overrides even to already-cached data, so a correction
+      // takes effect immediately without needing to bump the cache key.
+      return parsed.map((e) => ({ ...e, englishName: applyReciterNameOverrides(e.englishName) }));
     } catch {}
   }
 
@@ -143,7 +217,7 @@ export async function fetchAudioEditions(): Promise<AudioEdition[]> {
       if (availableSurahs.length < 114) continue;
       editions.push({
         identifier: `${r.id}-${m.id}`,
-        englishName: hasMultipleReadings ? `${r.name} (${m.name})` : r.name,
+        englishName: applyReciterNameOverrides(hasMultipleReadings ? `${r.name} (${m.name})` : r.name),
         server: m.server,
         availableSurahs,
       });
@@ -187,6 +261,156 @@ export async function fetchJuzBilingual(juzNumber: number): Promise<{ arabic: Ay
   ]);
   const result = { arabic: arabicData.ayahs, english: englishData.ayahs };
   await storage.setItem(cacheKey, JSON.stringify(result));
+  return result;
+}
+
+// Builds the full Quran (Arabic + English), once, by looping the same
+// already-verified /surah/{n}/editions/{ar},{en} endpoint used by
+// fetchSurahBilingual across all 114 Surahs — deliberately NOT using the
+// whole-book /quran/{edition} endpoint, since its exact response shape
+// isn't already used/verified anywhere else in this app, and guessing
+// wrong there would silently break this feature. Cached afterward via
+// storage, same as everything else, so this cost is only ever paid once.
+// Powers the page-based Read mode's ability to swipe freely across the
+// entire Quran regardless of which Surah/Juz the user originally opened.
+const K_WHOLE_QURAN_CACHE_KEY = `${TEXT_CACHE_PREFIX}wholeQuranBilingual.v5`;
+// The full bilingual Quran (6236 ayahs x 2 languages) serializes to
+// several MB of JSON — real evidence points to this silently failing to
+// persist via AsyncStorage (storage.setItem swallows write errors and
+// returns false, which fetchWholeQuranBilingual never checked), since
+// AsyncStorage is only really meant for small values and is known to be
+// unreliable well above a couple MB on Android. Cached as a plain file
+// instead, which has no comparable size ceiling.
+const WHOLE_QURAN_CACHE_PATH = `${FileSystem.documentDirectory}quran-whole-cache-v5.json`;
+
+// Retries specifically on HTTP 429 (rate limited) with increasing
+// backoff. Real logcat evidence: fetching all 114 Surahs at concurrency
+// 10 tripped AlQuranCloud's rate limiter ("Request failed: 429"). Local
+// to this bulk-fetch path only — the shared fetchJson used elsewhere in
+// this file is left as-is since single-Surah/Juz fetches never hit this.
+async function fetchJsonWithRetry(
+  url: string,
+  onWaitingForConnection?: (waiting: boolean) => void,
+  maxRateLimitRetries = 5,
+): Promise<any> {
+  let rateLimitAttempt = 0;
+  while (true) {
+    try {
+      const result = await fetchJson(url);
+      return result;
+    } catch (e: any) {
+      const is429 = typeof e?.message === "string" && e.message.includes("429");
+      if (is429) {
+        if (rateLimitAttempt >= maxRateLimitRetries) throw e;
+        await new Promise((resolve) => setTimeout(resolve, 600 * Math.pow(2, rateLimitAttempt)));
+        rateLimitAttempt += 1;
+        continue;
+      }
+      // Not a rate-limit error — check if we're genuinely offline. If so,
+      // pause here, poll connectivity, and retry the SAME request once
+      // back online, same "auto-pause/resume on disconnect" behavior the
+      // download feature already has, rather than treating a dropped
+      // connection as a hard failure.
+      const online = await hasInternetConnection();
+      if (online) {
+        throw e;
+      }
+      onWaitingForConnection?.(true);
+      while (!(await hasInternetConnection())) {
+        await new Promise((resolve) => setTimeout(resolve, CONNECTIVITY_POLL_MS));
+      }
+      onWaitingForConnection?.(false);
+    }
+  }
+}
+
+export type WholeQuranFetchProgress = {
+  done: number; // Surahs completed so far
+  total: number; // always 114
+  waitingForConnection: boolean;
+};
+
+export async function fetchWholeQuranBilingual(
+  onProgress?: (info: WholeQuranFetchProgress) => void,
+): Promise<{ arabic: Ayah[]; english: Ayah[] }> {
+  try {
+    const info = await FileSystem.getInfoAsync(WHOLE_QURAN_CACHE_PATH);
+    if (info.exists) {
+      const cached = await FileSystem.readAsStringAsync(WHOLE_QURAN_CACHE_PATH);
+      return JSON.parse(cached);
+    }
+  } catch (e) {
+    console.warn("fetchWholeQuranBilingual: reading cache file failed, will re-fetch", e);
+  }
+  const allArabic: Ayah[] = [];
+  const allEnglish: Ayah[] = [];
+  let doneCount = 0;
+  // Small batch size + a pause between batches, rather than firing many
+  // Surah requests at high concurrency — real evidence showed concurrency
+  // 10 tripping the rate limiter. This is slower (one-time only, cached
+  // after) but reliable.
+  const BATCH_SIZE = 3;
+  const BATCH_DELAY_MS = 500;
+  for (let start = 1; start <= 114; start += BATCH_SIZE) {
+    const batch = Array.from(
+      { length: Math.min(BATCH_SIZE, 114 - start + 1) },
+      (_, i) => start + i,
+    );
+    const results = await Promise.all(
+      batch.map((n) =>
+        fetchJsonWithRetry(
+          `${BASE}/surah/${n}/editions/${ARABIC_EDITION},${ENGLISH_EDITION}`,
+          (waiting) => onProgress?.({ done: doneCount, total: 114, waitingForConnection: waiting }),
+        ),
+      ),
+    );
+    results.forEach((data, batchIdx) => {
+      const surahNum = batch[batchIdx];
+      const arabicAyahs = data?.[0]?.ayahs;
+      const englishAyahs = data?.[1]?.ayahs;
+      if (!Array.isArray(arabicAyahs) || !Array.isArray(englishAyahs)) {
+        console.warn(`fetchWholeQuranBilingual: Surah ${surahNum} response missing ayahs arrays, skipping`);
+        return;
+      }
+      // Real evidence (logged ayah shape): the /surah/{n}/editions/{ar},{en}
+      // endpoint does NOT include a `.surah` sub-object per ayah (unlike
+      // the /juz/{n}/{edition} endpoint fetchJuzBilingual uses, which spans
+      // multiple Surahs and needs it) — every ayah here already belongs to
+      // the same known Surah, so the API puts that metadata at the
+      // response level instead. Attach it manually per ayah so downstream
+      // code (page grouping, Surah-header rendering, Surah/Juz jump-to
+      // lookup) can rely on `.surah` existing uniformly everywhere.
+      const surahMeta = {
+        number: data[0]?.number ?? surahNum,
+        englishName: data[0]?.englishName ?? `Surah ${surahNum}`,
+        name: data[0]?.name ?? "",
+      };
+      for (let i = 0; i < arabicAyahs.length; i++) {
+        const a = arabicAyahs[i];
+        const en = englishAyahs[i];
+        if (!a || typeof a.page !== "number" || !en) {
+          console.warn(`fetchWholeQuranBilingual: malformed ayah in Surah ${surahNum} at index ${i}, skipping`);
+          continue;
+        }
+        allArabic.push({ ...a, surah: surahMeta });
+        allEnglish.push(en);
+      }
+    });
+    doneCount += batch.length;
+    onProgress?.({ done: doneCount, total: 114, waitingForConnection: false });
+    if (start + BATCH_SIZE <= 114) {
+      await new Promise((resolve) => setTimeout(resolve, BATCH_DELAY_MS));
+    }
+  }
+  const result = { arabic: allArabic, english: allEnglish };
+  try {
+    await FileSystem.writeAsStringAsync(WHOLE_QURAN_CACHE_PATH, JSON.stringify(result));
+  } catch (e) {
+    // Not fatal — the fetch itself already succeeded and the caller has
+    // the data; this just means next launch will re-fetch instead of
+    // hitting a warm cache. Logged so it's visible if it keeps happening.
+    console.warn("fetchWholeQuranBilingual: writing cache file failed", e);
+  }
   return result;
 }
 
@@ -287,11 +511,56 @@ export type DownloadFailure = { surah: number; reason: string };
 // An individual Surah failing doesn't abort the rest — it's recorded with
 // its specific failure reason and reported back, rather than the whole
 // download silently stopping partway with no explanation.
+export type DownloadControl = {
+  cancelled: boolean;
+  // The currently in-flight resumable task, if any. Stashed here so the
+  // Cancel button (outside this function's closure) can actually interrupt
+  // a real network request — plain FileSystem.downloadAsync() has NO
+  // cancel method at all, which is why Cancel used to just sit there
+  // until whatever file was mid-transfer happened to finish on its own.
+  activeTask: FileSystem.DownloadResumable | null;
+};
+
+export function createDownloadControl(): DownloadControl {
+  return { cancelled: false, activeTask: null };
+}
+
+// Called by the Cancel button. Actually pauses the in-flight transfer via
+// the resumable task's pauseAsync() (a real native cancel-the-request
+// call), instead of only flipping a flag that gets checked between files.
+export async function cancelDownload(control: DownloadControl): Promise<void> {
+  control.cancelled = true;
+  if (control.activeTask) {
+    try {
+      await control.activeTask.pauseAsync();
+    } catch {
+      // Task already settled (completed or errored) right as we tried to
+      // pause it — nothing to do, not an error worth surfacing.
+    }
+  }
+}
+
+export type DownloadProgressInfo = {
+  done: number;
+  total: number;
+  etaSeconds: number | null;
+  waitingForConnection: boolean;
+  // Fraction (0..1) complete of whichever file is currently mid-transfer.
+  // Lets the UI move the percentage bar continuously between whole-file
+  // completions, instead of freezing for the whole duration of one file
+  // on a slow connection.
+  currentFileFraction: number;
+};
+
+// How often to re-check connectivity while paused waiting for it to return.
+const CONNECTIVITY_POLL_MS = 5000;
+
 export async function downloadQuranAudio(
   edition: AudioEdition,
   surahNumbers: number[],
-  onProgress: (done: number, total: number, etaSeconds: number | null) => void,
-): Promise<{ failures: DownloadFailure[] }> {
+  onProgress: (info: DownloadProgressInfo) => void,
+  control: DownloadControl,
+): Promise<{ failures: DownloadFailure[]; cancelled: boolean }> {
   const dir = localSurahAudioDir(edition.identifier);
   try {
     await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
@@ -299,10 +568,50 @@ export async function downloadQuranAudio(
     // Directory may already exist — fine, ignore.
   }
   const failures: DownloadFailure[] = [];
-  let elapsedMsSoFar = 0;
-  let filesTimedSoFar = 0;
+
+  // Real byte-rate-based ETA: track actual bytes transferred (completed
+  // files + whatever's been written of the file currently in flight)
+  // against real elapsed *active* download time. Time spent paused
+  // waiting for connectivity is excluded from that elapsed time so a
+  // disconnect doesn't drag the computed rate down artificially.
+  const batchStartedAt = Date.now();
+  let pausedMs = 0;
+  let bytesFromCompletedFiles = 0;
+  let totalExpectedBytesSeen = 0; // sum of file sizes seen so far, for estimating not-yet-started files
+  let filesWithKnownSize = 0;
+
+  const emitProgress = (
+    doneCount: number,
+    currentFileWritten: number,
+    currentFileExpected: number,
+    waitingForConnection: boolean,
+  ) => {
+    const activeMs = Math.max(1, Date.now() - batchStartedAt - pausedMs);
+    const bytesSoFar = bytesFromCompletedFiles + currentFileWritten;
+    const rate = bytesSoFar / (activeMs / 1000); // bytes/sec
+
+    const avgFileSize = filesWithKnownSize > 0 ? totalExpectedBytesSeen / filesWithKnownSize : null;
+    const remainingInCurrentFile =
+      currentFileExpected > 0 ? Math.max(0, currentFileExpected - currentFileWritten) : avgFileSize ?? 0;
+    const filesNotYetStarted = surahNumbers.length - doneCount - (currentFileExpected > 0 ? 1 : 0);
+    const remainingBytes =
+      remainingInCurrentFile + (avgFileSize != null ? avgFileSize * Math.max(0, filesNotYetStarted) : 0);
+
+    const etaSeconds = rate > 0 && bytesSoFar > 0 ? Math.round(remainingBytes / rate) : null;
+    const currentFileFraction = currentFileExpected > 0 ? Math.min(1, currentFileWritten / currentFileExpected) : 0;
+
+    onProgress({
+      done: doneCount,
+      total: surahNumbers.length,
+      etaSeconds,
+      waitingForConnection,
+      currentFileFraction,
+    });
+  };
 
   for (let i = 0; i < surahNumbers.length; i++) {
+    if (control.cancelled) return { failures, cancelled: true };
+
     const s = surahNumbers[i];
     // Defensive: fetchAudioEditions only returns complete (114/114)
     // reciters, so this should never actually trigger — kept as a safety
@@ -313,28 +622,81 @@ export async function downloadQuranAudio(
       const already = await isSurahDownloaded(edition.identifier, s);
       if (!already) {
         const dest = localSurahAudioPath(edition.identifier, s);
-        const startedAt = Date.now();
-        try {
-          await FileSystem.downloadAsync(mp3QuranSurahUrl(edition.server, s), dest);
-          elapsedMsSoFar += Date.now() - startedAt;
-          filesTimedSoFar += 1;
-        } catch (e: any) {
-          console.warn(`Quran download failed for surah ${s}, edition ${edition.identifier}`, e);
+        let succeeded = false;
+        let lastError: any = null;
+        let lastKnownWritten = 0;
+        let lastKnownExpected = 0;
+
+        // Retry loop: a failure while online is a real per-file failure
+        // (don't retry forever). A failure while offline pauses here,
+        // polling connectivity, and auto-resumes by restarting the SAME
+        // file once back online — this is the "auto-pause/resume on
+        // disconnect" behavior. (Restart-from-scratch, not byte-offset
+        // resume — a possible future upgrade, not needed for this fix.)
+        while (!succeeded && !control.cancelled) {
+          const task = FileSystem.createDownloadResumable(
+            mp3QuranSurahUrl(edition.server, s),
+            dest,
+            {},
+            (progress) => {
+              lastKnownWritten = progress.totalBytesWritten;
+              lastKnownExpected = progress.totalBytesExpectedToWrite;
+              emitProgress(i, lastKnownWritten, lastKnownExpected, false);
+            },
+          );
+          control.activeTask = task;
+          try {
+            const result = await task.downloadAsync();
+            control.activeTask = null;
+            if (result) {
+              if (lastKnownExpected > 0) {
+                bytesFromCompletedFiles += lastKnownExpected;
+                totalExpectedBytesSeen += lastKnownExpected;
+                filesWithKnownSize += 1;
+              }
+              succeeded = true;
+            } else {
+              // downloadAsync() resolved with null: the task was paused.
+              // On this code path that only happens via the Cancel
+              // button's pauseAsync() call above — treat as a real cancel.
+              return { failures, cancelled: true };
+            }
+          } catch (e: any) {
+            control.activeTask = null;
+            lastError = e;
+            const online = await hasInternetConnection();
+            if (online) {
+              // Genuine failure (server error, bad file, timeout while
+              // actually connected) — don't retry indefinitely.
+              break;
+            }
+            const pauseStartedAt = Date.now();
+            emitProgress(i, lastKnownWritten, lastKnownExpected, true);
+            while (!(await hasInternetConnection()) && !control.cancelled) {
+              await new Promise((resolve) => setTimeout(resolve, CONNECTIVITY_POLL_MS));
+            }
+            pausedMs += Date.now() - pauseStartedAt;
+            // Falls back to the top of the while loop: retries this same
+            // file if connection returned, or exits if cancelled meanwhile.
+          }
+        }
+
+        if (control.cancelled) return { failures, cancelled: true };
+
+        if (!succeeded) {
+          console.warn(`Quran download failed for surah ${s}, edition ${edition.identifier}`, lastError);
           const reason =
-            typeof e?.message === "string" && e.message.length > 0 && e.message.length < 200
-              ? e.message
+            typeof lastError?.message === "string" && lastError.message.length > 0 && lastError.message.length < 200
+              ? lastError.message
               : "Network error while downloading this Surah.";
           failures.push({ surah: s, reason });
         }
       }
     }
-    const doneCount = i + 1;
-    const remaining = surahNumbers.length - doneCount;
-    const avgMsPerFile = filesTimedSoFar > 0 ? elapsedMsSoFar / filesTimedSoFar : null;
-    const etaSeconds = avgMsPerFile != null ? Math.round((avgMsPerFile * remaining) / 1000) : null;
-    onProgress(doneCount, surahNumbers.length, etaSeconds);
+
+    emitProgress(i + 1, 0, 0, false);
   }
-  return { failures };
+  return { failures, cancelled: false };
 }
 
 // Checks, in parallel, which of the 114 Surahs are already downloaded for

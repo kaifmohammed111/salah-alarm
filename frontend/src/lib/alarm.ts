@@ -147,6 +147,7 @@ export async function scheduleAlarms(
   configs: Record<PrayerKey, AlarmConfig>,
   showSunrise: boolean,
   preAlarmAnchor: "start" | "jamaat" = "jamaat",
+  strongAlarmNotification: boolean = false,
 ): Promise<number> {
   const m = nf();
   if (!m || Platform.OS !== "android") return 0;
@@ -243,10 +244,29 @@ export async function scheduleAlarms(
             importance: AndroidImportance.HIGH,
             category: AndroidCategory.ALARM,
             visibility: AndroidVisibility.PUBLIC,
+            // REVERTED: pointing these at the custom AlarmActivity
+            // broke notification taps entirely (confirmed by real
+            // on-device testing — tapping the notification did nothing
+            // at all, a regression from the previous "opens on tap"
+            // behavior). Reverted to "default" (MainActivity) to
+            // restore working behavior while the correct
+            // launchActivity string format gets investigated properly.
+            // AlarmActivity itself (plugins/withAlarmActivity.js) is
+            // left in place, unused for now, harmless as dead code.
             fullScreenAction: { id: "default", launchActivity: "default" },
             pressAction: { id: "default", launchActivity: "default" },
             autoCancel: false,
-            vibrationPattern: j.vibrate ? [300, 500, 300, 500] : undefined,
+            // "Strong" mode: non-swipeable (user must actually act on it,
+            // not just dismiss it with a flick) plus a longer, more
+            // insistent repeating vibration — the closest compensating
+            // behavior available for when Android suppresses the
+            // full-screen alarm UI during active phone use.
+            ongoing: strongAlarmNotification,
+            vibrationPattern: j.vibrate
+              ? strongAlarmNotification
+                ? [300, 500, 300, 500, 300, 500, 300, 500, 300, 500]
+                : [300, 500, 300, 500]
+              : undefined,
           },
           data: data as any,
         },

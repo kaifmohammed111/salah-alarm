@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
@@ -57,6 +57,7 @@ export default function HomeScreen() {
 
   const [qi, setQi] = useState(quoteStartIndex);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [showMonthlyView, setShowMonthlyView] = useState(false);
   const moon = getMoonInfo(now);
 
   // Start from the quote chosen for this app-open, then gently slide through the rest.
@@ -143,6 +144,7 @@ export default function HomeScreen() {
         nextIndex,
         settings.widgetStyle,
         tomorrowFajrTimestamp,
+        settings.countdownAnchor,
       );
     } else {
       // All of today's prayers have passed — fall back to showing
@@ -155,6 +157,7 @@ export default function HomeScreen() {
         0,
         settings.widgetStyle,
         tomorrowFajrTimestamp,
+        settings.countdownAnchor,
       );
     }
     // FIX: settings.countdownAnchor was missing here, so even a correct
@@ -189,21 +192,32 @@ export default function HomeScreen() {
               <Text style={styles.quoteSource}>— {quote.source}</Text>
             </Animated.View>
 
-            <Pressable
-              testID="home-date-btn"
-              onPress={() => dateSheetRef.current?.present(viewDate)}
-              style={styles.dateBtn}
-              hitSlop={8}
-            >
-              <View style={styles.dateRow}>
-                <Text style={styles.dateText}>{dateStr}</Text>
-                <Ionicons name="calendar-outline" size={16} color="rgba(255,255,255,0.85)" />
-              </View>
-              <Text style={styles.hijriText}>{formatHijri(viewDate)}</Text>
-              <Text style={styles.moonText}>
-                🌙 {moon.name} · {Math.round(moon.illumination * 100)}% lit
-              </Text>
-            </Pressable>
+            <View style={styles.dateBtnRow}>
+              <Pressable
+                testID="home-date-btn"
+                onPress={() => dateSheetRef.current?.present(viewDate)}
+                style={styles.dateBtn}
+                hitSlop={8}
+              >
+                <View style={styles.dateRow}>
+                  <Text style={styles.dateText}>{dateStr}</Text>
+                  <Ionicons name="calendar-outline" size={16} color="rgba(255,255,255,0.85)" />
+                </View>
+                <Text style={styles.hijriText}>{formatHijri(viewDate)}</Text>
+                <Text style={styles.moonText}>
+                  🌙 {moon.name} · {Math.round(moon.illumination * 100)}% lit
+                </Text>
+              </Pressable>
+              <Pressable
+                testID="home-monthly-view-btn"
+                onPress={() => setShowMonthlyView(true)}
+                style={styles.monthlyBtn}
+                hitSlop={8}
+              >
+                <Ionicons name="grid-outline" size={14} color="rgba(255,255,255,0.85)" />
+                <Text style={styles.monthlyBtnText}>Month</Text>
+              </Pressable>
+            </View>
           </View>
 
           <View style={[styles.heroContent, { paddingTop: insets.top + SPACING.lg }]}>
@@ -337,6 +351,88 @@ export default function HomeScreen() {
         selected={viewDate}
         onSelect={(d) => setSelectedDate(sameYMD(d, now) ? null : d)}
       />
+
+      <Modal
+        visible={showMonthlyView}
+        animationType="slide"
+        onRequestClose={() => setShowMonthlyView(false)}
+      >
+        <View style={[styles.monthlyRoot, { backgroundColor: colors.surface }]}>
+          <View style={[styles.monthlyHeader, { paddingTop: insets.top + SPACING.md, borderBottomColor: colors.border }]}>
+            <Pressable testID="monthly-view-close" onPress={() => setShowMonthlyView(false)} hitSlop={10}>
+              <Ionicons name="close" size={26} color={colors.onSurface} />
+            </Pressable>
+            <Text style={[styles.monthlyTitle, { color: colors.onSurface }]}>
+              {timetable?.month ? `${timetable.month} ${timetable.year || ""}` : "This Month"}
+            </Text>
+            <View style={{ width: 26 }} />
+          </View>
+          {!timetable?.rows?.length ? (
+            <View style={styles.empty}>
+              <Text style={[styles.emptySub, { color: colors.onSurfaceTertiary }]}>No timetable loaded yet.</Text>
+            </View>
+          ) : (
+            <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + SPACING.xxl }}>
+              <View style={[styles.monthlyRow, styles.monthlyHeaderRow, { borderBottomColor: colors.border }]}>
+                <Text style={[styles.monthlyCellDate, styles.monthlyHeaderText, { color: colors.onSurfaceTertiary }]}>
+                  Date
+                </Text>
+                {keys.map((k) => (
+                  <Text
+                    key={k}
+                    style={[styles.monthlyCell, styles.monthlyHeaderText, { color: colors.onSurfaceTertiary }]}
+                  >
+                    {PRAYER_LABELS[k]}
+                  </Text>
+                ))}
+              </View>
+              {timetable.rows.map((row, i) => {
+                // Timetable.rows is already scoped to a single month (the
+                // whole app assumes one Timetable = one month), so
+                // matching purely on day-of-month is sufficient here —
+                // no need to also compare month/year strings, which
+                // could be formatted differently depending on whether
+                // this timetable came from CSV import or calculation.
+                const rowIsToday = row.date === String(now.getDate());
+                return (
+                  <View
+                    key={i}
+                    style={[
+                      styles.monthlyRow,
+                      { borderBottomColor: colors.divider },
+                      rowIsToday ? { backgroundColor: colors.brandTertiary } : null,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.monthlyCellDate,
+                        { color: rowIsToday ? colors.onBrandTertiary : colors.onSurface },
+                      ]}
+                    >
+                      {row.day} {row.date}
+                    </Text>
+                    {keys.map((k) => {
+                      const sj = startJamaat(row, k);
+                      const timeStr = k === "sunrise" ? row.sunrise : sj.start;
+                      return (
+                        <Text
+                          key={k}
+                          style={[
+                            styles.monthlyCell,
+                            { color: rowIsToday ? colors.onBrandTertiary : colors.onSurfaceTertiary },
+                          ]}
+                        >
+                          {timeStr ? formatTime(timeStr, settings.is24h) : "--:--"}
+                        </Text>
+                      );
+                    })}
+                  </View>
+                );
+              })}
+            </ScrollView>
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -380,6 +476,40 @@ const styles = StyleSheet.create({
   },
   bannerText: { fontFamily: FONTS.semibold, fontSize: 14, flex: 1 },
   dateBtn: { alignSelf: "flex-start", marginTop: SPACING.md },
+  dateBtnRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" },
+  monthlyBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: SPACING.md,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    borderRadius: RADIUS.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(255,255,255,0.3)",
+  },
+  monthlyBtnText: { fontFamily: FONTS.semibold, fontSize: 11, color: "rgba(255,255,255,0.85)" },
+  monthlyRoot: { flex: 1 },
+  monthlyHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  monthlyTitle: { fontFamily: FONTS.bold, fontSize: 17 },
+  monthlyRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  monthlyHeaderRow: { borderBottomWidth: 1 },
+  monthlyHeaderText: { fontFamily: FONTS.bold, fontSize: 10, textTransform: "uppercase" },
+  monthlyCellDate: { width: 56, fontFamily: FONTS.semibold, fontSize: 11 },
+  monthlyCell: { flex: 1, fontFamily: FONTS.regular, fontSize: 11, textAlign: "center" },
   dateRow: { flexDirection: "row", alignItems: "center", gap: SPACING.sm },
   sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: SPACING.md },
   resetPill: {
