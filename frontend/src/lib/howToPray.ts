@@ -39,7 +39,7 @@ export const SEGMENT_TYPE_LABELS: Record<SegmentType, string> = {
   "sunnah-muakkadah": "Sunnah (Mu'akkadah) / Emphasized Sunnah",
   "sunnah-ghair-muakkadah": "Sunnah (Ghair Mu'akkadah) / Non Emphasized Sunnah",
   fard: "Fard / Compulsory",
-  nafl: "Nafl",
+  nafl: "Nafl / Optional",
   wajib: "Wajib / Compulsory",
 };
 

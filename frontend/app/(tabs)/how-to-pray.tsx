@@ -121,6 +121,26 @@ export default function HowToPrayScreen() {
         <ScrollView contentContainerStyle={{ padding: SPACING.lg, paddingBottom: insets.bottom + SPACING.xxxl }}>
           {selectedPrayer.segments.map((seg, i) => {
             const isTappable = seg.type === "fard" || seg.type === "wajib"; // wajib = Witr, the one non-Fard segment with unique content (Qunut)
+            const fullLabel = seg.labelOverride ?? SEGMENT_TYPE_LABELS[seg.type];
+            const [segmentTitleText, segmentSubtitleText] = fullLabel.split(" / ");
+            const segmentIconName =
+              seg.type === "fard"
+                ? "star"
+                : seg.type === "wajib"
+                ? "flag"
+                : seg.type === "sunnah-muakkadah"
+                ? "sparkles"
+                : seg.type === "sunnah-ghair-muakkadah"
+                ? "leaf-outline"
+                : "add-circle-outline";
+            const segmentStatusText =
+              seg.type === "sunnah-muakkadah"
+                ? "Recommended but optional upon good reasoning"
+                : seg.type === "sunnah-ghair-muakkadah"
+                ? "Optional"
+                : seg.type === "nafl"
+                ? "Optional"
+                : "Required"; // fard, wajib
             return (
               <Pressable
                 key={seg.id}
@@ -128,20 +148,31 @@ export default function HowToPrayScreen() {
                 onPress={() => isTappable && setSelectedSegment(seg)}
                 disabled={!isTappable}
                 style={[
-                  styles.listRow,
+                  styles.segmentCard,
                   { backgroundColor: colors.surface, borderColor: colors.border },
                   !isTappable && styles.disabledRow,
                 ]}
               >
-                <View style={[styles.segmentOrderBadge, { backgroundColor: colors.brandTertiary }]}>
-                  <Text style={[styles.segmentOrderText, { color: colors.brand }]}>{i + 1}</Text>
+                <View style={[styles.segmentIconWrap, { backgroundColor: colors.brandTertiary }]}>
+                  <Ionicons name={segmentIconName} size={18} color={colors.brand} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.listTitle, { color: isTappable ? colors.onSurface : colors.muted }]}>
-                    {seg.rakahCount} {seg.labelOverride ?? SEGMENT_TYPE_LABELS[seg.type]}
+                  <Text style={[styles.segmentTitle, { color: isTappable ? colors.onSurface : colors.muted }]}>
+                    {segmentTitleText}
                   </Text>
+                  {segmentSubtitleText ? (
+                    <Text style={[styles.segmentSubtitle, { color: colors.onSurfaceTertiary }]}>{segmentSubtitleText}</Text>
+                  ) : null}
+                  <View style={[styles.segmentStatusBadge, { backgroundColor: colors.brandTertiary }]}>
+                    <Text style={[styles.segmentStatusText, { color: colors.brand }]}>{segmentStatusText}</Text>
+                  </View>
                 </View>
-                {isTappable ? <Ionicons name="chevron-forward" size={18} color={colors.muted} /> : null}
+                <View style={[styles.segmentCountBadge, { backgroundColor: colors.brandTertiary }]}>
+                  <Text style={[styles.segmentCountText, { color: colors.brand }]}>{seg.rakahCount}</Text>
+                </View>
+                {isTappable ? (
+                  <Ionicons name="chevron-forward" size={16} color={colors.muted} style={{ marginLeft: 4 }} />
+                ) : null}
               </Pressable>
             );
           })}
@@ -315,4 +346,33 @@ const styles = StyleSheet.create({
   stepNum: { fontFamily: FONTS.bold, fontSize: 10, letterSpacing: 0.5 },
   stepTitle: { fontFamily: FONTS.bold, fontSize: 15, marginTop: 2, marginBottom: 4 },
   stepDesc: { fontFamily: FONTS.regular, fontSize: 13, lineHeight: 19 },
+  segmentCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.md,
+    padding: SPACING.md,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginBottom: SPACING.sm,
+  },
+  segmentIconWrap: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  segmentTitle: { fontFamily: FONTS.bold, fontSize: 15 },
+  segmentSubtitle: { fontFamily: FONTS.regular, fontSize: 12, marginTop: 1 },
+  segmentStatusBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: RADIUS.pill,
+    marginTop: 6,
+  },
+  segmentStatusText: { fontFamily: FONTS.semibold, fontSize: 11 },
+  segmentCountBadge: {
+    minWidth: 28,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: RADIUS.pill,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  segmentCountText: { fontFamily: FONTS.bold, fontSize: 13 },
 });
