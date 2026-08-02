@@ -203,7 +203,13 @@ export default function UploadScreen() {
       const base64 = await readFileBase64(asset.uri);
       setLoadingLabel("Extracting text…");
       const rawText = await pdfExtractorRef.current?.extractText(base64);
-      if (!rawText) throw new Error("Could not read this PDF's text.");
+      // An empty string is a valid result (image-only PDF, no text layer)
+      // and should fall through to the OCR fallback below — only a
+      // missing/undefined result (the extractor itself failed) is a hard
+      // error here.
+      if (rawText === undefined || rawText === null) {
+        throw new Error("Could not read this PDF's text.");
+      }
       setLoadingLabel("Detecting timetable rows…");
       let result = parseTimetablePdfText(rawText);
 
