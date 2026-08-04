@@ -82,6 +82,7 @@ export default function UploadScreen() {
   const [pdfFileName, setPdfFileName] = useState<string | null>(null);
   const [pdfResult, setPdfResult] = useState<{ csv: string; rowCount: number } | null>(null);
   const [pdfSaved, setPdfSaved] = useState(false);
+  const [pdfDebugText, setPdfDebugText] = useState<string | null>(null);
 
   useEffect(() => {
     if (timetable && !draft) {
@@ -196,6 +197,7 @@ export default function UploadScreen() {
     setPdfFileName(asset.name || "timetable.pdf");
     setPdfResult(null);
     setPdfSaved(false);
+    setPdfDebugText(null);
     setError(null);
     setPdfLoading(true);
     try {
@@ -212,6 +214,7 @@ export default function UploadScreen() {
       }
       setLoadingLabel("Detecting timetable rows…");
       let result = parseTimetablePdfText(rawText);
+      let finalRawText = rawText;
 
       if (result.rowCount === 0) {
         // No usable text layer (e.g. a scanned/photographed poster saved
@@ -233,6 +236,7 @@ export default function UploadScreen() {
         }
         result = parseTimetablePdfText(ocrText);
         console.log(`[PDF OCR DEBUG] parsed rowCount=${result.rowCount}`);
+        finalRawText = ocrText;
       }
 
       if (result.rowCount === 0) {
@@ -240,6 +244,7 @@ export default function UploadScreen() {
           "Couldn't detect any timetable rows in this PDF, even with OCR. It may use a layout this converter doesn't recognize yet.",
         );
       }
+      setPdfDebugText(finalRawText);
       setPdfResult({ csv: result.csv, rowCount: result.rowCount });
     } catch (e: any) {
       setError(typeof e?.message === "string" ? e.message : "Could not convert this PDF.");
@@ -490,6 +495,27 @@ export default function UploadScreen() {
                   Detected {pdfResult.rowCount} day{pdfResult.rowCount === 1 ? "" : "s"} in {pdfFileName}
                 </Text>
               </View>
+              {pdfDebugText ? (
+                <View style={{ marginTop: SPACING.md, maxHeight: 220 }}>
+                  <Text style={[styles.mappingHint, { color: colors.onSurfaceTertiary, marginBottom: 4 }]}>
+                    Raw text used (debug — long-press to select/copy):
+                  </Text>
+                  <ScrollView
+                    style={{
+                      maxHeight: 180,
+                      borderWidth: StyleSheet.hairlineWidth,
+                      borderColor: colors.border,
+                      borderRadius: 8,
+                      padding: 8,
+                    }}
+                  >
+                    <Text selectable style={{ fontSize: 11, color: colors.onSurfaceSecondary, fontFamily: "monospace" as any }}>
+                      {pdfDebugText}
+                    </Text>
+                  </ScrollView>
+                </View>
+              ) : null}
+
               <View style={{ flexDirection: "row", gap: SPACING.sm, marginTop: SPACING.md }}>
                 <Pressable
                   testID="pdf-save-csv-btn"
