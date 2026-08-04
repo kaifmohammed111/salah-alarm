@@ -4,8 +4,6 @@ export type PdfTimetableParseResult = {
   headers: string[];
 };
 
-// Accepts ":", ".", or "-" as the hour/minute separator — confirmed real
-// OCR output misreads the colon as either (e.g. "10.00", "5-00").
 const FULL_TIME_RE = /^\d{1,2}[:.\-]\d{2}$/;
 const PARTIAL_TIME_RE = /^:\d{2}$/;
 const DAY_RE = /^[A-Za-z]{2,6}$/;
@@ -52,12 +50,6 @@ function toMinutes(raw: string, period: "AM" | "PM"): number {
 type Token = { raw: string; kind: "full" | "partial" };
 type Candidate = { day: string; hijri: string; tokens: Token[] };
 
-// Finds candidate data rows by shape, not position. The date digit itself
-// is deliberately NOT required or trusted here — confirmed real OCR
-// output sometimes merges or drops it entirely. Final dates are assigned
-// positionally instead (see parseTimetablePdfText) — every real sample
-// checked so far starts at day 1 and lists every day with no gaps, so row
-// position is actually more reliable than the OCR'd digit.
 function extractCandidates(rawText: string): Candidate[] {
   const lines = rawText
     .split("\n")
@@ -86,9 +78,6 @@ function extractCandidates(rawText: string): Candidate[] {
   return out;
 }
 
-// Most-common full-row token count, restricted to a plausible range —
-// more robust than a raw max, since a single line with one stray
-// OCR-matched extra number shouldn't be able to inflate the estimate.
 function estimateSlotCount(candidates: Candidate[]): number {
   const counts = new Map<number, number>();
   for (const c of candidates) {
@@ -107,9 +96,6 @@ function estimateSlotCount(candidates: Candidate[]): number {
   return best;
 }
 
-// 10 slots = this app's standard schema. 11 slots = some mosques print a
-// separate Zawal/solar-noon time before Zuhr Start — dropped before
-// emitting the final row since this app doesn't track it.
 function buildSlotPeriods(n: number): ("AM" | "PM")[] {
   const template: ("AM" | "PM")[] = ["AM", "AM", "AM", "PM", "PM", "PM", "PM", "PM", "PM", "PM", "PM"];
   if (n === 10) return ["AM", "AM", "AM", "PM", "PM", "PM", "PM", "PM", "PM", "PM"];
@@ -119,17 +105,6 @@ function buildSlotPeriods(n: number): ("AM" | "PM")[] {
 
 const ALIGN_TOLERANCE_MIN = 25;
 
-// Aligns a row's tokens against the fixed slot template using a reference
-// row (prevSlots — null entries mean "not yet known"). A slot with no
-// reference accepts the next token unconditionally; a slot WITH a
-// reference only consumes a token if it's a plausible small drift from
-// the reference, otherwise the slot is assumed unchanged (carried
-// forward) and the token is left for a later slot to try. Partial
-// (hour-dropped) tokens are repaired using the reference's hour, or
-// discarded if there's no reference yet to repair them with. Direction
-// doesn't matter here — this is called for both later rows (reference =
-// previous row) and earlier rows (reference = a later row), see
-// parseTimetablePdfText.
 function alignRow(tokens: Token[], periods: ("AM" | "PM")[], ref: (string | null)[]): (string | null)[] {
   const n = periods.length;
   const resolved: (string | null)[] = new Array(n).fill(null);
@@ -180,25 +155,41 @@ function alignRow(tokens: Token[], periods: ("AM" | "PM")[], ref: (string | null
   return resolved;
 }
 
+// Picks the most trustworthy row to seed the baseline from. A row whose
+// token COUNT matches the estimate can still contain a "partial" (repaired)
+// token rather than a genuinely complete one — confirmed real case: row 1
+// had exactly 10 tokens, but one was a hour-dropped partial, which the
+// anchor-seeding step (unlike alignRow) can't repair since there's no
+// prior reference yet to repair it against, leaving that slot blank in
+// the very row everything else gets compared to. So we specifically
+// prefer a row where every token is fully intact, falling back to a
+// count-only match, then the longest available row, only if no fully
+// clean row exists.
+function pickAnchorIndex(candidates: Candidate[], n: number): number {
+  let idx = candidates.findIndex((c) => c.tokens.length === n && c.tokens.every((t) => t.kind === "full"));
+  if (idx !== -1) return idx;
+
+  idx = candidates.findIndex((c) => c.tokens.length === n);
+  if (idx !== -1) return idx;
+
+  let maxLen = -1;
+  let best = 0;
+  candidates.forEach((c, i) => {
+    if (c.tokens.length > maxLen) {
+      maxLen = c.tokens.length;
+      best = i;
+    }
+  });
+  return best;
+}
+
 /**
  * Parses raw text (from either a real PDF text layer or on-device OCR)
- * into CSV rows.
- *
- * Two things this handles that plain left-to-right parsing can't: rows
- * with repeated values printed as blank cells rather than a visible ditto
- * mark (handled by alignRow's carry-forward), and a corrupted FIRST row —
- * confirmed in a real noisy sample, where the very first row lost a token
- * to misread OCR. Rather than trust row 1 unconditionally as the anchor
- * for every row after it, this finds the first row whose full token count
- * matches the estimated column count (the most trustworthy candidate —
- * rows can lose tokens to OCR noise or omitted repeats, but can't gain
- * extra real ones) and resolves outward from there in both directions.
- *
- * Dates are assigned positionally (row 1 = day 1, row 2 = day 2, ...)
- * rather than trusting OCR'd date digits, which are prone to being
- * merged, dropped, or misread — every real sample checked so far starts
- * at day 1 with no gaps, making row position more reliable than the
- * printed digit.
+ * into CSV rows. Resolves outward (both forward and backward) from the
+ * most trustworthy anchor row rather than assuming row 1 is reliable —
+ * see pickAnchorIndex(). Dates are assigned positionally (row 1 = day 1,
+ * row 2 = day 2, ...) rather than trusting OCR'd date digits, which are
+ * prone to being merged, dropped, or misread.
  */
 export function parseTimetablePdfText(rawText: string): PdfTimetableParseResult {
   const candidates = extractCandidates(rawText);
@@ -210,16 +201,7 @@ export function parseTimetablePdfText(rawText: string): PdfTimetableParseResult 
   const periods = buildSlotPeriods(n);
   const zawalIndex = n === 11 ? 3 : -1;
 
-  let anchorIdx = candidates.findIndex((c) => c.tokens.length === n);
-  if (anchorIdx === -1) {
-    let maxLen = -1;
-    candidates.forEach((c, i) => {
-      if (c.tokens.length > maxLen) {
-        maxLen = c.tokens.length;
-        anchorIdx = i;
-      }
-    });
-  }
+  const anchorIdx = pickAnchorIndex(candidates, n);
 
   const resolvedByIdx: ((string | null)[] | null)[] = new Array(candidates.length).fill(null);
 
@@ -230,7 +212,6 @@ export function parseTimetablePdfText(rawText: string): PdfTimetableParseResult 
   }
   resolvedByIdx[anchorIdx] = anchorResolved;
 
-  // Forward from the anchor.
   {
     const ref = [...anchorResolved];
     for (let i = anchorIdx + 1; i < candidates.length; i++) {
@@ -240,7 +221,6 @@ export function parseTimetablePdfText(rawText: string): PdfTimetableParseResult 
     }
   }
 
-  // Backward from the anchor.
   {
     const ref = [...anchorResolved];
     for (let i = anchorIdx - 1; i >= 0; i--) {
