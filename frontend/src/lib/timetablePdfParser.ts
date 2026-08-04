@@ -8,8 +8,9 @@ const FULL_TIME_RE = /^\d{1,2}[:.\-]\d{2}$/;
 const PARTIAL_TIME_RE = /^:\d{2}$/;
 const DAY_RE = /^[A-Za-z]{2,6}$/;
 const WEEKDAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+const RAMADAN_HINT_RE = /ramadh?an|suh[uo]+r|iftar/i;
 
-const HEADERS = [
+const STANDARD_HEADERS = [
   "Day",
   "Date",
   "Hijri",
@@ -24,6 +25,15 @@ const HEADERS = [
   "Isha Start",
   "Isha Jamaat",
 ];
+// Sehri End and Iftari duplicate Fajr Start / Maghrib rather than being
+// independently sourced — confirmed real Ramadan timetable, where
+// "Suhoor Ends" and "Iftar" are printed as banner labels directly over
+// the existing Fajr Start / Maghrib columns, not separate values. Adding
+// them lets this app's existing Ramadan-specific handling (which
+// activates specifically on these column names — see src/lib/csv.ts)
+// switch on correctly instead of silently treating a Ramadan timetable
+// as a normal month.
+const RAMADAN_HEADERS = [...STANDARD_HEADERS, "Sehri End", "Iftari"];
 
 function csvEscape(v: string): string {
   if (v.includes(",") || v.includes('"') || v.includes("\n")) {
@@ -48,11 +58,6 @@ function toMinutes(raw: string, period: "AM" | "PM"): number {
   return h * 60 + m;
 }
 
-// Scores a raw (possibly OCR-garbled) day abbreviation against each
-// canonical weekday by counting matching characters at the same
-// position — good enough for the kind of single-letter substitutions or
-// truncations confirmed in real OCR output ("SA" for "SAT", "TUF" for
-// "TUE"), without needing a full edit-distance implementation.
 function matchWeekday(raw: string): number {
   const upper = raw.toUpperCase();
   let bestIdx = 0;
@@ -75,6 +80,37 @@ function matchWeekday(raw: string): number {
 type Token = { raw: string; kind: "full" | "partial" };
 type Candidate = { day: string; hijri: string; tokens: Token[] };
 
+function classifyTimeWord(w: string): Token | null {
+  if (FULL_TIME_RE.test(w)) return { raw: normalizeTime(w), kind: "full" };
+  if (PARTIAL_TIME_RE.test(w)) return { raw: w, kind: "partial" };
+  if (/^\d{3,4}$/.test(w)) {
+    const hourLen = w.length === 3 ? 1 : 2;
+    const hourPart = w.slice(0, hourLen);
+    const minPart = w.slice(hourLen);
+    const hourNum = parseInt(hourPart, 10);
+    const minNum = parseInt(minPart, 10);
+    if (hourNum >= 1 && hourNum <= 12 && minNum >= 0 && minNum <= 59) {
+      return { raw: `${hourPart}:${minPart}`, kind: "full" };
+    }
+  }
+  return null;
+}
+
+// Detects which of two real row layouts a line uses: "Day, Date, ..."
+// (most samples so far) or "Date, Day, ..." (confirmed real Ramadan
+// timetable sample) — returns the day word and the index to start
+// scanning for hijri/lunar-date text from, or null if the line matches
+// neither shape.
+function detectRowStart(words: string[]): { dayWord: string; afterIdx: number } | null {
+  if (DAY_RE.test(words[0])) {
+    return { dayWord: words[0], afterIdx: 1 };
+  }
+  if (/^\d{1,2}$/.test(words[0]) && words[1] && DAY_RE.test(words[1])) {
+    return { dayWord: words[1], afterIdx: 2 };
+  }
+  return null;
+}
+
 function extractCandidates(rawText: string): Candidate[] {
   const lines = rawText
     .split("\n")
@@ -85,20 +121,22 @@ function extractCandidates(rawText: string): Candidate[] {
   for (const line of lines) {
     const words = line.split(/\s+/);
     if (words.length < 2) continue;
-    if (!DAY_RE.test(words[0])) continue;
 
-    const firstTimeIdx = words.findIndex((w, i) => i > 0 && (FULL_TIME_RE.test(w) || PARTIAL_TIME_RE.test(w)));
+    const start = detectRowStart(words);
+    if (!start) continue;
+
+    const firstTimeIdx = words.findIndex((w, i) => i >= start.afterIdx && classifyTimeWord(w) !== null);
     if (firstTimeIdx === -1) continue;
 
     const tokens: Token[] = [];
     for (const w of words.slice(firstTimeIdx)) {
-      if (FULL_TIME_RE.test(w)) tokens.push({ raw: normalizeTime(w), kind: "full" });
-      else if (PARTIAL_TIME_RE.test(w)) tokens.push({ raw: w, kind: "partial" });
+      const t = classifyTimeWord(w);
+      if (t) tokens.push(t);
     }
     if (tokens.length < 5) continue;
 
-    const hijri = words.slice(1, firstTimeIdx).join(" ");
-    out.push({ day: words[0].toUpperCase(), hijri, tokens });
+    const hijri = words.slice(start.afterIdx, firstTimeIdx).join(" ");
+    out.push({ day: start.dayWord.toUpperCase(), hijri, tokens });
   }
   return out;
 }
@@ -200,19 +238,21 @@ function pickAnchorIndex(candidates: Candidate[], n: number): number {
 
 /**
  * Parses raw text (from either a real PDF text layer or on-device OCR)
- * into CSV rows. Both the date AND the day-of-week are derived
- * positionally rather than trusted from OCR text: dates from row index
- * (row 1 = day 1, ...), and weekday from a fixed 7-day cycle anchored to
- * whichever row's day text best matches a canonical weekday — confirmed
- * real OCR output includes truncated/misread day abbreviations ("SA" for
- * "SAT", "TUF" for "TUE") that would otherwise pass straight through
- * uncorrected. Time-of-day values are resolved outward (both forward and
- * backward) from the most trustworthy row — see pickAnchorIndex().
+ * into CSV rows. Supports both "Day, Date, ..." and "Date, Day, ..." row
+ * layouts (see detectRowStart()), and emits Ramadan-specific columns
+ * (Sehri End / Iftari) when the source text looks like a Ramadan
+ * timetable, so this app's existing Ramadan handling activates correctly.
+ * Both the date AND the day-of-week are derived positionally rather than
+ * trusted from OCR text. Time-of-day values are resolved outward (both
+ * forward and backward) from the most trustworthy row.
  */
 export function parseTimetablePdfText(rawText: string): PdfTimetableParseResult {
+  const isRamadan = RAMADAN_HINT_RE.test(rawText);
+  const headers = isRamadan ? RAMADAN_HEADERS : STANDARD_HEADERS;
+
   const candidates = extractCandidates(rawText);
   if (candidates.length === 0) {
-    return { csv: [HEADERS.join(",")].join("\n"), rowCount: 0, headers: HEADERS };
+    return { csv: [headers.join(",")].join("\n"), rowCount: 0, headers };
   }
 
   const n = estimateSlotCount(candidates);
@@ -258,10 +298,14 @@ export function parseTimetablePdfText(rawText: string): PdfTimetableParseResult 
     if (!resolved) return;
     const finalSlots = zawalIndex >= 0 ? resolved.filter((_, i) => i !== zawalIndex) : resolved;
     if (finalSlots.length !== 10 || finalSlots.some((v) => !v)) return;
-    rows.push([weekdayForRow(idx), String(idx + 1), c.hijri, ...(finalSlots as string[])]);
+    const values = finalSlots as string[];
+    // finalSlots order: FajrStart, FajrJamaat, Sunrise, ZuhrStart,
+    // ZuhrJamaat, AsrStart, AsrJamaat, Maghrib, IshaStart, IshaJamaat.
+    const extra = isRamadan ? [values[0], values[7]] : [];
+    rows.push([weekdayForRow(idx), String(idx + 1), c.hijri, ...values, ...extra]);
   });
 
-  const csvLines = [HEADERS.join(",")];
+  const csvLines = [headers.join(",")];
   for (const r of rows) {
     csvLines.push(r.map(csvEscape).join(","));
   }
@@ -269,6 +313,6 @@ export function parseTimetablePdfText(rawText: string): PdfTimetableParseResult 
   return {
     csv: csvLines.join("\n"),
     rowCount: rows.length,
-    headers: HEADERS,
+    headers,
   };
 }
