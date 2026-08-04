@@ -7,6 +7,7 @@ export type PdfTimetableParseResult = {
 const FULL_TIME_RE = /^\d{1,2}[:.\-]\d{2}$/;
 const PARTIAL_TIME_RE = /^:\d{2}$/;
 const DAY_RE = /^[A-Za-z]{2,6}$/;
+const WEEKDAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
 const HEADERS = [
   "Day",
@@ -45,6 +46,30 @@ function toMinutes(raw: string, period: "AM" | "PM"): number {
     if (h !== 12) h += 12;
   }
   return h * 60 + m;
+}
+
+// Scores a raw (possibly OCR-garbled) day abbreviation against each
+// canonical weekday by counting matching characters at the same
+// position — good enough for the kind of single-letter substitutions or
+// truncations confirmed in real OCR output ("SA" for "SAT", "TUF" for
+// "TUE"), without needing a full edit-distance implementation.
+function matchWeekday(raw: string): number {
+  const upper = raw.toUpperCase();
+  let bestIdx = 0;
+  let bestScore = -1;
+  for (let i = 0; i < WEEKDAYS.length; i++) {
+    const canon = WEEKDAYS[i];
+    let score = 0;
+    for (let k = 0; k < Math.min(upper.length, canon.length); k++) {
+      if (upper[k] === canon[k]) score++;
+    }
+    if (upper.length === canon.length) score += 0.5;
+    if (score > bestScore) {
+      bestScore = score;
+      bestIdx = i;
+    }
+  }
+  return bestIdx;
 }
 
 type Token = { raw: string; kind: "full" | "partial" };
@@ -155,16 +180,6 @@ function alignRow(tokens: Token[], periods: ("AM" | "PM")[], ref: (string | null
   return resolved;
 }
 
-// Picks the most trustworthy row to seed the baseline from. A row whose
-// token COUNT matches the estimate can still contain a "partial" (repaired)
-// token rather than a genuinely complete one — confirmed real case: row 1
-// had exactly 10 tokens, but one was a hour-dropped partial, which the
-// anchor-seeding step (unlike alignRow) can't repair since there's no
-// prior reference yet to repair it against, leaving that slot blank in
-// the very row everything else gets compared to. So we specifically
-// prefer a row where every token is fully intact, falling back to a
-// count-only match, then the longest available row, only if no fully
-// clean row exists.
 function pickAnchorIndex(candidates: Candidate[], n: number): number {
   let idx = candidates.findIndex((c) => c.tokens.length === n && c.tokens.every((t) => t.kind === "full"));
   if (idx !== -1) return idx;
@@ -185,11 +200,14 @@ function pickAnchorIndex(candidates: Candidate[], n: number): number {
 
 /**
  * Parses raw text (from either a real PDF text layer or on-device OCR)
- * into CSV rows. Resolves outward (both forward and backward) from the
- * most trustworthy anchor row rather than assuming row 1 is reliable —
- * see pickAnchorIndex(). Dates are assigned positionally (row 1 = day 1,
- * row 2 = day 2, ...) rather than trusting OCR'd date digits, which are
- * prone to being merged, dropped, or misread.
+ * into CSV rows. Both the date AND the day-of-week are derived
+ * positionally rather than trusted from OCR text: dates from row index
+ * (row 1 = day 1, ...), and weekday from a fixed 7-day cycle anchored to
+ * whichever row's day text best matches a canonical weekday — confirmed
+ * real OCR output includes truncated/misread day abbreviations ("SA" for
+ * "SAT", "TUF" for "TUE") that would otherwise pass straight through
+ * uncorrected. Time-of-day values are resolved outward (both forward and
+ * backward) from the most trustworthy row — see pickAnchorIndex().
  */
 export function parseTimetablePdfText(rawText: string): PdfTimetableParseResult {
   const candidates = extractCandidates(rawText);
@@ -202,6 +220,10 @@ export function parseTimetablePdfText(rawText: string): PdfTimetableParseResult 
   const zawalIndex = n === 11 ? 3 : -1;
 
   const anchorIdx = pickAnchorIndex(candidates, n);
+
+  const weekdayMatchIdx = matchWeekday(candidates[anchorIdx].day);
+  const weekdayStart = ((weekdayMatchIdx - anchorIdx) % 7 + 7) % 7;
+  const weekdayForRow = (idx: number) => WEEKDAYS[((weekdayStart + idx) % 7 + 7) % 7];
 
   const resolvedByIdx: ((string | null)[] | null)[] = new Array(candidates.length).fill(null);
 
@@ -236,7 +258,7 @@ export function parseTimetablePdfText(rawText: string): PdfTimetableParseResult 
     if (!resolved) return;
     const finalSlots = zawalIndex >= 0 ? resolved.filter((_, i) => i !== zawalIndex) : resolved;
     if (finalSlots.length !== 10 || finalSlots.some((v) => !v)) return;
-    rows.push([c.day, String(idx + 1), c.hijri, ...(finalSlots as string[])]);
+    rows.push([weekdayForRow(idx), String(idx + 1), c.hijri, ...(finalSlots as string[])]);
   });
 
   const csvLines = [HEADERS.join(",")];
