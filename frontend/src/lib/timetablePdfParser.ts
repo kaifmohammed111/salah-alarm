@@ -5,12 +5,9 @@ export type PdfTimetableParseResult = {
 };
 
 const TIME_RE = /^\d{1,2}:\d{2}$/;
-// Printed timetables sometimes use a ditto mark instead of repeating a
-// Jamaat time that's unchanged from the row above (seen in a real sample:
-// Central Jamia Mosque Zia-ul-Quran's Aug 2026 table uses `"` this way).
-const DITTO_RE = /^["'\u2033\u201d\u201c]+$/;
-const DAY_RE = /^[A-Za-z]{3}$/;
-const TARGET_COUNT = 10; // Fajr Start/Jamaat, Sunrise, Zuhr Start/Jamaat, Asr Start/Jamaat, Maghrib, Isha Start/Jamaat
+// "Sat".."Thurs" — day abbreviations aren't always exactly 3 letters (one
+// real sample uses "Tues"/"Thurs"), so this is intentionally a range.
+const DAY_RE = /^[A-Za-z]{3,6}$/;
 
 // Header row this app's existing CSV parser (src/lib/csv.ts) already
 // auto-detects with zero manual column reassignment needed. Maghrib is
@@ -39,71 +36,130 @@ function csvEscape(v: string): string {
   return v;
 }
 
-function isTimeOrDitto(tok: string): boolean {
-  return TIME_RE.test(tok) || DITTO_RE.test(tok);
-}
-
-// Some mosques print an extra time column this app doesn't track (e.g. a
-// separate "Zawal"/solar-noon time before Zuhr Start). Trims down to the
-// 10 slots this app understands, preferring to trim right after Sunrise —
-// Fajr Start/Jamaat at the front and the Asr/Maghrib/Isha tail have been
-// the most consistently-positioned columns across the timetables checked
-// so far, so an unknown extra column is more likely to sit in the middle.
-function normalizeSlotCount(tokens: string[]): string[] | null {
-  if (tokens.length === TARGET_COUNT) return tokens;
-  if (tokens.length > TARGET_COUNT) {
-    const extra = tokens.length - TARGET_COUNT;
-    return [...tokens.slice(0, 3), ...tokens.slice(3 + extra)];
+function toMinutes(raw: string, period: "AM" | "PM"): number {
+  const [hStr, mStr] = raw.split(":");
+  let h = parseInt(hStr, 10);
+  const m = parseInt(mStr, 10);
+  if (period === "AM") {
+    if (h === 12) h = 0;
+  } else {
+    if (h !== 12) h += 12;
   }
-  return null; // fewer than expected — can't confidently map, skip the row
+  return h * 60 + m;
 }
 
-/**
- * Parses raw text (from either a real PDF text layer or on-device OCR)
- * into CSV rows. Detects data rows by shape, not position — a line
- * qualifies if it starts with a 3-letter day abbreviation, a numeric date,
- * and ends with a run of HH:MM/ditto tokens that normalizes to exactly 10
- * slots — matching the column order confirmed against real sample
- * timetables. The Hijri field is whatever text sits between the date and
- * the first time token, since it's sometimes a plain number and sometimes
- * a month name (e.g. "Rabi Ul Awwal") when the Hijri month changes
- * partway through the PDF.
- */
-export function parseTimetablePdfText(rawText: string): PdfTimetableParseResult {
+type Candidate = { day: string; date: string; hijri: string; timeTokens: string[] };
+
+// Finds candidate data rows by shape, not position. Only well-formed HH:MM
+// tokens are kept from the point the first one appears — OCR noise (stray
+// words from decorative rotated side-text, page furniture bleeding into a
+// row, etc., confirmed against a real sample) is simply dropped rather
+// than rejecting the whole row over one misread word.
+function extractCandidates(rawText: string): Candidate[] {
   const lines = rawText
     .split("\n")
     .map((l) => l.trim())
     .filter(Boolean);
-  const rows: string[][] = [];
-  let prevSlots: string[] | null = null;
+  const out: Candidate[] = [];
 
   for (const line of lines) {
     const tokens = line.split(/\s+/);
-    if (tokens.length < 12) continue;
+    if (tokens.length < 3) continue;
     if (!DAY_RE.test(tokens[0])) continue;
     if (!/^\d{1,2}$/.test(tokens[1])) continue;
 
-    const firstTimeIdx = tokens.findIndex((t) => isTimeOrDitto(t));
+    const firstTimeIdx = tokens.findIndex((t) => TIME_RE.test(t));
     if (firstTimeIdx === -1) continue;
 
-    const trailing = tokens.slice(firstTimeIdx);
-    if (!trailing.every(isTimeOrDitto)) continue;
+    const timeTokens = tokens.slice(firstTimeIdx).filter((t) => TIME_RE.test(t));
+    if (timeTokens.length < 5) continue; // too little survives to plausibly be a real data row
 
-    const slots = normalizeSlotCount(trailing);
-    if (!slots) continue;
+    const hijri = tokens.slice(2, firstTimeIdx).join(" ");
+    out.push({ day: tokens[0].toUpperCase(), date: tokens[1], hijri, timeTokens });
+  }
+  return out;
+}
 
-    const resolved = slots.map((tok, i) => {
-      if (TIME_RE.test(tok)) return tok;
-      return prevSlots ? prevSlots[i] : ""; // ditto with no prior row to copy from
-    });
-    if (resolved.some((v) => !v)) continue; // couldn't resolve a ditto — skip rather than emit a blank time
+// Per-slot AM/PM assumption. 10 slots = this app's standard schema (no
+// separate Zawal column). 11 slots = some mosques print a separate
+// Zawal/solar-noon time before Zuhr Start (confirmed against a real
+// sample) — that extra slot sits at index 3 and is dropped before
+// emitting the final row, since this app doesn't track it.
+function buildSlotPeriods(n: number): ("AM" | "PM")[] {
+  const template: ("AM" | "PM")[] = ["AM", "AM", "AM", "PM", "PM", "PM", "PM", "PM", "PM", "PM", "PM"];
+  if (n === 10) return ["AM", "AM", "AM", "PM", "PM", "PM", "PM", "PM", "PM", "PM"];
+  if (n === 11) return template;
+  return Array.from({ length: n }, (_, i) => template[Math.min(i, template.length - 1)]);
+}
 
+const ALIGN_TOLERANCE_MIN = 25;
+
+// Aligns a row's (possibly incomplete) time tokens against the fixed slot
+// template, using the previous fully-resolved row as a reference. Handles
+// timetables where a repeated value (unchanged from the row above) is
+// printed as a blank cell rather than a visible ditto mark — confirmed
+// against real OCR output, where the value is simply missing rather than
+// replaced by any symbol we could pattern-match on. At each slot, if the
+// next available token's implied time is close to what that slot held on
+// the previous row, it's consumed as this row's value; otherwise the slot
+// is assumed unchanged and carried forward, leaving the token to be tried
+// against the next slot instead.
+function alignRow(tokens: string[], periods: ("AM" | "PM")[], prevSlots: string[] | null): string[] | null {
+  const n = periods.length;
+  if (tokens.length === n) return tokens; // nothing missing — use as-is
+  if (!prevSlots) return null; // can't carry forward without a baseline row yet
+
+  const resolved: string[] = new Array(n).fill("");
+  let ti = 0;
+  for (let j = 0; j < n; j++) {
+    const tok = tokens[ti];
+    if (tok) {
+      const candMin = toMinutes(tok, periods[j]);
+      const prevMin = toMinutes(prevSlots[j], periods[j]);
+      if (Math.abs(candMin - prevMin) <= ALIGN_TOLERANCE_MIN) {
+        resolved[j] = tok;
+        ti++;
+        continue;
+      }
+    }
+    resolved[j] = prevSlots[j];
+  }
+  return resolved;
+}
+
+/**
+ * Parses raw text (from either a real PDF text layer or on-device OCR)
+ * into CSV rows. See extractCandidates() / alignRow() above for the two
+ * real-world complications this handles, both confirmed against actual
+ * samples: OCR noise interspersed mid-row, and repeated values printed as
+ * blank cells rather than a visible ditto mark.
+ */
+export function parseTimetablePdfText(rawText: string): PdfTimetableParseResult {
+  const candidates = extractCandidates(rawText);
+  if (candidates.length === 0) {
+    return { csv: [HEADERS.join(",")].join("\n"), rowCount: 0, headers: HEADERS };
+  }
+
+  // The most common full-row length is our reference slot count — a row
+  // with an omitted repeated value is always shorter than the true column
+  // count, never longer, so the max (clamped to a sane range) is a safe
+  // estimate of how many columns this particular timetable actually has.
+  const n = Math.min(12, Math.max(10, Math.max(...candidates.map((c) => c.timeTokens.length))));
+  const periods = buildSlotPeriods(n);
+  const zawalIndex = n === 11 ? 3 : -1;
+
+  const rows: string[][] = [];
+  let prevSlots: string[] | null = null;
+
+  for (const c of candidates) {
+    const resolved = alignRow(c.timeTokens, periods, prevSlots);
+    if (!resolved) continue; // no baseline yet to carry forward from — skip until a full row establishes one
     prevSlots = resolved;
 
-    const day = tokens[0].toUpperCase();
-    const date = tokens[1];
-    const hijri = tokens.slice(2, firstTimeIdx).join(" ");
-    rows.push([day, date, hijri, ...resolved]);
+    const finalSlots = zawalIndex >= 0 ? resolved.filter((_, i) => i !== zawalIndex) : resolved;
+    if (finalSlots.length !== 10) continue;
+
+    rows.push([c.day, c.date, c.hijri, ...finalSlots]);
   }
 
   const csvLines = [HEADERS.join(",")];
