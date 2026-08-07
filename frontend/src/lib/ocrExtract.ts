@@ -7,60 +7,19 @@ type MlKitLine = { text: string; frame: Frame; elements: MlKitElement[] };
 type MlKitBlock = { text: string; frame: Frame; lines: MlKitLine[] };
 type MlKitResult = { text: string; blocks: MlKitBlock[] };
 
-type PositionedWord = { text: string; x: number; y: number; width: number };
-
 // Reconstructs left-to-right, top-to-bottom row text from ML Kit's
-// positioned word-level results. EXPERIMENTAL column-awareness: a
-// multi-column poster (e.g. a timetable next to an unrelated donation/dua
-// side-panel) confirmed real case where naive Y-position-only clustering
-// glues unrelated side-panel text onto timetable rows that happen to sit
-// at the same page height. This looks for a genuinely large horizontal
-// gap in word positions — much bigger than normal word-spacing, and not
-// right at the page edge (which would just be margin) — and if found,
-// treats it as a column boundary, reconstructing each column's lines
-// independently before combining. If no such gap is found, this behaves
-// identically to the previous single-pass version.
-function reconstructLinesFromElements(elements: PositionedWord[]): string {
-  if (elements.length === 0) return "";
-
-  const centers = elements.map((e) => e.x + e.width / 2).sort((a, b) => a - b);
-  const minX = centers[0];
-  const maxX = centers[centers.length - 1];
-  const span = maxX - minX;
-
-  let splitX: number | null = null;
-  if (span > 0 && centers.length > 4) {
-    const gaps: { gap: number; at: number }[] = [];
-    for (let i = 1; i < centers.length; i++) {
-      gaps.push({ gap: centers[i] - centers[i - 1], at: (centers[i] + centers[i - 1]) / 2 });
-    }
-    const sortedGaps = [...gaps].map((g) => g.gap).sort((a, b) => a - b);
-    const medianGap = sortedGaps[Math.floor(sortedGaps.length / 2)] || 1;
-    const biggest = gaps.reduce((a, b) => (b.gap > a.gap ? b : a));
-    const relativePos = (biggest.at - minX) / span;
-    // Require the gap to be dramatically bigger than typical word-spacing
-    // AND to sit well away from either edge, so this only fires for a
-    // real column gutter, not ordinary spacing or page margin.
-    if (biggest.gap > medianGap * 6 && relativePos > 0.2 && relativePos < 0.8) {
-      splitX = biggest.at;
-    }
-  }
-
-  const columns: PositionedWord[][] =
-    splitX === null
-      ? [elements]
-      : [
-          elements.filter((e) => e.x + e.width / 2 < (splitX as number)),
-          elements.filter((e) => e.x + e.width / 2 >= (splitX as number)),
-        ];
-
-  return columns
-    .map((colElements) => linesFromColumn(colElements))
-    .filter((text) => text.length > 0)
-    .join("\n");
-}
-
-function linesFromColumn(elements: PositionedWord[]): string {
+// positioned word-level results — the same Y-cluster/X-sort approach
+// already used for real PDF text layers, applied here to OCR output
+// instead, so both extraction paths feed the exact same downstream
+// parser (timetablePdfParser.ts).
+//
+// NOTE: an experimental column-aware version of this function was tried
+// and reverted — it fixed a genuine multi-column poster case but caused
+// a regression on a previously-working single-column photo (a gap-detection
+// false positive), so this file is back to the simpler, more reliable
+// single-pass version. Revisit only with a more robust column-detection
+// approach and broader test coverage before re-attempting.
+function reconstructLines(elements: { text: string; x: number; y: number }[]): string {
   const sorted = [...elements].sort((a, b) => a.y - b.y);
   const TOLERANCE = 12; // OCR bounding boxes are noisier than PDF text coords
   const lines: (typeof sorted)[] = [];
@@ -89,21 +48,22 @@ function linesFromColumn(elements: PositionedWord[]): string {
 
 // Writes a base64 PNG to a temp file (ML Kit's API needs a real file URI,
 // not a raw base64 string) and runs on-device OCR — genuinely offline, no
-// network call, no server.
+// network call, no server: Google ML Kit's text recognizer ships its
+// model on-device as part of the native module.
 export async function recognizePageImage(base64Png: string): Promise<string> {
   const tmpPath = `${FileSystem.cacheDirectory}pdf-ocr-page-${Date.now()}-${Math.random().toString(36).slice(2)}.png`;
   await FileSystem.writeAsStringAsync(tmpPath, base64Png, { encoding: FileSystem.EncodingType.Base64 });
   try {
     const result = (await TextRecognition.recognize(tmpPath)) as MlKitResult;
-    const elements: PositionedWord[] = [];
+    const elements: { text: string; x: number; y: number }[] = [];
     for (const block of result.blocks || []) {
       for (const line of block.lines || []) {
         for (const el of line.elements || []) {
-          elements.push({ text: el.text, x: el.frame.left, y: el.frame.top, width: el.frame.width });
+          elements.push({ text: el.text, x: el.frame.left, y: el.frame.top });
         }
       }
     }
-    return reconstructLinesFromElements(elements);
+    return reconstructLines(elements);
   } finally {
     FileSystem.deleteAsync(tmpPath, { idempotent: true }).catch(() => {});
   }
