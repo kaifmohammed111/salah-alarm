@@ -28,6 +28,7 @@ import type { ColumnMap, CsvFieldKey } from "@/src/lib/prayer";
 import { parseTimetableCsv } from "@/src/lib/csv";
 import { readFileBase64, readFileText } from "@/src/lib/files";
 import HiddenPdfExtractor, { HiddenPdfExtractorHandle } from "@/src/components/HiddenPdfExtractor";
+import ImageCropModal from "@/src/components/ImageCropModal";
 import { parseTimetablePdfText } from "@/src/lib/timetablePdfParser";
 import { recognizePageImage } from "@/src/lib/ocrExtract";
 import { storage } from "@/src/utils/storage";
@@ -89,6 +90,7 @@ export default function UploadScreen() {
   const [missingDaysModal, setMissingDaysModal] = useState<{ source: "pdf" | "img"; days: number[] } | null>(null);
   const [imgSaved, setImgSaved] = useState(false);
   const [imgDebugText, setImgDebugText] = useState<string | null>(null);
+  const [cropModalUri, setCropModalUri] = useState<string | null>(null);
 
   useEffect(() => {
     if (timetable && !draft) {
@@ -278,10 +280,17 @@ export default function UploadScreen() {
     setImgSaved(false);
     setImgDebugText(null);
     setError(null);
+    // Open the crop tool first — OCR only runs once the user confirms a
+    // crop (or explicitly skips cropping), not immediately on pick.
+    setCropModalUri(asset.uri);
+  };
+
+  const runOcrOnImage = async (uri: string) => {
+    setError(null);
     setImgLoading(true);
     try {
       setLoadingLabel("Reading photo…");
-      const base64 = await readFileBase64(asset.uri);
+      const base64 = await readFileBase64(uri);
       setLoadingLabel("Reading text with on-device OCR…");
       const ocrText = await recognizePageImage(base64);
       setLoadingLabel("Detecting timetable rows…");
@@ -499,6 +508,22 @@ export default function UploadScreen() {
       </View>
 
       <HiddenPdfExtractor ref={pdfExtractorRef} />
+
+      <ImageCropModal
+        visible={!!cropModalUri}
+        imageUri={cropModalUri}
+        onCancel={() => {
+          const uri = cropModalUri;
+          setCropModalUri(null);
+          // "Cancel" skips cropping rather than aborting the import —
+          // falls back to running OCR on the original, uncropped photo.
+          if (uri) runOcrOnImage(uri);
+        }}
+        onConfirm={(croppedUri) => {
+          setCropModalUri(null);
+          runOcrOnImage(croppedUri);
+        }}
+      />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
