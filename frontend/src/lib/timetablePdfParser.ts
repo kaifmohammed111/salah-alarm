@@ -2,6 +2,12 @@ export type PdfTimetableParseResult = {
   csv: string;
   rowCount: number;
   headers: string[];
+  // Day numbers (1-based, positional) that have at least one blank time
+  // field — couldn't be confidently resolved from the source. These days
+  // ARE still included in the CSV (with blank fields), rather than being
+  // silently dropped, so the app's normal per-day edit screen can be used
+  // to fill them in directly.
+  missingDays: number[];
 };
 
 const FULL_TIME_RE = /^\d{1,2}[:.\-]\d{2}$/;
@@ -9,6 +15,7 @@ const PARTIAL_TIME_RE = /^:\d{2}$/;
 const DAY_RE = /^[A-Za-z]{2,6}$/;
 const WEEKDAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 const RAMADAN_HINT_RE = /ramadh?an|suh[uo]+r|iftar/i;
+const GLUED_DATE_DAY_RE = /^(\d{1,2})([A-Za-z]{2,6})$/;
 
 const STANDARD_HEADERS = [
   "Day",
@@ -25,14 +32,6 @@ const STANDARD_HEADERS = [
   "Isha Start",
   "Isha Jamaat",
 ];
-// Sehri End and Iftari duplicate Fajr Start / Maghrib rather than being
-// independently sourced — confirmed real Ramadan timetable, where
-// "Suhoor Ends" and "Iftar" are printed as banner labels directly over
-// the existing Fajr Start / Maghrib columns, not separate values. Adding
-// them lets this app's existing Ramadan-specific handling (which
-// activates specifically on these column names — see src/lib/csv.ts)
-// switch on correctly instead of silently treating a Ramadan timetable
-// as a normal month.
 const RAMADAN_HEADERS = [...STANDARD_HEADERS, "Sehri End", "Iftari"];
 
 function csvEscape(v: string): string {
@@ -96,11 +95,19 @@ function classifyTimeWord(w: string): Token | null {
   return null;
 }
 
-// Detects which of two real row layouts a line uses: "Day, Date, ..."
-// (most samples so far) or "Date, Day, ..." (confirmed real Ramadan
-// timetable sample) — returns the day word and the index to start
-// scanning for hijri/lunar-date text from, or null if the line matches
-// neither shape.
+function splitGluedDateDay(words: string[]): string[] {
+  const out: string[] = [];
+  for (const w of words) {
+    const m = w.match(GLUED_DATE_DAY_RE);
+    if (m) {
+      out.push(m[1], m[2]);
+    } else {
+      out.push(w);
+    }
+  }
+  return out;
+}
+
 function detectRowStart(words: string[]): { dayWord: string; afterIdx: number } | null {
   if (DAY_RE.test(words[0])) {
     return { dayWord: words[0], afterIdx: 1 };
@@ -119,7 +126,7 @@ function extractCandidates(rawText: string): Candidate[] {
   const out: Candidate[] = [];
 
   for (const line of lines) {
-    const words = line.split(/\s+/);
+    const words = splitGluedDateDay(line.split(/\s+/));
     if (words.length < 2) continue;
 
     const start = detectRowStart(words);
@@ -159,11 +166,19 @@ function estimateSlotCount(candidates: Candidate[]): number {
   return best;
 }
 
+// This app's schema only understands two shapes (10 slots, or 11 with a
+// Zawal column) — clamp to whichever is closer in case a noisy document
+// produces an estimate outside that pair, so downstream row-length checks
+// stay reliable.
+function clampSlotCount(n: number): number {
+  if (n === 10 || n === 11) return n;
+  return Math.abs(n - 11) <= Math.abs(n - 10) ? 11 : 10;
+}
+
 function buildSlotPeriods(n: number): ("AM" | "PM")[] {
   const template: ("AM" | "PM")[] = ["AM", "AM", "AM", "PM", "PM", "PM", "PM", "PM", "PM", "PM", "PM"];
   if (n === 10) return ["AM", "AM", "AM", "PM", "PM", "PM", "PM", "PM", "PM", "PM"];
-  if (n === 11) return template;
-  return Array.from({ length: n }, (_, i) => template[Math.min(i, template.length - 1)]);
+  return template;
 }
 
 const ALIGN_TOLERANCE_MIN = 25;
@@ -238,13 +253,12 @@ function pickAnchorIndex(candidates: Candidate[], n: number): number {
 
 /**
  * Parses raw text (from either a real PDF text layer or on-device OCR)
- * into CSV rows. Supports both "Day, Date, ..." and "Date, Day, ..." row
- * layouts (see detectRowStart()), and emits Ramadan-specific columns
- * (Sehri End / Iftari) when the source text looks like a Ramadan
- * timetable, so this app's existing Ramadan handling activates correctly.
- * Both the date AND the day-of-week are derived positionally rather than
- * trusted from OCR text. Time-of-day values are resolved outward (both
- * forward and backward) from the most trustworthy row.
+ * into CSV rows. Every detected day is included in the output — even one
+ * that couldn't be fully resolved gets a row with blank fields for
+ * whatever's missing, rather than being silently dropped, so the app's
+ * normal per-day edit screen can be used to fill gaps in directly. See
+ * missingDays in the return value for exactly which day numbers need
+ * attention.
  */
 export function parseTimetablePdfText(rawText: string): PdfTimetableParseResult {
   const isRamadan = RAMADAN_HINT_RE.test(rawText);
@@ -252,10 +266,10 @@ export function parseTimetablePdfText(rawText: string): PdfTimetableParseResult 
 
   const candidates = extractCandidates(rawText);
   if (candidates.length === 0) {
-    return { csv: [headers.join(",")].join("\n"), rowCount: 0, headers };
+    return { csv: [headers.join(",")].join("\n"), rowCount: 0, headers, missingDays: [] };
   }
 
-  const n = estimateSlotCount(candidates);
+  const n = clampSlotCount(estimateSlotCount(candidates));
   const periods = buildSlotPeriods(n);
   const zawalIndex = n === 11 ? 3 : -1;
 
@@ -293,15 +307,18 @@ export function parseTimetablePdfText(rawText: string): PdfTimetableParseResult 
   }
 
   const rows: string[][] = [];
+  const missingDays: number[] = [];
+
   candidates.forEach((c, idx) => {
-    const resolved = resolvedByIdx[idx];
-    if (!resolved) return;
+    const resolved = resolvedByIdx[idx] ?? new Array(n).fill(null);
     const finalSlots = zawalIndex >= 0 ? resolved.filter((_, i) => i !== zawalIndex) : resolved;
-    if (finalSlots.length !== 10 || finalSlots.some((v) => !v)) return;
-    const values = finalSlots as string[];
-    // finalSlots order: FajrStart, FajrJamaat, Sunrise, ZuhrStart,
-    // ZuhrJamaat, AsrStart, AsrJamaat, Maghrib, IshaStart, IshaJamaat.
-    const extra = isRamadan ? [values[0], values[7]] : [];
+    const values = finalSlots.map((v) => v ?? "");
+
+    if (finalSlots.some((v) => !v)) {
+      missingDays.push(idx + 1);
+    }
+
+    const extra = isRamadan ? [values[0] || "", values[7] || ""] : [];
     rows.push([weekdayForRow(idx), String(idx + 1), c.hijri, ...values, ...extra]);
   });
 
@@ -314,5 +331,6 @@ export function parseTimetablePdfText(rawText: string): PdfTimetableParseResult 
     csv: csvLines.join("\n"),
     rowCount: rows.length,
     headers,
+    missingDays,
   };
 }

@@ -86,6 +86,7 @@ export default function UploadScreen() {
   const [imgLoading, setImgLoading] = useState(false);
   const [imgFileName, setImgFileName] = useState<string | null>(null);
   const [imgResult, setImgResult] = useState<{ csv: string; rowCount: number } | null>(null);
+  const [missingDaysModal, setMissingDaysModal] = useState<{ source: "pdf" | "img"; days: number[] } | null>(null);
   const [imgSaved, setImgSaved] = useState(false);
   const [imgDebugText, setImgDebugText] = useState<string | null>(null);
 
@@ -251,6 +252,9 @@ export default function UploadScreen() {
       }
       setPdfDebugText(finalRawText);
       setPdfResult({ csv: result.csv, rowCount: result.rowCount });
+      if (result.missingDays.length > 0) {
+        setMissingDaysModal({ source: "pdf", days: result.missingDays });
+      }
     } catch (e: any) {
       setError(typeof e?.message === "string" ? e.message : "Could not convert this PDF.");
     } finally {
@@ -289,6 +293,9 @@ export default function UploadScreen() {
       }
       setImgDebugText(ocrText);
       setImgResult({ csv: result.csv, rowCount: result.rowCount });
+      if (result.missingDays.length > 0) {
+        setMissingDaysModal({ source: "img", days: result.missingDays });
+      }
     } catch (e: any) {
       setError(typeof e?.message === "string" ? e.message : "Could not convert this photo.");
     } finally {
@@ -326,6 +333,17 @@ export default function UploadScreen() {
     } catch (e: any) {
       setError(typeof e?.message === "string" ? e.message : "Could not import the converted timetable.");
     }
+  };
+
+  const applyMissingDaysFix = () => {
+    if (!missingDaysModal) return;
+    if (missingDaysModal.source === "pdf") {
+      autoImportPdfResult();
+    } else {
+      autoImportImageResult();
+    }
+    setRowIdx(Math.max(0, missingDaysModal.days[0] - 1));
+    setMissingDaysModal(null);
   };
 
   const savePdfResultAsCsv = async () => {
@@ -860,6 +878,46 @@ export default function UploadScreen() {
           </View>
         ) : null}
       </KeyboardAvoidingView>
+
+      {/* Missing days popup */}
+      <Modal
+        visible={!!missingDaysModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setMissingDaysModal(null)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setMissingDaysModal(null)}>
+          <Pressable
+            style={[styles.modalSheet, { backgroundColor: colors.surface, paddingBottom: insets.bottom + SPACING.lg }]}
+            onPress={() => {}}
+          >
+            <View style={styles.modalHandle} />
+            <Text style={[styles.modalTitle, { color: colors.onSurface }]}>Some days need review</Text>
+            <Text style={[styles.modalSub, { color: colors.onSurfaceTertiary }]}>
+              {missingDaysModal
+                ? `We couldn't confidently read every time for ${missingDaysModal.days.length} day${
+                    missingDaysModal.days.length === 1 ? "" : "s"
+                  }: ${missingDaysModal.days.join(", ")}. These are still included, just with blanks where
+              something couldn't be read. You can fill them in now, or come back to it later using the manual editor.`
+                : ""}
+            </Text>
+            <Pressable
+              testID="missing-days-fix-now-btn"
+              onPress={applyMissingDaysFix}
+              style={[styles.saveBtn, { backgroundColor: colors.brand, marginTop: SPACING.lg }]}
+            >
+              <Text style={styles.saveText}>Add Times Now</Text>
+            </Pressable>
+            <Pressable
+              testID="missing-days-later-btn"
+              onPress={() => setMissingDaysModal(null)}
+              style={{ alignItems: "center", paddingVertical: SPACING.md }}
+            >
+              <Text style={{ color: colors.muted, fontFamily: FONTS.semibold, fontSize: 14 }}>I'll do this later</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* Column re-assignment picker */}
       <Modal
