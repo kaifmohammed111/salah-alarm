@@ -20,22 +20,28 @@ type Corner = "tl" | "tr" | "bl" | "br";
 
 // Full-screen crop tool: lets the user drag the crop rectangle's corners
 // (to resize) or its interior (to reposition) over the picked image, then
-// produces a genuinely cropped image file via expo-image-manipulator —
-// this is what actually gets sent to OCR, not just a visual preview.
-// Built for exactly one real use case: letting the user crop a
-// multi-column poster down to just the timetable region themselves,
-// rather than the app trying to auto-detect where the table is.
+// produces a genuinely cropped image file via expo-image-manipulator.
+//
+// IMPORTANT: the picked image is first normalized through a no-op
+// manipulateAsync call before anything else happens. Phone camera photos
+// often store their real pixel data unrotated, with a separate EXIF tag
+// saying "display this rotated 90°" — Image.getSize() can report those
+// raw, unrotated dimensions while the actual on-screen render is already
+// auto-rotated, so crop math built directly on Image.getSize() can target
+// entirely the wrong region of the real pixel data. Running the image
+// through the manipulator once bakes the correct orientation into the
+// actual pixels and gives back dimensions that are guaranteed to match
+// what both the display AND the final crop operate on, since both now
+// come from the same already-normalized file.
 export default function ImageCropModal({ visible, imageUri, onCancel, onConfirm }: ImageCropModalProps) {
   const insets = useSafeAreaInsets();
+  const [normalizedUri, setNormalizedUri] = useState<string | null>(null);
   const [sourceSize, setSourceSize] = useState<{ width: number; height: number } | null>(null);
   const [displayArea, setDisplayArea] = useState<{ width: number; height: number } | null>(null);
   const [rect, setRect] = useState<Rect | null>(null);
+  const [preparing, setPreparing] = useState(false);
   const [processing, setProcessing] = useState(false);
   const rectRef = useRef<Rect | null>(null);
-  // Each drag (a corner, or moving the whole rect) needs its OWN starting
-  // rect snapshot, taken at the moment that specific gesture begins —
-  // gesture.dx/dy from PanResponder are relative to that gesture's start,
-  // not absolute, so without this a drag would jump/compound incorrectly.
   const dragStartRects = useRef<Record<string, Rect>>({});
 
   useEffect(() => {
@@ -44,30 +50,43 @@ export default function ImageCropModal({ visible, imageUri, onCancel, onConfirm 
 
   useEffect(() => {
     if (!visible || !imageUri) {
+      setNormalizedUri(null);
       setSourceSize(null);
       setDisplayArea(null);
       setRect(null);
       return;
     }
-    Image.getSize(
-      imageUri,
-      (w, h) => {
-        setSourceSize({ width: w, height: h });
+
+    let cancelled = false;
+    setPreparing(true);
+    (async () => {
+      try {
+        // No-op action list — this call's only purpose is to re-encode
+        // the file with orientation baked in and get trustworthy
+        // dimensions back.
+        const normalized = await ImageManipulator.manipulateAsync(imageUri, [], {
+          compress: 1,
+          format: ImageManipulator.SaveFormat.PNG,
+        });
+        if (cancelled) return;
+        setNormalizedUri(normalized.uri);
+        setSourceSize({ width: normalized.width, height: normalized.height });
+
         const maxW = SCREEN_W - 32;
         const maxH = Dimensions.get("window").height - insets.top - insets.bottom - 220;
-        const scale = Math.min(maxW / w, maxH / h);
-        const dw = w * scale;
-        const dh = h * scale;
+        const scale = Math.min(maxW / normalized.width, maxH / normalized.height);
+        const dw = normalized.width * scale;
+        const dh = normalized.height * scale;
         setDisplayArea({ width: dw, height: dh });
-        // Default crop starts as the full image — the user narrows it
-        // in, rather than guessing a smaller default that might not
-        // match this particular photo's layout at all.
         setRect({ x: 0, y: 0, width: dw, height: dh });
-      },
-      () => {
-        setSourceSize(null);
-      },
-    );
+      } finally {
+        if (!cancelled) setPreparing(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [visible, imageUri, insets.top, insets.bottom]);
 
   const clampRect = (r: Rect): Rect => {
@@ -137,7 +156,7 @@ export default function ImageCropModal({ visible, imageUri, onCancel, onConfirm 
   ).current;
 
   const handleConfirm = async () => {
-    if (!imageUri || !sourceSize || !displayArea || !rect) return;
+    if (!normalizedUri || !sourceSize || !displayArea || !rect) return;
     setProcessing(true);
     try {
       const scaleX = sourceSize.width / displayArea.width;
@@ -148,7 +167,10 @@ export default function ImageCropModal({ visible, imageUri, onCancel, onConfirm 
         width: Math.round(rect.width * scaleX),
         height: Math.round(rect.height * scaleY),
       };
-      const result = await ImageManipulator.manipulateAsync(imageUri, [{ crop: cropRegion }], {
+      // Cropping the ALREADY-NORMALIZED file, not the original — this is
+      // the fix: display, crop math, and the actual crop operation all
+      // now agree on the same coordinate space.
+      const result = await ImageManipulator.manipulateAsync(normalizedUri, [{ crop: cropRegion }], {
         compress: 1,
         format: ImageManipulator.SaveFormat.PNG,
       });
@@ -167,16 +189,17 @@ export default function ImageCropModal({ visible, imageUri, onCancel, onConfirm 
         </View>
 
         <View style={styles.imageWrap}>
-          {imageUri && displayArea ? (
+          {preparing ? (
+            <Text style={{ color: "#fff" }}>Preparing image…</Text>
+          ) : normalizedUri && displayArea ? (
             <View style={{ width: displayArea.width, height: displayArea.height }}>
               <Image
-                source={{ uri: imageUri }}
+                source={{ uri: normalizedUri }}
                 style={{ width: displayArea.width, height: displayArea.height }}
                 resizeMode="contain"
               />
               {rect ? (
                 <>
-                  {/* Darken everything outside the crop rect */}
                   <View style={[styles.dim, { left: 0, top: 0, width: displayArea.width, height: rect.y }]} />
                   <View
                     style={[
@@ -231,8 +254,8 @@ export default function ImageCropModal({ visible, imageUri, onCancel, onConfirm 
           <Pressable
             testID="crop-confirm-btn"
             onPress={handleConfirm}
-            disabled={processing}
-            style={[styles.primaryBtn, processing && { opacity: 0.6 }]}
+            disabled={processing || preparing}
+            style={[styles.primaryBtn, (processing || preparing) && { opacity: 0.6 }]}
           >
             <Ionicons name="checkmark" size={18} color="#fff" />
             <Text style={styles.primaryBtnText}>{processing ? "Cropping…" : "Use This Crop"}</Text>
