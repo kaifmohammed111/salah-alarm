@@ -221,7 +221,8 @@ export default function UploadScreen() {
         throw new Error("Could not read this PDF's text.");
       }
       setLoadingLabel("Detecting timetable rows…");
-      let result = parseTimetablePdfText(rawText);
+      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      let result = parseTimetablePdfText(rawText, daysInMonth);
       let finalRawText = rawText;
 
       if (result.rowCount === 0) {
@@ -242,7 +243,7 @@ export default function UploadScreen() {
           console.log(pageText);
           ocrText += pageText + "\n";
         }
-        result = parseTimetablePdfText(ocrText);
+        result = parseTimetablePdfText(ocrText, daysInMonth);
         console.log(`[PDF OCR DEBUG] parsed rowCount=${result.rowCount}`);
         finalRawText = ocrText;
       }
@@ -294,7 +295,8 @@ export default function UploadScreen() {
       setLoadingLabel("Reading text with on-device OCR…");
       const ocrText = await recognizePageImage(base64);
       setLoadingLabel("Detecting timetable rows…");
-      const result = parseTimetablePdfText(ocrText);
+      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      const result = parseTimetablePdfText(ocrText, daysInMonth);
       if (result.rowCount === 0) {
         throw new Error(
           "Couldn't detect any timetable rows in this photo. Try a clearer, more evenly-lit photo taken straight-on.",
